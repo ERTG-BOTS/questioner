@@ -322,12 +322,11 @@ public class QueueChatManager
       foreach (var dialog in DialogQueue)
       {
         var timeSinceLastMessage = currentTime - dialog.Value.TimeLast;
-
         if (timeSinceLastMessage.TotalMinutes >= 3)
         {
           dialogsToEnd.Add(dialog.Key);
         }
-        else if (timeSinceLastMessage.TotalMinutes >= 2)
+        else if (timeSinceLastMessage.Minutes == 2 && timeSinceLastMessage.Seconds <= 10)
         {
           await botClient.SendTextMessageAsync(dialog.Value.ChatIdEmployee, "Диалог будет завершен из-за отсутствия активности");
           await botClient.SendTextMessageAsync(dialog.Value.ChatIdSupervisor, "Диалог будет завершен из-за отсутствия активности");
@@ -339,12 +338,13 @@ public class QueueChatManager
         var dialog = DialogQueue[dialogId];
         await botClient.SendTextMessageAsync(dialog.ChatIdEmployee, "Диалог завершен из-за отсутствия активности");
         await botClient.SendTextMessageAsync(dialog.ChatIdSupervisor, "Диалог завершен из-за отсутствия активности");
+        await QueueManager.EndDialogAsync(dialog.ChatIdEmployee);
       }
 
-      await Task.Delay(10000); // Повторение проверки каждые 10 секунд
+      await Task.Delay(10000);
     }
   }
-  
+
   public async Task ClearAllQueuesAsync()
   {
     var readyQueueItems = ReadyQueue.Values.ToList();

@@ -63,3 +63,4 @@ D:\Repos\C#\QuestionBot\obj\Debug\net8.0\refint\QuestionBot.dll
 D:\Repos\C#\QuestionBot\obj\Debug\net8.0\QuestionBot.pdb
 D:\Repos\C#\QuestionBot\obj\Debug\net8.0\QuestionBot.genruntimeconfig.cache
 D:\Repos\C#\QuestionBot\obj\Debug\net8.0\ref\QuestionBot.dll
+D:\Repos\C#\QuestionBot\obj\Debug\net8.0\QuestionBot.sourcelink.json
