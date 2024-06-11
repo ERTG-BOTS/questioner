@@ -110,7 +110,9 @@ internal class BotAsync
             return;
           case "/reset":
             currentUser.CurrentMode = currentUser.DefaultMode;
-            await SendDefault(currentUser);
+            await botClient.SendTextMessageAsync(chatId,
+                "Статус сброшен",
+                replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
             return;
           default: break;
         }
@@ -293,8 +295,34 @@ internal class BotAsync
                     replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
                 return;
               case "файл с диалогами":
+                await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.Month);
+                return;
+              case "dubug":
+                await QueueManager.AddToDialogQueueAsync(new DialogChatRecord
+                {
+                  ChatIdEmployee = chatId,
+                  FIOEmployee = currentUser.FIO,
+                  ChatIdSupervisor = chatId,
+                  FIOSupervisor = currentUser.FIO,
+                  TimeStart = DateTime.UtcNow,
+                  TimeLast = DateTime.UtcNow,
+                  MessageHistory = []
+                });
+                currentUser.CurrentMode = ModeCode["in dialog"];
+                await botClient.SendTextMessageAsync(chatId,
+                    "Теперь в диалоге",
+                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+                return;
               default:
-                await SendDefault(currentUser);
+                var dialogHistory = db.DialogHistoryModels.FirstOrDefault(x => x.TokenDialog == message.Text);
+                if (dialogHistory != null)
+                {
+                  await DocumentAsync.DialogHistoryPDF(currentUser.ChatId, dialogHistory);
+                }
+                else
+                {
+                  await SendDefault(currentUser);
+                }
                 return;
             }
           #endregion
