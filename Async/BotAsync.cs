@@ -291,7 +291,7 @@ internal class BotAsync
               case "стать старшим":
                 currentUser.CurrentMode = ModeCode["signed rg"];
                 await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты специалист",
+                    "Теперь ты старший",
                     replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
                 return;
               case "файл с диалогами":

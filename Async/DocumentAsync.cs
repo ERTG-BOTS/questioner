@@ -27,7 +27,7 @@ public class DocumentAsync
 
       using (var package = new ExcelPackage())
       {
-        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
+        OfficeOpenXml.ExcelWorksheet? worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
 
         worksheet.Cells[1, 1].Value = "Token";
         worksheet.Cells[1, 2].Value = "Специалист";
@@ -87,7 +87,7 @@ public class DocumentAsync
     string dialogDocument = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialogDocument");
     string messagePhotoPath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialogPhoto.jpg");
 
-    PdfWriter writer = new(filePath);
+    using PdfWriter writer = new(filePath);
 
     PdfFont font = PdfFontFactory.CreateFont(fontPath, "cp1251", PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED, true);
 
@@ -153,8 +153,8 @@ public class DocumentAsync
         if (message == "") break;
         string[] messageSplit = message.Split('#');
         long currentChatId = long.Parse(messageSplit[0]);
-        MessageId thisMessageId = await botClient.CopyMessageAsync(-1001900962165, currentChatId, int.Parse(messageSplit[1]));
-        Message thisMessage = await botClient.EditMessageReplyMarkupAsync(-1001900962165, thisMessageId.Id, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1")));
+        MessageId thisMessageId = await botClient.CopyMessageAsync(5405986946, currentChatId, int.Parse(messageSplit[1]));
+        Message thisMessage = await botClient.EditMessageReplyMarkupAsync(5405986946, thisMessageId.Id, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1")));
 
         string sender = currentChatId == usersInDialog[0]
                         ? currentDialog.FIOEmployee
@@ -199,13 +199,14 @@ public class DocumentAsync
             await botClient.SendDocumentAsync(chatId, inputFileFromStream);
           }
 
-          await botClient.EditMessageCaptionAsync(-1001900962165, thisMessageId.Id, "0");
+          await botClient.EditMessageCaptionAsync(5405986946, thisMessageId.Id, "0");
         }
 
         if (thisMessage.Sticker != null)
           AddTextToDocument("Телеграмм стикер");
 
-        await botClient.DeleteMessageAsync(-1001900962165, thisMessageId.Id);
+        await botClient.DeleteMessageAsync(5405986946, thisMessageId.Id);
+        await Task.Delay(500);
       }
 
       document.Close();

@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Newtonsoft.Json;
 using QuestionBot.Data;
 using QuestionBot.Data.QueueModels;
 using QuestionBot.Async;
