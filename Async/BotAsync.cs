@@ -297,7 +297,7 @@ internal class BotAsync
               case "файл с диалогами":
                 await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.Month);
                 return;
-              case "dubug":
+              case "debug":
                 await QueueManager.AddToDialogQueueAsync(new DialogChatRecord
                 {
                   ChatIdEmployee = chatId,

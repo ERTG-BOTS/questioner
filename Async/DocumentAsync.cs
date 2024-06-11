@@ -93,7 +93,6 @@ public class DocumentAsync
 
     PdfDocument pdf = new(writer);
     iText.Layout.Document document = new(pdf);
-    Paragraph paraghraph = new();
 
     string[] dialogHistory = currentDialog.DialogHistory.Split('@');
 
@@ -111,11 +110,41 @@ public class DocumentAsync
 
     try
     {
-      paraghraph.SetFont(font);
-      paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
-      paraghraph.Add(fileName + $" в {currentDialog.TimeDialogStart.AddHours(3)} : {currentDialog.TimeDialogEnd.AddHours(3)} МСК");
-      paraghraph.Add(Environment.NewLine);
-      paraghraph.Add(Environment.NewLine);
+      Paragraph CreateDefaultParagraph()
+      {
+        Paragraph paragraph = new Paragraph();
+        paragraph.SetFont(font);
+        paragraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
+        return paragraph;
+      }
+      void AddTextToDocument(string text)
+      {
+        Paragraph paragraph = CreateDefaultParagraph();
+        paragraph.Add(text);
+        paragraph.Add(Environment.NewLine);
+        document.Add(paragraph);
+      }
+      void AddImageToDocument(Image image)
+      {
+        Paragraph paragraph = CreateDefaultParagraph();
+        paragraph.Add(image);
+        paragraph.Add(Environment.NewLine);
+        document.Add(paragraph);
+      }
+      void AddTextToDocumentBold(string text)
+      {
+        Paragraph paragraph = CreateDefaultParagraph();
+        paragraph.Add(text).SetBold();
+        paragraph.Add(Environment.NewLine);
+        document.Add(paragraph);
+      }
+
+      string start = string.Format("Диалог {0} с {1} в {2} - {3} МСК\n",
+            currentDialog.FIOSupervisor,
+            currentDialog.FIOEmployee,
+            currentDialog.TimeDialogStart.AddHours(3).ToString("dd.MM.yyyy HH:mm:ss", russianCulture),
+            currentDialog.TimeDialogEnd.AddHours(3).ToString("HH:mm:ss", russianCulture));
+      AddTextToDocumentBold(start);
 
       int documentNumber = 1;
 
@@ -127,38 +156,21 @@ public class DocumentAsync
         MessageId thisMessageId = await botClient.CopyMessageAsync(-1001900962165, currentChatId, int.Parse(messageSplit[1]));
         Message thisMessage = await botClient.EditMessageReplyMarkupAsync(-1001900962165, thisMessageId.Id, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1")));
 
-        paraghraph = new();
-        paraghraph.SetFont(font);
-        paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
-
         string sender = currentChatId == usersInDialog[0]
                         ? currentDialog.FIOEmployee
                         : currentChatId == usersInDialog[1]
                           ? currentDialog.FIOSupervisor
                           : "Отправитель не определен";
 
-        paraghraph.Add(sender).SetBold();
-        document.Add(paraghraph);
-
-        paraghraph = new();
-        paraghraph.SetFont(font);
-        paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
+        AddTextToDocumentBold(sender);
 
         string? textMessage = thisMessage.Caption ?? thisMessage.Text ?? null;
         if (textMessage != null)
-        {
-          paraghraph.Add(textMessage);
-          paraghraph.Add(Environment.NewLine);
-          document.Add(paraghraph);
-        }
+          AddTextToDocument(textMessage);
 
 
         if (thisMessage.Photo != null)
         {
-          paraghraph = new();
-          paraghraph.SetFont(font);
-          paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
-
           var messagePhoto = await botClient.GetFileAsync(thisMessage.Photo.Last().FileId);
           FileStream downloadPhoto = new FileStream(messagePhotoPath, FileMode.Create);
           await botClient.DownloadFileAsync(messagePhoto!.FilePath!, downloadPhoto);
@@ -166,21 +178,14 @@ public class DocumentAsync
           ImageData imagedata = ImageDataFactory.Create(messagePhotoPath);
           Image image = new(imagedata);
           image.Scale(0.3f, 0.3f);
-          paraghraph.Add(image);
-          paraghraph.Add(Environment.NewLine);
-          document.Add(paraghraph);
+
+          AddImageToDocument(image);
         }
 
 
         if (thisMessage.Document != null)
         {
-          paraghraph = new();
-          paraghraph.SetFont(font);
-          paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
-
-          paraghraph.Add($"Документ {documentNumber}");
-          paraghraph.Add(Environment.NewLine);
-          document.Add(paraghraph);
+          AddTextToDocument($"Документ {documentNumber}");
 
           Telegram.Bot.Types.File file = await botClient.GetFileAsync(thisMessage.Document.FileId);
           using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Create))
@@ -198,21 +203,11 @@ public class DocumentAsync
         }
 
         if (thisMessage.Sticker != null)
-        {
-          paraghraph = new();
-          paraghraph.SetFont(font);
-          paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT);
-
-          paraghraph.Add($"Стикер телеграмм");
-          paraghraph.Add(Environment.NewLine);
-          document.Add(paraghraph);
-        }
+          AddTextToDocument("Телеграмм стикер");
 
         await botClient.DeleteMessageAsync(-1001900962165, thisMessageId.Id);
       }
 
-      document.Add(paraghraph);
-      paraghraph.SetTextAlignment(iText.Layout.Properties.TextAlignment.LEFT).SetFontSize(8);
       document.Close();
       writer.Dispose();
 
