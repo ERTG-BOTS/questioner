@@ -43,7 +43,9 @@ internal class BotAsync
     {
       var thisMessage = update.Message
                   ?? update.CallbackQuery?.Message;
-      if (thisMessage == null || thisMessage.Type == MessageType.MessagePinned) { return; }
+      if (thisMessage == null
+          || thisMessage.Type == MessageType.MessagePinned
+          || thisMessage.Type == MessageType.Unknown) { return; }
       UserModel? currentUser;
       if (update.Message != null || update.CallbackQuery != null)
       {
@@ -317,7 +319,7 @@ internal class BotAsync
                 var dialogHistory = db.DialogHistoryModels.FirstOrDefault(x => x.TokenDialog == message.Text);
                 if (dialogHistory != null)
                 {
-                  await DocumentAsync.DialogHistoryPDF(currentUser.ChatId, dialogHistory);
+                  _ = Task.Run(async () => await DocumentAsync.DialogHistoryPDF(currentUser.ChatId, dialogHistory));
                 }
                 else
                 {

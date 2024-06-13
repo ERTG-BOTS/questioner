@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QuestionBot run Debug НЦК",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build Debug НЦК",
+      "program": "${workspaceFolder}/bin/DEBUG/QuestionBot.dll",
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "requireExactSource": false
+    },
+  ]
+}

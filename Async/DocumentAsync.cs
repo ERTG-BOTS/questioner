@@ -27,7 +27,7 @@ public class DocumentAsync
 
       using (var package = new ExcelPackage())
       {
-        OfficeOpenXml.ExcelWorksheet? worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
+        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
 
         worksheet.Cells[1, 1].Value = "Token";
         worksheet.Cells[1, 2].Value = "Специалист";
@@ -73,6 +73,20 @@ public class DocumentAsync
 
   public static async Task DialogHistoryPDF(long chatId, DialogHistoryModels currentDialog)
   {
+    string[] dialogHistory = currentDialog.DialogHistory.Split('@');
+    if (currentDialog.FIOSupervisor == currentDialog.FIOEmployee)
+    {
+      var debugHistory = dialogHistory.Select(x => x.Split('#')[0]).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToList();
+      if (debugHistory.Count == 2 && int.TryParse(debugHistory[0], out var chatId0) && int.TryParse(debugHistory[1], out var chatId1))
+      {
+        using (AppDbContext db = new())
+        {
+          var users = db.RegisteredUsers.Where(x => x.ChatId == chatId0 || x.ChatId == chatId1);
+          currentDialog.FIOEmployee = users.First(x => x.ChatId == chatId0).FIO;
+          currentDialog.FIOSupervisor = users.First(x => x.ChatId == chatId1).FIO;
+        }
+      }
+    }
     await botClient.SendTextMessageAsync(chatId,
         string.Format("Найден диалог {0} с {1} в {2} - {3}",
             currentDialog.FIOSupervisor,
@@ -93,8 +107,6 @@ public class DocumentAsync
 
     PdfDocument pdf = new(writer);
     iText.Layout.Document document = new(pdf);
-
-    string[] dialogHistory = currentDialog.DialogHistory.Split('@');
 
     long[] usersInDialog = { 0, 0 };
 
