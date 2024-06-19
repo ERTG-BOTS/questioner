@@ -23,7 +23,7 @@
       "args": [
         "build",
         "${workspaceFolder}/QuestionBot.csproj",
-        "/p:DefineConstants=Debug",
+        "/p:DefineConstants=DEBUG",
       ],
       "group": {
         "kind": "build",
@@ -37,7 +37,7 @@
       "args": [
         "build",
         "${workspaceFolder}/QuestionBot.csproj",
-        "/p:DefineConstants=Debug",
+        "/p:DefineConstants=DEBUG",
         "/p:DefineConstants=НЦК",
       ],
       "group": {

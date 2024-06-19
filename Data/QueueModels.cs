@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Telegram.Bot;
+using Telegram.Bot.Requests;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Data.QueueModels;
@@ -200,7 +201,13 @@ public class QueueChatManager
         long targetChatId = dialogRecord.ChatIdEmployee == chatId ? dialogRecord.ChatIdSupervisor : dialogRecord.ChatIdEmployee;
         try
         {
-          await botClient.CopyMessageAsync(targetChatId, chatId, messageId);
+          await botClient.CopyMessageAsync(
+                new CopyMessageRequest()
+                {
+                  ChatId = targetChatId,
+                  FromChatId = chatId,
+                  MessageId = messageId
+                });
           dialogRecord.MessageHistory ??= [];
           dialogRecord.MessageHistory.Add((chatId, messageId));
           dialogRecord.TimeLast = DateTime.UtcNow;
@@ -208,7 +215,7 @@ public class QueueChatManager
         }
         catch (Exception)
         {
-          await botClient.SendTextMessageAsync(chatId, "Ошибка отправки");
+          await botClient.SendMessageAsync(new SendMessageRequest() { ChatId = chatId, Text = "Ошибка отправки" });
         }
       }
     }
@@ -221,22 +228,38 @@ public class QueueChatManager
   private async Task SendMessageDialogRemove(DialogChatRecord dialog, string token)
   {
     UsersList.First(x => x.ChatId == dialog.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
-    await botClient.SendTextMessageAsync(dialog.ChatIdEmployee,
-        "Диалог завершен",
-        replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"]));
-    await botClient.SendTextMessageAsync(dialog.ChatIdEmployee,
-        $"Оцени диалог с {dialog.FIOSupervisor}",
-        replyMarkup: Keyboards.DialogQuality(token));
+    await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialog.ChatIdEmployee,
+            Text = "Диалог завершен",
+            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+          });
+    await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialog.ChatIdSupervisor,
+            Text = $"Оцени диалог с {dialog.FIOSupervisor}",
+            ReplyMarkup = Keyboards.DialogQuality(token)
+          });
 
     UsersList.First(x => x.ChatId == dialog.ChatIdSupervisor).CurrentMode = Substitution.ModeCode["await ready rg"];
-    await botClient.SendTextMessageAsync(dialog.ChatIdSupervisor,
-        "Диалог завершен",
-        replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["await ready rg"]));
+    await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialog.ChatIdSupervisor,
+            Text = "Диалог завершен",
+            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["await ready rg"])
+          });
 
     Task delayAfter = Task.Run(async () =>
     {
-      await botClient.SendTextMessageAsync(dialog.ChatIdSupervisor,
-          $"Ожидание после завершения диалога {Config.DelayAfterDialog} секунд");
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = dialog.ChatIdEmployee,
+              Text = $"Ожидание после завершения диалога {Config.DelayAfterDialog} секунд",
+            });
       await QueueManager.AddToAwaitQueueAsync(new ReadyChatRecord()
       {
         ChatId = dialog.ChatIdSupervisor,
@@ -255,9 +278,13 @@ public class QueueChatManager
           FIO = dialog.FIOSupervisor,
           TimeStart = DateTime.UtcNow
         });
-        await botClient.SendTextMessageAsync(dialog.ChatIdSupervisor,
-            "Теперь ты готов",
-            replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["ready rg"]));
+        await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = dialog.ChatIdSupervisor,
+                Text = "Теперь ты готов",
+                ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["ready rg"])
+              });
       }
     });
   }
@@ -328,16 +355,36 @@ public class QueueChatManager
         }
         else if (timeSinceLastMessage.Minutes == 2 && timeSinceLastMessage.Seconds <= 10)
         {
-          await botClient.SendTextMessageAsync(dialog.Value.ChatIdEmployee, "Диалог будет завершен из-за отсутствия активности");
-          await botClient.SendTextMessageAsync(dialog.Value.ChatIdSupervisor, "Диалог будет завершен из-за отсутствия активности");
+          await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = dialog.Value.ChatIdEmployee,
+                  Text = "Диалог будет завершен из-за отсутствия активности",
+                });
+          await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = dialog.Value.ChatIdEmployee,
+                Text = "Диалог будет завершен из-за отсутствия активности",
+              });
         }
       }
 
       foreach (var dialogId in dialogsToEnd)
       {
         var dialog = DialogQueue[dialogId];
-        await botClient.SendTextMessageAsync(dialog.ChatIdEmployee, "Диалог завершен из-за отсутствия активности");
-        await botClient.SendTextMessageAsync(dialog.ChatIdSupervisor, "Диалог завершен из-за отсутствия активности");
+        await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = dialog.ChatIdEmployee,
+                Text = "Диалог завершен из-за отсутствия активности",
+              });
+        await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = dialog.ChatIdSupervisor,
+                Text = "Диалог завершен из-за отсутствия активности",
+              });
         await QueueManager.EndDialogAsync(dialog.ChatIdEmployee);
       }
 
@@ -353,19 +400,34 @@ public class QueueChatManager
 
     foreach (var item in readyQueueItems)
     {
-      await botClient.SendTextMessageAsync(item.ChatId, "Твой статус изменен на \"Не готов\"");
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = item.ChatId,
+              Text = "Твой статус изменен на \"Не готов\"",
+            });
     }
     ReadyQueue.Clear();
 
     foreach (var item in awaitQueueItems)
     {
-      await botClient.SendTextMessageAsync(item.ChatId, "Твой статус изменен на \"Не готов\"");
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = item.ChatId,
+              Text = "Твой статус изменен на \"Не готов\"",
+            });
     }
     AwaitQueue.Clear();
 
     foreach (var item in questionQueueItems)
     {
-      await botClient.SendTextMessageAsync(item.ChatId, "Твой вопрос был отменен");
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = item.ChatId,
+              Text = "Твой вопрос был отменен",
+            });
     }
     QuestionQueue.Clear();
   }

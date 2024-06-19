@@ -2,6 +2,7 @@
 using QuestionBot.Data;
 using QuestionBot.Data.QueueModels;
 using Telegram.Bot;
+using Telegram.Bot.Requests;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Async;
@@ -35,15 +36,24 @@ public class TasksAsync
 
 
       UsersList.First(x => x.ChatId == questionRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog"];
-      await botClient.SendTextMessageAsync(questionRecord.ChatId,
-          $"На твой вопрос отвечает {readyRecord.FIO}",
-          replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"]));
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = questionRecord.ChatId,
+              Text = $"На твой вопрос отвечает {readyRecord.FIO}",
+              ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+            });
 
       UsersList.First(x => x.ChatId == readyRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog rg"];
-      await botClient.SendTextMessageAsync(readyRecord.ChatId,
-          $"Вопрос от {questionRecord.FIO}",
-          replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog rg"]));
-      await botClient.CopyMessageAsync(readyRecord.ChatId, questionRecord.ChatId, questionRecord.StartMessageId);
+      await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = readyRecord.ChatId,
+              Text = $"На твой вопрос отвечает {readyRecord.FIO}",
+              ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog rg"])
+            });
+      await botClient.CopyMessageAsync(
+            new CopyMessageRequest() { ChatId = readyRecord.ChatId, FromChatId = questionRecord.ChatId, MessageId = questionRecord.StartMessageId });
 
       var dialogRecord = new DialogChatRecord
       {
@@ -107,7 +117,7 @@ public class TasksAsync
 #if НЦК
     await Substitution.SendJsonToUrl("http://46.146.231.248/apinck", json);
 #else
-    await Substitution.SendJsonToUrl("http://46.146.231.248/apispsk", json);
+    await Substitution.SendJsonToUrl("http://185.255.135.17/apispsk", json);
 #endif
   }
 }

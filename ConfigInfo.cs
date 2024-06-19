@@ -8,7 +8,7 @@ public class ConfigInfo
   // Параметры подключения к базе данных SQL
   public string DbServer { get; set; }
 
-#if !DEBUG
+#if DEBUG
   public string Database { get; set; } = "STPMainTemp";
 #else
   public string Database { get; set; } = "STPMain";
@@ -23,9 +23,7 @@ public class ConfigInfo
   public string Division { get; set; } = "НЦК";
 #endif
 
-#if DEBUG  
-  public string BotToken { get; } = "6175066343:AAH8F3_0I-AQFTTmNGxKMDG1pXPcJcZ1JF8";
-#elif НЦК
+#if НЦК && !DEBUG
   public string BotToken { get; } = "6004209126:AAGayH0rZhI7iCNO8_qBDIw89rmSFnqAmF8";
 #else
   public string BotToken { get; } = "6175066343:AAH8F3_0I-AQFTTmNGxKMDG1pXPcJcZ1JF8";

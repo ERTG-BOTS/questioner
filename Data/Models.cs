@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.RegularExpressions;
 using Telegram.Bot;
+using Telegram.Bot.Requests;
 
 namespace QuestionBot.Data.Models;
 
@@ -135,8 +136,12 @@ public class UserModel
     var correctUser = GetUser(chatId, username);
     if (correctUser == null)
     {
-      await Program.botClient.SendTextMessageAsync(chatId,
-          $"Этот бот работает только для {Program.Config.Division}");
+      await Program.botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = chatId,
+              Text = $"Этот бот работает только для {Program.Config.Division}"
+            });
       return null;
     }
 

@@ -6,6 +6,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using OfficeOpenXml;
 using static QuestionBot.Async.TasksAsync;
+using Telegram.Bot.Requests;
 
 namespace QuestionBot;
 
@@ -21,7 +22,7 @@ public class Program
     ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
     botClient = new TelegramBotClient(Config.BotToken);
-    Substitution.WriteLog("Start", $"Загрузка бота {botClient.GetMeAsync().Result.FirstName}...");
+    Substitution.WriteLog("Start", $"Загрузка бота {botClient.MakeRequestAsync(new GetMeRequest()).Result.FirstName}...");
     var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
 
     if (!Directory.Exists(bufferDirectory))
@@ -69,7 +70,7 @@ public class Program
     _ = Task.Run(EndDayTask);
 
     botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions, cancellationToken);
-    Substitution.WriteLog("Start", $"Бот {botClient.GetMeAsync().Result.FirstName} запущен.");
+    Substitution.WriteLog("Start", $"Бот {botClient.MakeRequestAsync(new GetMeRequest()).Result.FirstName} запущен.");
 
     await Task.Delay(Timeout.Infinite);
   }

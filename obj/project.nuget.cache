@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "xLVzT54ZROM=",
+  "dgSpecHash": "axK70mCuEEA=",
   "success": true,
   "projectFilePath": "D:\\Repos\\C#\\QuestionBot\\QuestionBot.csproj",
   "expectedPackageFiles": [
@@ -137,7 +137,7 @@
     "C:\\Users\\lidiu\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
     "C:\\Users\\lidiu\\.nuget\\packages\\system.xml.readerwriter\\4.3.0\\system.xml.readerwriter.4.3.0.nupkg.sha512",
     "C:\\Users\\lidiu\\.nuget\\packages\\system.xml.xmldocument\\4.3.0\\system.xml.xmldocument.4.3.0.nupkg.sha512",
-    "C:\\Users\\lidiu\\.nuget\\packages\\telegram.bot\\19.0.0\\telegram.bot.19.0.0.nupkg.sha512"
+    "C:\\Users\\lidiu\\.nuget\\packages\\telegram.bot\\20.0.0\\telegram.bot.20.0.0.nupkg.sha512"
   ],
   "logs": []
 }
