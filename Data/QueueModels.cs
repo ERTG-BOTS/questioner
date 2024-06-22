@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
+using Telegram.Bot.Types;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Data.QueueModels;
@@ -13,42 +14,32 @@ public class QuestionChatRecord
   public int StartMessageId { get; set; }
 }
 
-public class ReadyChatRecord
-{
-  public long ChatId { get; set; }
-  public required string FIO { get; set; }
-  public DateTime TimeStart { get; set; }
-}
-
 public class DialogChatRecord
 {
-  public long ChatIdEmployee { get; set; }
+  public required string Token { get; set; }
   public required string FIOEmployee { get; set; }
-  public long ChatIdSupervisor { get; set; }
-  public required string FIOSupervisor { get; set; }
-  public DateTime TimeStart { get; set; }
-  public DateTime TimeLast { get; set; }
-  public required List<(long ChatId, int MessageId)> MessageHistory { get; set; }
+  public required long ChatIdEmployee { get; set; }
+  public required List<string> ListFIOSupervisor { get; set; }
+  public required long ChatIdLastSupervisor { get; set; }
+  public required string StartQuestion { get; set; }
+  public required int FirstMessageId { get; set; }
+  public int MessageThreadId { get; set; }
+  public required List<string> ListStartDialog { get; set; }
+  public required List<string> ListEndDialog { get; set; }
 }
 
 public class QueueChatManager
 {
-  private readonly SemaphoreSlim questionQueueSemaphore = new(1, 1);
-  private readonly SemaphoreSlim readyQueueSemaphore = new(1, 1);
-  private readonly SemaphoreSlim dialogQueueSemaphore = new(1, 1);
-  private readonly SemaphoreSlim awaitQueueSemaphore = new(1, 1);
+  public readonly SemaphoreSlim questionQueueSemaphore = new(1, 1);
+  public readonly SemaphoreSlim dialogSemaphore = new(1, 1);
 
-  public ConcurrentDictionary<int, DialogChatRecord> DialogQueue { get; private set; }
   public ConcurrentDictionary<int, QuestionChatRecord> QuestionQueue { get; private set; }
-  public ConcurrentDictionary<int, ReadyChatRecord> ReadyQueue { get; private set; }
-  public ConcurrentDictionary<int, ReadyChatRecord> AwaitQueue { get; private set; }
+  public List<DialogChatRecord> DialogChats { get; private set; }
 
   public QueueChatManager()
   {
-    DialogQueue = new ConcurrentDictionary<int, DialogChatRecord>();
     QuestionQueue = new ConcurrentDictionary<int, QuestionChatRecord>();
-    ReadyQueue = new ConcurrentDictionary<int, ReadyChatRecord>();
-    AwaitQueue = new ConcurrentDictionary<int, ReadyChatRecord>();
+    DialogChats = [];
   }
 
   public async Task<bool> AddToQuestionQueueAsync(QuestionChatRecord record)
@@ -56,7 +47,7 @@ public class QueueChatManager
     await questionQueueSemaphore.WaitAsync();
     try
     {
-      record.TimeStart = DateTime.UtcNow;
+      record.TimeStart = DateTime.UtcNow.AddHours(3);
       int id = !QuestionQueue.IsEmpty ? QuestionQueue.Keys.Max() + 1 : 1;
       QuestionQueue.TryAdd(id, record);
       return true;
@@ -92,333 +83,9 @@ public class QueueChatManager
     }
   }
 
-  public async Task<bool> AddToAwaitQueueAsync(ReadyChatRecord record)
+  public async Task ClearQuestionQueuesAsync()
   {
-    await awaitQueueSemaphore.WaitAsync();
-    try
-    {
-      record.TimeStart = DateTime.UtcNow;
-      int id = !AwaitQueue.IsEmpty ? QuestionQueue.Keys.Max() + 1 : 1;
-      AwaitQueue.TryAdd(id, record);
-      return true;
-    }
-    finally
-    {
-      awaitQueueSemaphore.Release();
-    }
-  }
-
-  public async Task<bool> RemoveFromAwaitQueueAsync(long chatId)
-  {
-    await awaitQueueSemaphore.WaitAsync();
-    try
-    {
-      var removedRecord = AwaitQueue.FirstOrDefault(x => x.Value.ChatId == chatId);
-      if (!removedRecord.Equals(default(KeyValuePair<int, ReadyChatRecord>)))
-      {
-        AwaitQueue.TryRemove(removedRecord.Key, out _);
-        var remainingRecords = AwaitQueue.Values.ToList();
-        AwaitQueue.Clear();
-        for (int i = 0; i < remainingRecords.Count; i++)
-        {
-          AwaitQueue.TryAdd(i + 1, remainingRecords[i]);
-        }
-        return true;
-      }
-      return false;
-    }
-    finally
-    {
-      awaitQueueSemaphore.Release();
-    }
-  }
-
-  public async Task<bool> AddToReadyQueueAsync(ReadyChatRecord record)
-  {
-    await readyQueueSemaphore.WaitAsync();
-    try
-    {
-      record.TimeStart = DateTime.UtcNow;
-      int id = !ReadyQueue.IsEmpty ? ReadyQueue.Keys.Max() + 1 : 1;
-      ReadyQueue.TryAdd(id, record);
-      return true;
-    }
-    finally
-    {
-      readyQueueSemaphore.Release();
-    }
-  }
-
-  public async Task<bool> RemoveFromReadyQueueAsync(long chatId)
-  {
-    await readyQueueSemaphore.WaitAsync();
-    try
-    {
-      var removedRecord = ReadyQueue.FirstOrDefault(x => x.Value.ChatId == chatId);
-      if (!removedRecord.Equals(default(KeyValuePair<int, ReadyChatRecord>)))
-      {
-        ReadyQueue.TryRemove(removedRecord.Key, out _);
-        var remainingRecords = ReadyQueue.Values.ToList();
-        ReadyQueue.Clear();
-        for (int i = 0; i < remainingRecords.Count; i++)
-        {
-          ReadyQueue.TryAdd(i + 1, remainingRecords[i]);
-        }
-        return true;
-      }
-      return false;
-    }
-    finally
-    {
-      readyQueueSemaphore.Release();
-    }
-  }
-
-  public async Task<bool> AddToDialogQueueAsync(DialogChatRecord record)
-  {
-    await dialogQueueSemaphore.WaitAsync();
-    try
-    {
-      record.TimeStart = DateTime.UtcNow;
-      int id = !DialogQueue.IsEmpty ? DialogQueue.Keys.Max() + 1 : 1;
-      DialogQueue.TryAdd(id, record);
-      return true;
-    }
-    finally
-    {
-      dialogQueueSemaphore.Release();
-    }
-  }
-
-  public async Task AddToMessageHistoryAsync(long chatId, int messageId)
-  {
-    await dialogQueueSemaphore.WaitAsync();
-    try
-    {
-      var dialogRecord = DialogQueue.FirstOrDefault(x => x.Value.ChatIdEmployee == chatId || x.Value.ChatIdSupervisor == chatId).Value;
-      if (dialogRecord != null)
-      {
-        long targetChatId = dialogRecord.ChatIdEmployee == chatId ? dialogRecord.ChatIdSupervisor : dialogRecord.ChatIdEmployee;
-        try
-        {
-          await botClient.CopyMessageAsync(
-                new CopyMessageRequest()
-                {
-                  ChatId = targetChatId,
-                  FromChatId = chatId,
-                  MessageId = messageId
-                });
-          dialogRecord.MessageHistory ??= [];
-          dialogRecord.MessageHistory.Add((chatId, messageId));
-          dialogRecord.TimeLast = DateTime.UtcNow;
-          Substitution.WriteLog("Диалог", $"\x1b[94m{chatId}\x1b[0m отправляет сообщение => \x1b[93m{targetChatId}\x1b[0m");
-        }
-        catch (Exception)
-        {
-          await botClient.SendMessageAsync(new SendMessageRequest() { ChatId = chatId, Text = "Ошибка отправки" });
-        }
-      }
-    }
-    finally
-    {
-      dialogQueueSemaphore.Release();
-    }
-  }
-
-  private async Task SendMessageDialogRemove(DialogChatRecord dialog, string token)
-  {
-    UsersList.First(x => x.ChatId == dialog.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
-    await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = dialog.ChatIdEmployee,
-            Text = "Диалог завершен",
-            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
-          });
-    await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = dialog.ChatIdSupervisor,
-            Text = $"Оцени диалог с {dialog.FIOSupervisor}",
-            ReplyMarkup = Keyboards.DialogQuality(token)
-          });
-
-    UsersList.First(x => x.ChatId == dialog.ChatIdSupervisor).CurrentMode = Substitution.ModeCode["await ready rg"];
-    await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = dialog.ChatIdSupervisor,
-            Text = "Диалог завершен",
-            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["await ready rg"])
-          });
-
-    Task delayAfter = Task.Run(async () =>
-    {
-      await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = dialog.ChatIdEmployee,
-              Text = $"Ожидание после завершения диалога {Config.DelayAfterDialog} секунд",
-            });
-      await QueueManager.AddToAwaitQueueAsync(new ReadyChatRecord()
-      {
-        ChatId = dialog.ChatIdSupervisor,
-        FIO = dialog.FIOSupervisor,
-        TimeStart = DateTime.UtcNow
-      });
-      await Task.Delay(Config.DelayAfterDialog);
-      var user = UsersList.First(x => x.ChatId == dialog.ChatIdSupervisor);
-      if (user.CurrentMode == Substitution.ModeCode["await ready rg"])
-      {
-        await QueueManager.RemoveFromAwaitQueueAsync(dialog.ChatIdSupervisor);
-        user.CurrentMode = Substitution.ModeCode["ready rg"];
-        await QueueManager.AddToReadyQueueAsync(new ReadyChatRecord()
-        {
-          ChatId = dialog.ChatIdSupervisor,
-          FIO = dialog.FIOSupervisor,
-          TimeStart = DateTime.UtcNow
-        });
-        await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = dialog.ChatIdSupervisor,
-                Text = "Теперь ты готов",
-                ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["ready rg"])
-              });
-      }
-    });
-  }
-
-  public async Task<bool> EndDialogAsync(long chatId)
-  {
-    await dialogQueueSemaphore.WaitAsync();
-    try
-    {
-      var removedRecord = DialogQueue.FirstOrDefault(x => x.Value.ChatIdEmployee == chatId || x.Value.ChatIdSupervisor == chatId);
-      if (!removedRecord.Equals(default(KeyValuePair<int, DialogChatRecord>)))
-      {
-        DialogQueue.TryRemove(removedRecord.Key, out var dialogRecord);
-        if (dialogRecord != null)
-        {
-          string tokenDialog = Guid.NewGuid().ToString();
-          string dialogHistory = string.Join("@", dialogRecord.MessageHistory.Select(m => $"{m.ChatId}#{m.MessageId}"));
-
-          var dialogHistoryModel = new Models.DialogHistoryModels
-          {
-            TokenDialog = tokenDialog,
-            FIOEmployee = dialogRecord.FIOEmployee,
-            FIOSupervisor = dialogRecord.FIOSupervisor,
-            TimeDialogStart = dialogRecord.TimeStart,
-            TimeDialogEnd = dialogRecord.TimeLast,
-            DialogQuality = null,
-            DialogHistory = dialogHistory
-          };
-          using (AppDbContext dbContext = new())
-          {
-            dbContext.DialogHistoryModels.Add(dialogHistoryModel);
-            await dbContext.SaveChangesAsync();
-          }
-
-          _ = Task.Run(() => SendMessageDialogRemove(dialogRecord, tokenDialog));
-
-          var remainingRecords = DialogQueue.Values.ToList();
-          DialogQueue.Clear();
-          for (int i = 0; i < remainingRecords.Count; i++)
-          {
-            DialogQueue.TryAdd(i + 1, remainingRecords[i]);
-          }
-
-          return true;
-        }
-      }
-      return false;
-    }
-    finally
-    {
-      dialogQueueSemaphore.Release();
-    }
-  }
-
-  public async Task MonitorDialogActivity()
-  {
-    while (true)
-    {
-      var currentTime = DateTime.UtcNow;
-      var dialogsToEnd = new List<int>();
-
-      foreach (var dialog in DialogQueue)
-      {
-        var timeSinceLastMessage = currentTime - dialog.Value.TimeLast;
-        if (timeSinceLastMessage.TotalMinutes >= 3)
-        {
-          dialogsToEnd.Add(dialog.Key);
-        }
-        else if (timeSinceLastMessage.Minutes == 2 && timeSinceLastMessage.Seconds <= 10)
-        {
-          await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = dialog.Value.ChatIdEmployee,
-                  Text = "Диалог будет завершен из-за отсутствия активности",
-                });
-          await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = dialog.Value.ChatIdEmployee,
-                Text = "Диалог будет завершен из-за отсутствия активности",
-              });
-        }
-      }
-
-      foreach (var dialogId in dialogsToEnd)
-      {
-        var dialog = DialogQueue[dialogId];
-        await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = dialog.ChatIdEmployee,
-                Text = "Диалог завершен из-за отсутствия активности",
-              });
-        await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = dialog.ChatIdSupervisor,
-                Text = "Диалог завершен из-за отсутствия активности",
-              });
-        await QueueManager.EndDialogAsync(dialog.ChatIdEmployee);
-      }
-
-      await Task.Delay(10000);
-    }
-  }
-
-  public async Task ClearAllQueuesAsync()
-  {
-    var readyQueueItems = ReadyQueue.Values.ToList();
-    var awaitQueueItems = AwaitQueue.Values.ToList();
     var questionQueueItems = QuestionQueue.Values.ToList();
-
-    foreach (var item in readyQueueItems)
-    {
-      await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = item.ChatId,
-              Text = "Твой статус изменен на \"Не готов\"",
-            });
-    }
-    ReadyQueue.Clear();
-
-    foreach (var item in awaitQueueItems)
-    {
-      await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = item.ChatId,
-              Text = "Твой статус изменен на \"Не готов\"",
-            });
-    }
-    AwaitQueue.Clear();
 
     foreach (var item in questionQueueItems)
     {
@@ -430,5 +97,398 @@ public class QueueChatManager
             });
     }
     QuestionQueue.Clear();
+  }
+
+  public async Task AddDialogAsync(Models.DialogHistories dialog, long chatId)
+  {
+    await Task.Delay(5000); 
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      DialogChats.Add(new DialogChatRecord()
+      {
+        Token = dialog.Token,
+        FIOEmployee = dialog.FIOEmployee,
+        ChatIdEmployee = chatId,
+        ListFIOSupervisor = [.. dialog.ListFIOSupervisor.Split(";")],
+        ChatIdLastSupervisor = 0,
+        StartQuestion = dialog.StartQuestion,
+        FirstMessageId = dialog.FirstMessageId,
+        MessageThreadId = dialog.MessageThreadId,
+        ListStartDialog = [.. dialog.ListStartDialog.Split(";")],
+        ListEndDialog = [.. dialog.ListEndDialog.Split(";")]
+      });
+
+      await botClient.ReopenForumTopicAsync(
+                      new ReopenForumTopicRequest()
+                      {
+                        ChatId = Config.TopicId,
+                        MessageThreadId = dialog.MessageThreadId
+                      });
+
+      await botClient.EditForumTopicAsync(
+        new EditForumTopicRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = dialog.MessageThreadId,
+          Name = dialog.FIOEmployee,
+          IconCustomEmojiId = "5417915203100613993"
+        });
+
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = dialog.MessageThreadId,
+          Text = "Диалог возобновлен"
+        });
+
+      UsersList.First(x => x.ChatId == chatId).CurrentMode = Substitution.ModeCode["in dialog"];
+
+      await botClient.SendMessageAsync(
+        new SendMessageRequest
+        {
+          ChatId = chatId,
+          Text = "Диалог возобновлен",
+          ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+        });
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
+  }
+
+  public async Task AddDialogAsync(QuestionChatRecord question)
+  {
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      var newTopic = await botClient.CreateForumTopicAsync(
+                            new CreateForumTopicRequest()
+                            {
+                              ChatId = Config.TopicId,
+                              Name = question.FIO
+                            });
+
+      await botClient.EditForumTopicAsync(
+        new EditForumTopicRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = newTopic.MessageThreadId,
+          IconCustomEmojiId = "5417915203100613993"
+        });
+
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = Config.TopicId,
+          Text = $"Вопрос задает <b>{question.FIO}</b>",
+          MessageThreadId = newTopic.MessageThreadId,
+          ParseMode = Telegram.Bot.Types.Enums.ParseMode.Html
+        }
+      );
+
+      var firstMessageId = await botClient.CopyMessageAsync(
+        new CopyMessageRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = newTopic.MessageThreadId,
+          FromChatId = question.ChatId,
+          MessageId = question.StartMessageId
+        }
+      );
+
+      var dialogRecord = new DialogChatRecord()
+      {
+        Token = Guid.NewGuid().ToString(),
+        FIOEmployee = question.FIO,
+        ChatIdEmployee = question.ChatId,
+        FirstMessageId = firstMessageId.Id,
+        StartQuestion = question.TimeStart.ToString("dd.MM.yyyy HH:mm:ss"),
+        MessageThreadId = newTopic.MessageThreadId,
+        ListFIOSupervisor = [],
+        ChatIdLastSupervisor = 0,
+        ListStartDialog = [],
+        ListEndDialog = [],
+      };
+
+      DialogChats.Add(dialogRecord);
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
+  }
+
+  private async Task ErrorDialogAsync(long chatId)
+  {
+    await botClient.SendMessageAsync(
+      new SendMessageRequest()
+      {
+        ChatId = chatId,
+        Text = "Диалог не был найден\nСоздай вопрос снова"
+      }
+    );
+    var user = UsersList.FirstOrDefault(x => x.ChatId == chatId);
+    if (user != null)
+      user.CurrentMode = user.DefaultMode;
+  }
+
+  public async Task DeliveryMessageDialogAsync(DialogChatRecord dialog, int messageId)
+  {
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      await Task.Delay(1000);
+      var dialogRecord = DialogChats.FirstOrDefault(x => x == dialog);
+      if (dialogRecord != null)
+      {
+        await botClient.CopyMessageAsync(
+          new CopyMessageRequest()
+          {
+            ChatId = dialogRecord.ChatIdEmployee,
+            FromChatId = Config.TopicId,
+            MessageId = messageId
+          }
+        );
+      }
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
+  }
+
+  public async Task DeliveryMessageDialogAsync(long chatId, int messageId)
+  {
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      await Task.Delay(1000);
+      var dialogRecord = DialogChats.FirstOrDefault(x => x.ChatIdEmployee == chatId);
+      if (dialogRecord != null)
+      {
+        await botClient.CopyMessageAsync(
+          new CopyMessageRequest()
+          {
+            ChatId = Config.TopicId,
+            MessageThreadId = dialogRecord.MessageThreadId,
+            FromChatId = dialogRecord.ChatIdEmployee,
+            MessageId = messageId
+          }
+        );
+      }
+      else
+      {
+        await ErrorDialogAsync(chatId);
+      }
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
+  }
+
+  public async Task EndDialogAsync(DialogChatRecord dialog)
+  {
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      var dialogRecord = DialogChats.FirstOrDefault(x => x == dialog);
+
+      if (dialogRecord != null)
+      {
+        if (dialogRecord.ListStartDialog.Count != 0)
+          using (var db = new AppDbContext())
+          {
+            var dialogHistoryRecord = db.DialogHistory.FirstOrDefault(x => x.Token == dialogRecord.Token);
+            dialogRecord.ListEndDialog.Add(Substitution.GetCorrectDateTime);
+            if (dialogHistoryRecord == null)
+            {
+              dialogHistoryRecord = Models.DialogHistories.GetDialogHistories(dialogRecord);
+              db.DialogHistory.Add(dialogHistoryRecord);
+              db.SaveChanges();
+            }
+            else
+            {
+              var newDialogHistoryRecord = Models.DialogHistories.GetDialogHistories(dialogRecord);
+              if (dialogHistoryRecord != newDialogHistoryRecord)
+              {
+                dialogHistoryRecord.ListFIOSupervisor = string.Join(";", dialogRecord.ListFIOSupervisor);
+                dialogHistoryRecord.ListStartDialog = string.Join(";", dialogRecord.ListStartDialog);
+                dialogHistoryRecord.ListEndDialog = string.Join(";", dialogRecord.ListEndDialog);
+                db.DialogHistory.Update(dialogHistoryRecord);
+                db.SaveChanges();
+              }
+            }
+          }
+        DialogChats.Remove(dialogRecord);
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = Config.TopicId,
+            MessageThreadId = dialogRecord.MessageThreadId,
+            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+          });
+
+        UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialogRecord.ChatIdEmployee,
+            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
+            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+          });
+
+        if (dialogRecord.ListStartDialog.Count != 0)
+        {
+          await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = dialogRecord.ChatIdEmployee,
+              Text = $"Оцени диалог",
+              ReplyMarkup = Keyboards.DialogQuality(dialogRecord.Token)
+            });
+          _ = Task.Run(async () =>
+          {
+            await Task.Delay(5000);
+            await botClient.CloseForumTopicAsync(
+              new CloseForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId
+              });
+
+            await botClient.EditForumTopicAsync(
+              new EditForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId,
+                Name = dialogRecord.Token,
+                IconCustomEmojiId = "5312315739842026755"
+              });
+          });
+        }
+        else
+          _ = Task.Run(async () =>
+          {
+            await Task.Delay(5000);
+            await botClient.DeleteForumTopicAsync(
+              new DeleteForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId
+              });
+          });
+      }
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
+  }
+
+  public async Task EndDialogAsync(long chatId)
+  {
+    await dialogSemaphore.WaitAsync();
+    try
+    {
+      var dialogRecord = DialogChats.FirstOrDefault(x => x.ChatIdEmployee == chatId);
+
+      if (dialogRecord != null)
+      {
+        if (dialogRecord.ListStartDialog.Count != 0)
+          using (var db = new AppDbContext())
+          {
+            var dialogHistoryRecord = db.DialogHistory.FirstOrDefault(x => x.Token == dialogRecord.Token);
+            if (dialogHistoryRecord == null)
+            {
+              dialogHistoryRecord = Models.DialogHistories.GetDialogHistories(dialogRecord);
+              db.DialogHistory.Add(dialogHistoryRecord);
+              db.SaveChanges();
+            }
+            else
+            {
+              var newDialogHistoryRecord = Models.DialogHistories.GetDialogHistories(dialogRecord);
+              if (dialogHistoryRecord != newDialogHistoryRecord)
+              {
+                dialogRecord.ListEndDialog.Add(Substitution.GetCorrectDateTime);
+                dialogHistoryRecord.ListFIOSupervisor = string.Join(";", dialogRecord.ListFIOSupervisor);
+                dialogHistoryRecord.ListStartDialog = string.Join(";", dialogRecord.ListStartDialog);
+                dialogHistoryRecord.ListEndDialog = string.Join(";", dialogRecord.ListEndDialog);
+                db.DialogHistory.Update(dialogHistoryRecord);
+                db.SaveChanges();
+              }
+            }
+          }
+        DialogChats.Remove(dialogRecord);
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = Config.TopicId,
+            MessageThreadId = dialogRecord.MessageThreadId,
+            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+          });
+
+        UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialogRecord.ChatIdEmployee,
+            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
+            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+          });
+
+        if (dialogRecord.ListStartDialog.Count != 0)
+        {
+          await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = dialogRecord.ChatIdEmployee,
+              Text = $"Оцени диалог",
+              ReplyMarkup = Keyboards.DialogQuality(dialogRecord.Token)
+            });
+          _ = Task.Run(async () =>
+          {
+            await Task.Delay(5000);
+            await botClient.CloseForumTopicAsync(
+              new CloseForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId
+              });
+
+            await botClient.EditForumTopicAsync(
+              new EditForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId,
+                Name = dialogRecord.Token,
+                IconCustomEmojiId = "5312315739842026755"
+              });
+          });
+        }
+        else
+          _ = Task.Run(async () =>
+          {
+            await Task.Delay(5000);
+            await botClient.DeleteForumTopicAsync(
+              new DeleteForumTopicRequest()
+              {
+                ChatId = Config.TopicId,
+                MessageThreadId = dialogRecord.MessageThreadId
+              });
+          });
+      }
+      else
+      {
+        await ErrorDialogAsync(chatId);
+      }
+    }
+    finally
+    {
+      dialogSemaphore.Release();
+    }
   }
 }

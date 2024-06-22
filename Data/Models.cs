@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
+using static QuestionBot.Program;
 
 namespace QuestionBot.Data.Models;
 
@@ -50,7 +52,7 @@ public class RegisteredUsersModel
       FIO = fio ?? throw new ArgumentNullException(nameof(fio)),
       ChatId = chatId ?? 0,
       Username = username ?? "Не указан",
-      Division = division ?? Program.Config.Division ?? "СТП",
+      Division = division ?? Config.Division ?? "СТП",
       Position = position ?? "Должность не указана",
       Boss = boss ?? "Руководитель не указан",
       Email = email ?? "Не указан",
@@ -88,7 +90,7 @@ public class RegisteredUsersModel
   public bool MatchThisFIO()
   {
     Regex regexFIO = new(@"^([а-яА-ЯёЁ]+)\s([а-яА-ЯёЁ]+)\s([а-яА-ЯёЁ]+)\s([а-яА-ЯёЁ]+)$|^([а-яА-ЯёЁ]+)\s([а-яА-ЯёЁ]+)\s([а-яА-ЯёЁ]+)$");
-    return regexFIO.Match(this.FIO).Success;
+    return regexFIO.Match(FIO).Success;
   }
 }
 
@@ -99,7 +101,7 @@ public class UserModel
   // username Телеграмм пользователя (если есть)
   public string? Username { get; set; }
   // Полное имя пользователя
-  public string? FIO { get; set; }
+  public required string FIO { get; set; }
   public string? Email { get; set; }
   // Должность пользователя
   public string? Position { get; set; }
@@ -107,9 +109,6 @@ public class UserModel
   public short DefaultMode { get; set; }
   // Текущее состояние пользователя
   public short CurrentMode { get; set; }
-  public bool TokenCorrect { get; set; }
-  public string? Token { get; set; }
-  public string? Buffer { get; set; }
   public override bool Equals(object? obj)
   {
     if (obj == null || GetType() != obj.GetType())
@@ -130,31 +129,50 @@ public class UserModel
     return HashCode.Combine(FIO, DefaultMode, Email, Position, ChatId, Username);
   }
 
-  public static async Task<UserModel?> GetCorrectUserAsync(long chatId, string username = "")
+  public static async Task<UserModel?> GetCorrectUserAsync(bool isTopic, long chatId, string username = "")
   {
-    var currentUser = Program.UsersList.FirstOrDefault(x => x.ChatId == chatId);
+    var currentUser = UsersList.FirstOrDefault(x => x.ChatId == chatId);
     var correctUser = GetUser(chatId, username);
     if (correctUser == null)
     {
-      await Program.botClient.SendMessageAsync(
-            new SendMessageRequest()
+      if (isTopic)
+        await botClient.BanChatMemberAsync(
+              new BanChatMemberRequest()
+              {
+                ChatId = Config.TopicId,
+                UserId = chatId,
+              });
+      else
+        await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = chatId,
+                Text = $"Этот бот работает только для {Config.Division}"
+              });
+      return null;
+    }
+
+    if (isTopic && correctUser.DefaultMode switch { 20 or 30 or 100 => false, _ => true })
+    {
+      await botClient.BanChatMemberAsync(
+            new BanChatMemberRequest()
             {
-              ChatId = chatId,
-              Text = $"Этот бот работает только для {Program.Config.Division}"
+              ChatId = Config.TopicId,
+              UserId = chatId
             });
       return null;
     }
 
     if (currentUser is null || !currentUser.Equals(correctUser))
     {
-      var index = Program.UsersList.IndexOf(currentUser!);
+      var index = UsersList.IndexOf(currentUser!);
       if (index != -1)
-        Program.UsersList[index] = correctUser;
+        UsersList[index] = correctUser;
       else
-        Program.UsersList.Add(correctUser);
+        UsersList.Add(correctUser);
     }
 
-    return Program.UsersList.FirstOrDefault(x => x.ChatId == chatId);
+    return UsersList.FirstOrDefault(x => x.ChatId == chatId);
   }
 
   /// <summary>
@@ -163,7 +181,7 @@ public class UserModel
   /// <param name="chatId">Идентификатор чата пользователя.</param>
   /// <param name="username">username Телеграмм пользователя (необязательно).</param>
   /// <returns>Объект UserModel, представляющий информацию о пользователе.</returns>
-  public static UserModel GetUser(long chatId, string username = "")
+  public static UserModel? GetUser(long chatId, string username = "")
   {
     RegisteredUsersModel? user = null;
     using (AppDbContext db = new())
@@ -173,8 +191,16 @@ public class UserModel
       try
       {
         if (username != "Скрыто/не определено" && username != "")
-          userByUsername = db.RegisteredUsers.SingleOrDefault(x => x.Username == username && (x.Division == Program.Config.Division || x.Role == 6 || x.Role == 10));
-        userByChatId = db.RegisteredUsers.SingleOrDefault(x => x.ChatId == chatId && (x.Division == Program.Config.Division || x.Role == 6 || x.Role == 10));
+          userByUsername = db.RegisteredUsers.SingleOrDefault(x =>
+                                                            x.Username == username &&
+                                                            (x.Role == 10 ||
+                                                            (x.Division == Config.Division &&
+                                                            (x.Role == 1 || x.Role == 2 || x.Role == 3 || x.Role == 8))));
+        userByChatId = db.RegisteredUsers.SingleOrDefault(x =>
+                                                    x.ChatId == chatId &&
+                                                    (x.Role == 10 ||
+                                                    (x.Division == Config.Division &&
+                                                    (x.Role == 1 || x.Role == 2 || x.Role == 3 || x.Role == 8))));
       }
       catch
       {
@@ -207,6 +233,7 @@ public class UserModel
         user = userByUsername;
       }
     }
+    if (user == null) return null;
 
     // Получаем должность пользователя
     var position = user?.Position;
@@ -214,9 +241,9 @@ public class UserModel
     var mode = Substitution.ModeCode[user?.Role switch
     {
       1 => "signed",
-      2 => "signed rg",
+      2 => "supervisor",
       3 => "signed supervisor",
-      10 => "signed root",
+      8 or 10 => "signed root",
       _ => "default"
     }];
 
@@ -225,12 +252,11 @@ public class UserModel
     {
       ChatId = chatId,
       Username = user?.Username,
-      FIO = user?.FIO,
+      FIO = user?.FIO ?? user?.Username ?? throw new Exception("FIO is null"),
       Email = user?.Email,
       Position = position,
       DefaultMode = mode,
-      CurrentMode = mode,
-      TokenCorrect = mode != Substitution.ModeCode["default"]
+      CurrentMode = mode
     };
   }
 
@@ -247,9 +273,39 @@ public class UserModel
     return false; // Не найден ключ
   }
 }
-/// <summary>Модель базы данных сотрудников</summary>
+
 [Table("DialogHistories")]
-public class DialogHistoryModels
+public class DialogHistories
+{
+  [Key]
+  public required string Token { get; set; }
+  public required string FIOEmployee { get; set; }
+  public required string ListFIOSupervisor { get; set; }
+  public required string StartQuestion { get; set; }
+  public required int FirstMessageId { get; set; }
+  public required int MessageThreadId { get; set; }
+  public required string ListStartDialog { get; set; }
+  public required string ListEndDialog { get; set; }
+  public bool? DialogQuality { get; set; }
+
+  public static DialogHistories GetDialogHistories(QueueModels.DialogChatRecord dialogRecord) =>
+    new()
+    {
+      Token = dialogRecord.Token,
+      FIOEmployee = dialogRecord.FIOEmployee,
+      ListFIOSupervisor = string.Join(";", dialogRecord.ListFIOSupervisor),
+      StartQuestion = dialogRecord.StartQuestion,
+      FirstMessageId = dialogRecord.FirstMessageId,
+      MessageThreadId = dialogRecord.MessageThreadId,
+      ListStartDialog = string.Join(";", dialogRecord.ListStartDialog),
+      ListEndDialog = string.Join(";", dialogRecord.ListEndDialog)
+    };
+}
+
+
+/// <summary>Модель базы данных сотрудников</summary>
+[Table("OldDialogHistories")]
+public class OldDialogHistoryModels
 {
   [Key]
   /// <summary>Идентификатор диалога</summary>

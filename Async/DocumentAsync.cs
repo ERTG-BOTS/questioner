@@ -17,11 +17,96 @@ namespace QuestionBot.Async;
 
 public class DocumentAsync
 {
+
   public static async Task DialogHistoryExcel(long chatId, int month)
   {
     using (AppDbContext dbContext = new())
     {
-      var dialogHistory = dbContext.DialogHistoryModels
+      var dialogHistory = dbContext.DialogHistory
+                                   .ToList()
+                                   .Where(x => DateTime.Parse(x.StartQuestion).Month == month)
+                                   .OrderBy(x => x.FirstMessageId)
+                                   .ToList();
+      using (var package = new ExcelPackage())
+      {
+        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
+
+        worksheet.Cells[1, 1].Value = "Token";
+        worksheet.Cells[1, 2].Value = "Специалист";
+        worksheet.Cells[1, 3].Value = "Старший";
+        worksheet.Cells[1, 4].Value = "Время вопроса";
+        worksheet.Cells[1, 5].Value = "Время ответа";
+        worksheet.Cells[1, 6].Value = "Время завершения";
+        worksheet.Cells[1, 7].Value = "Оценка";
+
+        int row = 2;
+
+
+        foreach (var dialog in dialogHistory)
+        {
+          int rowBuffer = 0;
+          int rowBufferMax = 0;
+
+          worksheet.Cells[row, 1].Value = dialog.Token;
+          worksheet.Cells[row, 2].Value = dialog.FIOEmployee;
+          worksheet.Cells[row, 4].Value = dialog.StartQuestion;
+          worksheet.Cells[row, 7].Value = dialog.DialogQuality switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          foreach (var item in dialog.ListFIOSupervisor.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 3].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListStartDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 5].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListEndDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 6].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          row += rowBufferMax;
+        }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        var fileName = $"DialogHistory_{russianCulture.DateTimeFormat.GetMonthName(month)}.xlsx";
+        var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
+        File.WriteAllBytes(filePath, package.GetAsByteArray());
+        using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
+        {
+          InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
+          await botClient.SendDocumentAsync(
+                new SendDocumentRequest()
+                {
+                  ChatId = chatId,
+                  Document = inputFileFromStream
+                });
+        }
+      }
+    }
+  }
+
+
+
+
+
+  public static async Task OldDialogHistoryExcel(long chatId, int month)
+  {
+    using (AppDbContext dbContext = new())
+    {
+      var dialogHistory = dbContext.OldDialogHistory
                                    .Where(x => x.TimeDialogStart.Month == month)
                                    .OrderBy(x => x.TimeDialogStart)
                                    .ToList();
@@ -60,7 +145,7 @@ public class DocumentAsync
 
         worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
-        var fileName = $"DialogHistory_{DateTime.UtcNow:MM_yyyy_HH_mm}.xlsx";
+        var fileName = $"DialogHistory_{russianCulture.DateTimeFormat.GetMonthName(month)}.xlsx";
         var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
         File.WriteAllBytes(filePath, package.GetAsByteArray());
         using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
@@ -77,7 +162,7 @@ public class DocumentAsync
     }
   }
 
-  public static async Task DialogHistoryPDF(long chatId, DialogHistoryModels currentDialog)
+  public static async Task DialogHistoryPDF(long chatId, OldDialogHistoryModels currentDialog)
   {
     string[] dialogHistory = currentDialog.DialogHistory.Split('@');
     if (currentDialog.FIOSupervisor == currentDialog.FIOEmployee)

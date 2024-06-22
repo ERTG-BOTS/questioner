@@ -11,10 +11,13 @@ class Keyboards
   /// <returns>готовую клавиатуру</returns>
   public static ReplyKeyboardMarkup GetCurrentKeyboard(int modeCode) => modeCode switch
   {
-    2 => new ReplyKeyboardMarkup(new KeyboardButton[][]
+    2 or 20 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
           new("Задать вопрос")
+        ],
+        [
+          new("Вернуть вопрос")
         ]
       })
     { ResizeKeyboard = true },
@@ -25,48 +28,17 @@ class Keyboards
         ]
       })
     { ResizeKeyboard = true },
-    10 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Готов")
-        ]
-      })
-    { ResizeKeyboard = true },
-    11 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Не готов")
-        ]
-      })
-    { ResizeKeyboard = true },
-    5 or 12 => new ReplyKeyboardMarkup(new KeyboardButton[][]
+    5 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
           new ("Завершить диалог")
         ]
       })
     { ResizeKeyboard = true },
-    13 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Готов")
-        ],
-        [
-          new ("Не готов")
-        ],
-      })
-    { ResizeKeyboard = true },
-    20 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Стать спецом"), new("Стать старшим")
-        ]
-      })
-    { ResizeKeyboard = true },
     100 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
-          new ("Стать спецом"), new("Стать старшим")
+          new ("Стать спецом")
         ],
         [
           new("Файл с диалогами")

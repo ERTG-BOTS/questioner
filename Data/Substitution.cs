@@ -16,14 +16,11 @@ public static class Substitution
     {"blocked" , -1 },
     {"default" , 0 },
     {"signed" , 2 },
+    {"signed supervisor" , 20 },
     {"question" , 3 },
     {"await answer" , 4 },
     {"in dialog" , 5 },
-    {"signed rg", 10 },
-    {"ready rg", 11},
-    {"in dialog rg", 12},
-    {"await ready rg", 13},
-    {"signed supervisor" , 20 },
+    {"supervisor" , 30 },
     {"signed root" , 100 },
     {"test" , 999 },
   };
@@ -109,6 +106,8 @@ public static class Substitution
 
     return convertedDate;
   }
+
+  public static string GetCorrectDateTime => DateTime.UtcNow.AddHours(5).ToString("dd.MM.yyyy HH:mm:ss");
 }
 
 public static class ListExtensions
