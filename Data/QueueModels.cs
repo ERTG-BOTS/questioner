@@ -176,7 +176,7 @@ public class QueueChatManager
         {
           ChatId = Config.TopicId,
           MessageThreadId = newTopic.MessageThreadId,
-          IconCustomEmojiId = "5417915203100613993"
+          IconCustomEmojiId = "5377316857231450742"
         });
 
       await botClient.SendMessageAsync(
@@ -366,7 +366,7 @@ public class QueueChatManager
                 ChatId = Config.TopicId,
                 MessageThreadId = dialogRecord.MessageThreadId,
                 Name = dialogRecord.Token,
-                IconCustomEmojiId = "5312315739842026755"
+                IconCustomEmojiId = "5237699328843200968"
               });
           });
         }
@@ -465,7 +465,7 @@ public class QueueChatManager
                 ChatId = Config.TopicId,
                 MessageThreadId = dialogRecord.MessageThreadId,
                 Name = dialogRecord.Token,
-                IconCustomEmojiId = "5312315739842026755"
+                IconCustomEmojiId = "5237699328843200968"
               });
           });
         }
