@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
                             ListFIOSupervisor NVARCHAR(MAX) NOT NULL,
                             StartQuestion NVARCHAR(MAX) NOT NULL,
                             FirstMessageId INT NOT NULL,
+                            MessageThreadId INT NOT NULL,
                             ListStartDialog NVARCHAR(MAX) NOT NULL,
                             ListEndDialog NVARCHAR(MAX) NOT NULL,
                             DialogQuality bit

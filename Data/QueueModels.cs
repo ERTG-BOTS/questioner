@@ -101,7 +101,7 @@ public class QueueChatManager
 
   public async Task AddDialogAsync(Models.DialogHistories dialog, long chatId)
   {
-    await Task.Delay(5000); 
+    await Task.Delay(5000);
     await dialogSemaphore.WaitAsync();
     try
     {
@@ -171,6 +171,14 @@ public class QueueChatManager
                               Name = question.FIO
                             });
 
+      await botClient.CloseForumTopicAsync(
+        new CloseForumTopicRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = newTopic.MessageThreadId
+        }
+      );
+
       await botClient.EditForumTopicAsync(
         new EditForumTopicRequest()
         {
@@ -214,6 +222,14 @@ public class QueueChatManager
       };
 
       DialogChats.Add(dialogRecord);
+      
+      await botClient.ReopenForumTopicAsync(
+        new ReopenForumTopicRequest()
+        {
+          ChatId = Config.TopicId,
+          MessageThreadId = newTopic.MessageThreadId
+        }
+      );
     }
     finally
     {

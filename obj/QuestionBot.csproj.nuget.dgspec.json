@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\local\\Documents\\GitHub\\QuestionBot\\QuestionBot.csproj": {}
+    "D:\\Repos\\C#\\QuestionBot\\QuestionBot.csproj": {}
   },
   "projects": {
-    "C:\\Users\\local\\Documents\\GitHub\\QuestionBot\\QuestionBot.csproj": {
+    "D:\\Repos\\C#\\QuestionBot\\QuestionBot.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\local\\Documents\\GitHub\\QuestionBot\\QuestionBot.csproj",
+        "projectUniqueName": "D:\\Repos\\C#\\QuestionBot\\QuestionBot.csproj",
         "projectName": "QuestionBot",
-        "projectPath": "C:\\Users\\local\\Documents\\GitHub\\QuestionBot\\QuestionBot.csproj",
-        "packagesPath": "C:\\Users\\local\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\local\\Documents\\GitHub\\QuestionBot\\obj\\",
+        "projectPath": "D:\\Repos\\C#\\QuestionBot\\QuestionBot.csproj",
+        "packagesPath": "C:\\Users\\lidiu\\.nuget\\packages\\",
+        "outputPath": "D:\\Repos\\C#\\QuestionBot\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\local\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\lidiu\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -22,6 +22,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {},
           "https://nuget.voids.site/v3/index.json": {}
         },
@@ -79,7 +80,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.204/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.300/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

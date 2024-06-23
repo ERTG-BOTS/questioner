@@ -64,22 +64,7 @@ public class Program
             catch { }
           }
         });
-
-    // _ = Task.Run(async () =>
-    // {
-    //   while (true)
-    //   {
-    //     await Task.Delay(1000);
-    //     try
-    //     {
-    //       await SendJsonToLine();
-    //     }
-    //     catch { }
-    //   }
-    // });
-
-    // _ = Task.Run(QueueManager.MonitorDialogActivity);
-
+        
     _ = Task.Run(EndDayTask);
 
     botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions, cancellationToken);
