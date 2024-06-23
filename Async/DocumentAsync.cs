@@ -12,6 +12,7 @@ using iText.Layout.Element;
 using Telegram.Bot.Types.ReplyMarkups;
 using iText.IO.Image;
 using Telegram.Bot.Requests;
+using System.Globalization;
 
 namespace QuestionBot.Async;
 
@@ -24,7 +25,7 @@ public class DocumentAsync
     {
       var dialogHistory = dbContext.DialogHistory
                                    .ToList()
-                                   .Where(x => DateTime.Parse(x.StartQuestion).Month == month)
+                                   .Where(x => int.TryParse(x.StartQuestion.Split('.')[1], out int Month) && Month == month)
                                    .OrderBy(x => x.FirstMessageId)
                                    .ToList();
       using (var package = new ExcelPackage())

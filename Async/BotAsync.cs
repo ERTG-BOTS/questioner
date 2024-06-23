@@ -14,6 +14,7 @@ using Telegram.Bot.Requests;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Data.Common;
 using System.Security.Cryptography;
+using System.Globalization;
 
 namespace QuestionBot.Async;
 
@@ -202,6 +203,45 @@ internal class BotAsync
     {
       switch (currentMessage.Split('@')[0])
       {
+        case "/help":
+          await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = Config.TopicId,
+              MessageThreadId = message.MessageThreadId,
+              Text =
+@"Инструкция для работы с диалогами для старших
+
+Создание тем для диалогов:
+- Если ограничение на количество диалогов в группе не достигнуто, создается тема, название которой соответствует ФИО Специалиста.
+- На теме появляется значок 💬.
+
+Забрать диалог:
+- Каждый диалог с значком 💬 может быть забран одним из Старших с помощью команды 
+<copy>/start</copy>
+- Команду нужно отправить в сам диалог.
+- В диалоге может быть только один старший. Сообщения других старших не дойдут до специалиста, и бот ответит ""Это не твой чат"".
+
+Диалог в работе:
+- После того, как диалог забрали, значок меняется на 💅.
+- Сообщения Старшего, который забрал диалог, будут пересылаться специалисту в бота.
+
+Завершение или освобождение диалога:
+- Диалог может завершить Специалист или Старший, который забрал этот диалог.
+- Диалог может освободить Старший, который забрал этот диалог.
+- Завершить или освободить чат до того, как его забрали, нельзя.
+
+Команды для управления диалогом:
+- Чтобы завершить диалог, нужно написать 
+<copy>/end</copy>
+ После этого бот напишет ""Диалог завершен"", закроет тему, название поменяется на уникальный токен, а значок на 🏆.
+- Чтобы освободить диалог, нужно написать 
+<copy>/release</copy>
+В этом случае значок меняется на 💬, и чат может забрать любой Старший.",
+              ParseMode = ParseMode.Html,
+              ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+            });
+          return;
         case "/start":
           if (dialog.ChatIdLastSupervisor != 0)
           {
@@ -237,6 +277,12 @@ internal class BotAsync
                   MessageThreadId = (int)message.MessageThreadId,
                   IconCustomEmojiId = EmojiKeys["start"]
                 });
+              await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = dialog.ChatIdEmployee,
+                  Text = $"На твой вопрос отвечает {currentUser.FIO}"
+                });
             }
             finally
             {
@@ -266,8 +312,13 @@ internal class BotAsync
                   ChatId = Config.TopicId,
                   MessageThreadId = (int)message.MessageThreadId,
                   IconCustomEmojiId = EmojiKeys["new"]
-                }
-              );
+                });
+              await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = dialog.ChatIdEmployee,
+                  Text = $"Старший вышел из чата, твой вопрос сейчас на рассмотрении"
+                });
             }
             finally
             {
@@ -373,6 +424,39 @@ internal class BotAsync
               case "/release":
                 currentUser.CurrentMode = currentUser.DefaultMode;
                 return;
+              case "/help":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text =
+@"Задаем вопрос:
+- Нажмите кнопку ""Задать вопрос"".
+- Напишите одно сообщение с текстом вопроса.
+- Постарайтесь сформулировать вопрос максимально понятно, чтобы тебе было проще его идентифицировать.
+
+Очередь вопросов:
+- Как только вопрос задан, он попадает в очередь. Бот сообщит: ""Вопрос был добавлен в очередь"".
+- Если есть свободные слоты, чат передается Старший. Бот сообщит: ""Вопрос передан на рассмотрение"".
+
+Обмен сообщениями с Старшим:
+- После передачи вопроса на рассмотрение можно отправлять любое количество сообщений, которые Старший получит.
+- Когда свободный Старший возьмет твой диалог в работу, ты получишь сообщение: ""На твой вопрос отвечает XXXXXXX"".
+
+Передача вопроса между специалистами:
+- Старший может передать ваш вопрос другому старшему, если это потребуется. Бот сообщит: ""Старший вышел из чата, твой вопрос сейчас на рассмотрении"".
+- Впоследствии вопрос заберет другой Старший.
+
+Закрытие вопроса:
+- Вопрос может закрыть как старший специалист, так и Старший.
+
+Возврат чатов специалистом:
+- Специалист может вернуть один из трех последних чатов.
+- Идентифицировать вопрос можно по первому сообщению или времени, когда был задан вопрос.
+- История общения по этому вопросу будет у Старшего."
+                  }
+                );
+                return;
               case "задать вопрос":
                 currentUser.CurrentMode = ModeCode["question"];
                 SendMessageRequest sendMessage = new()
@@ -384,13 +468,19 @@ internal class BotAsync
                 await botClient.SendMessageAsync(sendMessage);
                 return;
               case "вернуть вопрос":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text = "Загружаю список вопросов",
+                  });
                 var dialogList = db.DialogHistory
                                   .Where(x => x.FIOEmployee == currentUser.FIO)
                                   .OrderBy(x => x.FirstMessageId)
                                   .ToList()
                                   .Where(x =>
-                                    DateTime.TryParse(x.StartQuestion, out var dateTime)
-                                    && dateTime > DateTime.UtcNow.AddDays(-1))
+                                    DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
+                                      && dateTime > DateTime.UtcNow.AddDays(-1))
                                   .TakeLast(3);
 
                 if (dialogList.Count() != 0)
@@ -399,7 +489,9 @@ internal class BotAsync
                   int counter = 1;
                   foreach (var dialog in dialogList)
                   {
-                    var firstMessage = await botClient.EditMessageReplyMarkupAsync(
+                    try
+                    {
+                      var firstMessage = await botClient.EditMessageReplyMarkupAsync(
                       new EditMessageReplyMarkupRequest()
                       {
                         ChatId = Config.TopicId,
@@ -414,16 +506,21 @@ internal class BotAsync
                           })
                       });
 
-                    await botClient.EditMessageReplyMarkupAsync(
-                      new EditMessageReplyMarkupRequest()
-                      {
-                        ChatId = Config.TopicId,
-                        MessageId = dialog.FirstMessageId,
-                        ReplyMarkup = null
-                      });
+                      await botClient.EditMessageReplyMarkupAsync(
+                        new EditMessageReplyMarkupRequest()
+                        {
+                          ChatId = Config.TopicId,
+                          MessageId = dialog.FirstMessageId,
+                          ReplyMarkup = null
+                        });
 
-                    sendDialog.Add(@$"{counter++}. {dialog.StartQuestion}
-{firstMessage.Text ?? "Текста нет"}");
+                      sendDialog.Add(@$"{counter++}. {dialog.StartQuestion}
+{firstMessage.Text ?? firstMessage.Caption ?? "Текста нет"}");
+                    }
+                    catch (Exception ex)
+                    {
+                      WriteLog("Error", ex.Message);
+                    }
                   }
 
                   await botClient.SendMessageAsync(
@@ -432,6 +529,15 @@ internal class BotAsync
                       ChatId = chatId,
                       Text = string.Join("\n\n", sendDialog),
                       ReplyMarkup = new InlineKeyboardMarkup(KeyboardButtonsEmployees(dialogList.Count()))
+                    });
+                }
+                else
+                {
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = "Список вопросов пуст, вернуть нечего"
                     });
                 }
                 return;
@@ -515,11 +621,24 @@ internal class BotAsync
                     strings.Add($"{item.Emoji} | {item.CustomEmojiId}");
                   }
                   currentUser.CurrentMode = ModeCode["signed"];
-                  var sendMessage =
-                    sendMessageRequest("Теперь ты специалист", currentUser.CurrentMode);
-                  await botClient.SendMessageAsync(sendMessage);
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = $"Теперь ты специалист",
+                      ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                    });
                   return;
                 }
+              case "максмум диалогов":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text = $"Текущее максимальное количество диалогов {Config.DialogMaxCount}\nЧтобы изменить максмальное количество диалогов, отправь число\n0 - снять ограничение",
+                    ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                  });
+                return;
               case "файл с диалогами":
                 await botClient.SendMessageAsync(
                   new SendMessageRequest()
@@ -551,7 +670,8 @@ internal class BotAsync
                     new SendMessageRequest()
                     {
                       ChatId = chatId,
-                      Text = $"{Config.TopicUrl}/{dialogHistory.FirstMessageId}"
+                      Text = $"{Config.TopicUrl}/{dialogHistory.FirstMessageId}",
+                      ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
                     }
                   );
                 }
@@ -564,6 +684,18 @@ internal class BotAsync
                   }
                   else
                   {
+                    if (int.TryParse(message.Text, out var count) && count >= 0)
+                    {
+                      Config.DialogMaxCount = count;
+                      await botClient.SendMessageAsync(
+                        new SendMessageRequest()
+                        {
+                          ChatId = chatId,
+                          Text = $"Максимальное количество диалогов установлено на {count}",
+                          ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                        });
+                      return;
+                    }
                     await SendDefault(currentUser);
                   }
                 }
