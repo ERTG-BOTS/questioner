@@ -25,6 +25,14 @@ public static class Substitution
     {"test" , 999 },
   };
 
+  public static readonly Dictionary<string, string> EmojiKeys = new()
+  {
+    {"start", "5368808634392257474"},
+    {"end", "5237699328843200968"},
+    {"new", "5377316857231450742"},
+    {"lost", "5372819184658949787"}
+  };
+
   /// <summary>
   /// Словать параметоров с форматированием логов
   /// </summary>

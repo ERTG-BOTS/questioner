@@ -125,7 +125,7 @@ internal class BotAsync
                 {
                   ChatId = Config.TopicId,
                   MessageThreadId = (int)message.MessageThreadId,
-                  IconCustomEmojiId = "5312315739842026755",
+                  IconCustomEmojiId = EmojiKeys["end"],
                   Name = checkDialog.Token
                 }
               );
@@ -163,7 +163,7 @@ internal class BotAsync
           {
             ChatId = Config.TopicId,
             MessageThreadId = (int)message.MessageThreadId,
-            IconCustomEmojiId = "5372819184658949787"
+            IconCustomEmojiId = EmojiKeys["lost"]
           });
         await botClient.SendMessageAsync(
           new SendMessageRequest()
@@ -211,7 +211,7 @@ internal class BotAsync
                   {
                     ChatId = Config.TopicId,
                     MessageThreadId = (int)message.MessageThreadId,
-                    IconCustomEmojiId = "5368808634392257474"
+                    IconCustomEmojiId = EmojiKeys["start"]
                   });
               }
               finally
@@ -241,7 +241,7 @@ internal class BotAsync
                   {
                     ChatId = Config.TopicId,
                     MessageThreadId = (int)message.MessageThreadId,
-                    IconCustomEmojiId = "5417915203100613993"
+                    IconCustomEmojiId = EmojiKeys["new"]
                   }
                 );
               }
