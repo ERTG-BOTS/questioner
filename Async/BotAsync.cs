@@ -90,7 +90,10 @@ internal class BotAsync
 
   static async Task HandleTopicAsync(Message message, long chatId)
   {
-    if (message.MessageThreadId == null || message.MessageThreadId == 3 || chatId == Config.BotChatId) return;
+    if (message.MessageThreadId == null
+      || message.MessageThreadId == 3
+      || chatId == Config.BotChatId
+      || message.MessageThreadId == 1) return;
 
     var currentUser = UsersList.First(x => x.ChatId == chatId);
     #region Старший
@@ -157,7 +160,7 @@ internal class BotAsync
         {
           ChatId = Config.TopicId,
           MessageThreadId = (int)message.MessageThreadId,
-          IconCustomEmojiId = "5372819184658949787"
+          IconCustomEmojiId = EmojiKeys["lost"]
         });
       await botClient.SendMessageAsync(
         new SendMessageRequest()
@@ -205,15 +208,8 @@ internal class BotAsync
                 {
                   ChatId = Config.TopicId,
                   MessageThreadId = (int)message.MessageThreadId,
-<<<<<<< HEAD
-                  IconCustomEmojiId = EmojiKeys["end"],
-                  Name = checkDialog.Token
-                }
-              );
-=======
-                  IconCustomEmojiId = "5368808634392257474"
+                  IconCustomEmojiId = EmojiKeys["start"]
                 });
->>>>>>> 3f7617dfa20699903f5b7cee3e4c3b5b29b2c195
             }
             finally
             {
@@ -242,7 +238,7 @@ internal class BotAsync
                 {
                   ChatId = Config.TopicId,
                   MessageThreadId = (int)message.MessageThreadId,
-                  IconCustomEmojiId = "5417915203100613993"
+                  IconCustomEmojiId = EmojiKeys["new"]
                 }
               );
             }
@@ -278,151 +274,6 @@ internal class BotAsync
           }
           else
           {
-<<<<<<< HEAD
-            ChatId = Config.TopicId,
-            MessageThreadId = (int)message.MessageThreadId,
-            IconCustomEmojiId = EmojiKeys["lost"]
-          });
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = Config.TopicId,
-            MessageThreadId = 3,
-            Text = $"Не найден диалог в чате {Config.TopicUrl}/{message.MessageThreadId}"
-          });
-        return;
-      }
-      if (message.Type == MessageType.Text)
-      {
-        switch (currentMessage.Split('@')[0])
-        {
-          case "/start":
-            if (dialog.ChatIdLastSupervisor != 0)
-            {
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = message.MessageThreadId,
-                  Text = "Нельзя взять этот чат в работу",
-                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                });
-            }
-            else
-            {
-              await QueueManager.dialogSemaphore.WaitAsync();
-              try
-              {
-                dialog.ChatIdLastSupervisor = chatId;
-                dialog.ListFIOSupervisor.Add(currentUser.FIO);
-                dialog.ListStartDialog.Add(GetCorrectDateTime);
-                await botClient.SendMessageAsync(
-                  new SendMessageRequest()
-                  {
-                    ChatId = Config.TopicId,
-                    MessageThreadId = message.MessageThreadId,
-                    Text = $"Чат в работу был взят {currentUser.FIO}",
-                    ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                  });
-                await botClient.EditForumTopicAsync(
-                  new EditForumTopicRequest()
-                  {
-                    ChatId = Config.TopicId,
-                    MessageThreadId = (int)message.MessageThreadId,
-                    IconCustomEmojiId = EmojiKeys["start"]
-                  });
-              }
-              finally
-              {
-                QueueManager.dialogSemaphore.Release();
-              }
-            }
-            return;
-          case "/release":
-            if (dialog.ChatIdLastSupervisor == currentUser.ChatId)
-            {
-              await QueueManager.dialogSemaphore.WaitAsync();
-              try
-              {
-                dialog.ChatIdLastSupervisor = 0;
-                dialog.ListEndDialog.Add(GetCorrectDateTime);
-                await botClient.SendMessageAsync(
-                  new SendMessageRequest()
-                  {
-                    ChatId = Config.TopicId,
-                    MessageThreadId = message.MessageThreadId,
-                    Text = $"Чат был освобожден {currentUser.FIO}",
-                    ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                  });
-                await botClient.EditForumTopicAsync(
-                  new EditForumTopicRequest()
-                  {
-                    ChatId = Config.TopicId,
-                    MessageThreadId = (int)message.MessageThreadId,
-                    IconCustomEmojiId = EmojiKeys["new"]
-                  }
-                );
-              }
-              finally
-              {
-                QueueManager.dialogSemaphore.Release();
-              }
-            }
-            else
-            {
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = message.MessageThreadId,
-                  Text = $"Это не твой чат",
-                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                });
-            }
-            return;
-          case "/end":
-            if (dialog.ChatIdLastSupervisor == currentUser.ChatId)
-            {
-              await QueueManager.EndDialogAsync(dialog);
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = message.MessageThreadId,
-                  Text = $"Чат был закрыт {currentUser.FIO}",
-                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                });
-            }
-            else
-            {
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = message.MessageThreadId,
-                  Text = $"Это не твой чат",
-                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                });
-            }
-            return;
-          default: break;
-        }
-      }
-      if (dialog.ChatIdLastSupervisor == chatId)
-        await QueueManager.DeliveryMessageDialogAsync(dialog, message.MessageId);
-      else
-      {
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = Config.TopicId,
-            MessageThreadId = message.MessageThreadId,
-            Text = $"Это не твой чат",
-            ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-          });
-      }
-      #endregion
-=======
             await botClient.SendMessageAsync(
               new SendMessageRequest()
               {
@@ -435,7 +286,6 @@ internal class BotAsync
           return;
         default: break;
       }
->>>>>>> 3f7617dfa20699903f5b7cee3e4c3b5b29b2c195
     }
     if (dialog.ChatIdLastSupervisor == chatId)
       await QueueManager.DeliveryMessageDialogAsync(dialog, message.MessageId);
