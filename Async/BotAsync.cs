@@ -90,12 +90,39 @@ internal class BotAsync
 
   static async Task HandleTopicAsync(Message message, long chatId)
   {
+
+    var currentUser = UsersList.First(x => x.ChatId == chatId);
     if (message.MessageThreadId == null
       || message.MessageThreadId == 3
       || chatId == Config.BotChatId
-      || message.MessageThreadId == 1) return;
+      || message.MessageThreadId == 1)
+    {
+      try
+      {
+        if (currentUser.DefaultMode == ModeCode["signed root"])
+        {
+          await botClient.PromoteChatMemberAsync(
+            new PromoteChatMemberRequest()
+            {
+              ChatId = Config.TopicId,
+              UserId = chatId,
+              CanManageChat = true,
+              CanDeleteMessages = true,
+              CanManageVideoChat = true,
+              CanRestrictMembers = true,
+              CanPromoteMembers = true,
+              CanChangeInfo = true,
+              CanInviteUsers = true,
+              CanPostMessages = true,
+              CanPinMessages = true,
+              CanManageTopics = true
+            });
+        }
+      }
+      catch { }
+      return;
+    }
 
-    var currentUser = UsersList.First(x => x.ChatId == chatId);
     #region Старший
     string currentMessage = message.Text?.ToLower().Split('@')[0] ?? "";
     var dialog = QueueManager.DialogChats.FirstOrDefault(x => x.MessageThreadId == message.MessageThreadId);
