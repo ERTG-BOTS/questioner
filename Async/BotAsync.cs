@@ -218,8 +218,7 @@ internal class BotAsync
 
 Забрать диалог:
 - Каждый диалог с значком 💬 может быть забран одним из Старших с помощью команды 
-<copy>/start</copy>
-- Команду нужно отправить в сам диалог.
+- Диалог будет взят в работу после первого сообщения, если ранее его никто не взял
 - В диалоге может быть только один старший. Сообщения других старших не дойдут до специалиста, и бот ответит ""Это не твой чат"".
 
 Диалог в работе:
@@ -241,54 +240,6 @@ internal class BotAsync
               ParseMode = ParseMode.Html,
               ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
             });
-          return;
-        case "/start":
-          if (dialog.ChatIdLastSupervisor != 0)
-          {
-            await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = Config.TopicId,
-                MessageThreadId = message.MessageThreadId,
-                Text = "Нельзя взять этот чат в работу",
-                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-              });
-          }
-          else
-          {
-            await QueueManager.dialogSemaphore.WaitAsync();
-            try
-            {
-              dialog.ChatIdLastSupervisor = chatId;
-              dialog.ListFIOSupervisor.Add(currentUser.FIO);
-              dialog.ListStartDialog.Add(GetCorrectDateTime);
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = message.MessageThreadId,
-                  Text = $"Чат в работу был взят {currentUser.FIO}",
-                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
-                });
-              await botClient.EditForumTopicAsync(
-                new EditForumTopicRequest()
-                {
-                  ChatId = Config.TopicId,
-                  MessageThreadId = (int)message.MessageThreadId,
-                  IconCustomEmojiId = EmojiKeys["start"]
-                });
-              await botClient.SendMessageAsync(
-                new SendMessageRequest()
-                {
-                  ChatId = dialog.ChatIdEmployee,
-                  Text = $"На твой вопрос отвечает {currentUser.FIO}"
-                });
-            }
-            finally
-            {
-              QueueManager.dialogSemaphore.Release();
-            }
-          }
           return;
         case "/release":
           if (dialog.ChatIdLastSupervisor == currentUser.ChatId)
@@ -363,6 +314,41 @@ internal class BotAsync
           }
           return;
         default: break;
+      }
+    }
+    if (dialog.ChatIdLastSupervisor == 0)
+    {
+      await QueueManager.dialogSemaphore.WaitAsync();
+      try
+      {
+        dialog.ChatIdLastSupervisor = chatId;
+        dialog.ListFIOSupervisor.Add(currentUser.FIO);
+        dialog.ListStartDialog.Add(GetCorrectDateTime);
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = Config.TopicId,
+            MessageThreadId = message.MessageThreadId,
+            Text = $"Чат в работу был взят {currentUser.FIO}",
+            ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+          });
+        await botClient.EditForumTopicAsync(
+          new EditForumTopicRequest()
+          {
+            ChatId = Config.TopicId,
+            MessageThreadId = (int)message.MessageThreadId,
+            IconCustomEmojiId = EmojiKeys["start"]
+          });
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialog.ChatIdEmployee,
+            Text = $"На твой вопрос отвечает {currentUser.FIO}"
+          });
+      }
+      finally
+      {
+        QueueManager.dialogSemaphore.Release();
       }
     }
     if (dialog.ChatIdLastSupervisor == chatId)
