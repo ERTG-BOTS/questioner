@@ -54,7 +54,7 @@ internal class BotAsync
       {
         long chatId = thisMessage?.Chat.Id ?? 0;
 
-        bool isTopic = chatId == Config.TopicId;
+        bool isTopic = chatId == Config.ForumId;
         if (isTopic)
           chatId = thisMessage?.From?.Id ?? 0;
 
@@ -105,7 +105,7 @@ internal class BotAsync
           await botClient.PromoteChatMemberAsync(
             new PromoteChatMemberRequest()
             {
-              ChatId = Config.TopicId,
+              ChatId = Config.ForumId,
               UserId = chatId,
               CanManageChat = true,
               CanDeleteMessages = true,
@@ -138,7 +138,7 @@ internal class BotAsync
           await botClient.SendMessageAsync(
             new SendMessageRequest()
             {
-              ChatId = Config.TopicId,
+              ChatId = Config.ForumId,
               MessageThreadId = message.MessageThreadId,
               Text = "Диалога в данном чате не найдено\nЧат будет закрыт"
             }
@@ -148,7 +148,7 @@ internal class BotAsync
             await botClient.EditForumTopicAsync(
               new EditForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = (int)message.MessageThreadId,
                 IconCustomEmojiId = "5312315739842026755",
                 Name = checkDialog.Token
@@ -161,7 +161,7 @@ internal class BotAsync
             await botClient.CloseForumTopicAsync(
               new CloseForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = (int)message.MessageThreadId
               }
             );
@@ -173,27 +173,27 @@ internal class BotAsync
       await botClient.SendMessageAsync(
         new SendMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = message.MessageThreadId,
           Text = "Диалога в данном чате не найдено\nЧат будет закрыт"
         });
       await botClient.CloseForumTopicAsync(
         new CloseForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = (int)message.MessageThreadId
         });
       await botClient.EditForumTopicAsync(
         new EditForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = (int)message.MessageThreadId,
           IconCustomEmojiId = EmojiKeys["lost"]
         });
       await botClient.SendMessageAsync(
         new SendMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = 3,
           Text = $"Не найден диалог в чате {Config.TopicUrl}/{message.MessageThreadId}"
         });
@@ -207,7 +207,7 @@ internal class BotAsync
           await botClient.SendMessageAsync(
             new SendMessageRequest()
             {
-              ChatId = Config.TopicId,
+              ChatId = Config.ForumId,
               MessageThreadId = message.MessageThreadId,
               Text =
 @"Инструкция для работы с диалогами для старших
@@ -252,7 +252,7 @@ internal class BotAsync
               await botClient.SendMessageAsync(
                 new SendMessageRequest()
                 {
-                  ChatId = Config.TopicId,
+                  ChatId = Config.ForumId,
                   MessageThreadId = message.MessageThreadId,
                   Text = $"Чат был освобожден {currentUser.FIO}",
                   ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -260,7 +260,7 @@ internal class BotAsync
               await botClient.EditForumTopicAsync(
                 new EditForumTopicRequest()
                 {
-                  ChatId = Config.TopicId,
+                  ChatId = Config.ForumId,
                   MessageThreadId = (int)message.MessageThreadId,
                   IconCustomEmojiId = EmojiKeys["new"]
                 });
@@ -281,7 +281,7 @@ internal class BotAsync
             await botClient.SendMessageAsync(
               new SendMessageRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = message.MessageThreadId,
                 Text = $"Это не твой чат",
                 ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -295,7 +295,7 @@ internal class BotAsync
             await botClient.SendMessageAsync(
               new SendMessageRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = message.MessageThreadId,
                 Text = $"Чат был закрыт {currentUser.FIO}",
                 ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -306,7 +306,7 @@ internal class BotAsync
             await botClient.SendMessageAsync(
               new SendMessageRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = message.MessageThreadId,
                 Text = $"Это не твой чат",
                 ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -327,7 +327,7 @@ internal class BotAsync
         await botClient.SendMessageAsync(
           new SendMessageRequest()
           {
-            ChatId = Config.TopicId,
+            ChatId = Config.ForumId,
             MessageThreadId = message.MessageThreadId,
             Text = $"Чат в работу был взят {currentUser.FIO}",
             ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -335,7 +335,7 @@ internal class BotAsync
         await botClient.EditForumTopicAsync(
           new EditForumTopicRequest()
           {
-            ChatId = Config.TopicId,
+            ChatId = Config.ForumId,
             MessageThreadId = (int)message.MessageThreadId,
             IconCustomEmojiId = EmojiKeys["start"]
           });
@@ -358,7 +358,7 @@ internal class BotAsync
       await botClient.SendMessageAsync(
         new SendMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = message.MessageThreadId,
           Text = $"Это не твой чат",
           ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
@@ -393,7 +393,7 @@ internal class BotAsync
       using AppDbContext db = new();
       var resultDb = db.RegisteredUsers.FirstOrDefault(x => x.ChatId == chatId);
       if (resultDb == null && currentUser.DefaultMode != ModeCode["default"])
-        currentUser = await GetCorrectUserAsync(message.Chat.Id == Config.TopicId, chatId) ?? throw new Exception($"Не удалось получить пользователя {chatId}");
+        currentUser = await GetCorrectUserAsync(message.Chat.Id == Config.ForumId, chatId) ?? throw new Exception($"Не удалось получить пользователя {chatId}");
 
       string currentMessage = message.Text?.ToLower() ?? message.Caption?.ToLower() ?? "";
 
@@ -480,7 +480,7 @@ internal class BotAsync
                       var firstMessage = await botClient.EditMessageReplyMarkupAsync(
                       new EditMessageReplyMarkupRequest()
                       {
-                        ChatId = Config.TopicId,
+                        ChatId = Config.ForumId,
                         MessageId = dialog.FirstMessageId,
                         ReplyMarkup = new InlineKeyboardMarkup(
                           new[]
@@ -495,7 +495,7 @@ internal class BotAsync
                       await botClient.EditMessageReplyMarkupAsync(
                         new EditMessageReplyMarkupRequest()
                         {
-                          ChatId = Config.TopicId,
+                          ChatId = Config.ForumId,
                           MessageId = dialog.FirstMessageId,
                           ReplyMarkup = null
                         });

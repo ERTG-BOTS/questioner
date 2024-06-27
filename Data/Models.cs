@@ -139,7 +139,7 @@ public class UserModel
         await botClient.BanChatMemberAsync(
               new BanChatMemberRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 UserId = chatId,
               });
       else
@@ -157,7 +157,7 @@ public class UserModel
       await botClient.BanChatMemberAsync(
             new BanChatMemberRequest()
             {
-              ChatId = Config.TopicId,
+              ChatId = Config.ForumId,
               UserId = chatId
             });
       return null;

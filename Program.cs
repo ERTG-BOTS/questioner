@@ -7,6 +7,7 @@ using Telegram.Bot.Polling;
 using OfficeOpenXml;
 using static QuestionBot.Async.TasksAsync;
 using Telegram.Bot.Requests;
+using System.Security.Cryptography;
 
 namespace QuestionBot;
 
@@ -64,8 +65,20 @@ public class Program
             catch { }
           }
         });
-        
+
     _ = Task.Run(EndDayTask);
+
+    _ = Task.Run(async () =>
+    {
+      while (true)
+      {
+          await Task.Delay(60 * 1000);
+        try
+        {
+          await ExpirationOverwatchTask();
+        } catch {}
+      }
+    });
 
     botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions, cancellationToken);
     Substitution.WriteLog("Start", $"Бот {botInfo.FirstName} запущен.");
