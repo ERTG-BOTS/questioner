@@ -25,11 +25,11 @@ public class ConfigInfo
 
 #if НЦК && !DEBUG
   public string BotToken { get; } = "6004209126:AAGayH0rZhI7iCNO8_qBDIw89rmSFnqAmF8";
-  public long TopicId = -1002199294331;
+  public long ForumId = -1002199294331;
   public string TopicUrl = "https://t.me/c/2199294331";
 #else
   public string BotToken { get; } = "6671363655:AAF3X2z4VTL4EPOenB6LR7BSjpwW1GeamgI";
-  public long TopicId = -1002199294331;
+  public long ForumId = -1002199294331;
   public string TopicUrl = "https://t.me/c/2199294331";
 #endif
   public TimeSpan DelayAfterDialog = new TimeSpan(0, 0, 5);

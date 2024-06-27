@@ -26,6 +26,8 @@ public class DialogChatRecord
   public int MessageThreadId { get; set; }
   public required List<string> ListStartDialog { get; set; }
   public required List<string> ListEndDialog { get; set; }
+  public DateTime? LastMessageReceived { get; set; }
+
 }
 
 public class QueueChatManager
@@ -116,20 +118,21 @@ public class QueueChatManager
         FirstMessageId = dialog.FirstMessageId,
         MessageThreadId = dialog.MessageThreadId,
         ListStartDialog = [.. dialog.ListStartDialog.Split(";")],
-        ListEndDialog = [.. dialog.ListEndDialog.Split(";")]
+        ListEndDialog = [.. dialog.ListEndDialog.Split(";")],
+        LastMessageReceived = DateTime.UtcNow,
       });
 
       await botClient.ReopenForumTopicAsync(
                       new ReopenForumTopicRequest()
                       {
-                        ChatId = Config.TopicId,
+                        ChatId = Config.ForumId,
                         MessageThreadId = dialog.MessageThreadId
                       });
 
       await botClient.EditForumTopicAsync(
         new EditForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = dialog.MessageThreadId,
           Name = dialog.FIOEmployee,
           IconCustomEmojiId = "5417915203100613993"
@@ -138,7 +141,7 @@ public class QueueChatManager
       await botClient.SendMessageAsync(
         new SendMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = dialog.MessageThreadId,
           Text = "Диалог возобновлен"
         });
@@ -167,14 +170,14 @@ public class QueueChatManager
       var newTopic = await botClient.CreateForumTopicAsync(
                             new CreateForumTopicRequest()
                             {
-                              ChatId = Config.TopicId,
+                              ChatId = Config.ForumId,
                               Name = question.FIO
                             });
 
       await botClient.CloseForumTopicAsync(
         new CloseForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = newTopic.MessageThreadId
         }
       );
@@ -182,7 +185,7 @@ public class QueueChatManager
       await botClient.EditForumTopicAsync(
         new EditForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = newTopic.MessageThreadId,
           IconCustomEmojiId = Substitution.EmojiKeys["new"]
         });
@@ -190,7 +193,7 @@ public class QueueChatManager
       await botClient.SendMessageAsync(
         new SendMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           Text = $"Вопрос задает <b>{question.FIO}</b>",
           MessageThreadId = newTopic.MessageThreadId,
           ParseMode = Telegram.Bot.Types.Enums.ParseMode.Html
@@ -200,7 +203,7 @@ public class QueueChatManager
       var firstMessageId = await botClient.CopyMessageAsync(
         new CopyMessageRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = newTopic.MessageThreadId,
           FromChatId = question.ChatId,
           MessageId = question.StartMessageId
@@ -219,6 +222,7 @@ public class QueueChatManager
         ChatIdLastSupervisor = 0,
         ListStartDialog = [],
         ListEndDialog = [],
+        LastMessageReceived = DateTime.UtcNow,
       };
 
       DialogChats.Add(dialogRecord);
@@ -226,7 +230,7 @@ public class QueueChatManager
       await botClient.ReopenForumTopicAsync(
         new ReopenForumTopicRequest()
         {
-          ChatId = Config.TopicId,
+          ChatId = Config.ForumId,
           MessageThreadId = newTopic.MessageThreadId
         }
       );
@@ -264,10 +268,11 @@ public class QueueChatManager
           new CopyMessageRequest()
           {
             ChatId = dialogRecord.ChatIdEmployee,
-            FromChatId = Config.TopicId,
+            FromChatId = Config.ForumId,
             MessageId = messageId
           }
         );
+        dialogRecord.LastMessageReceived = DateTime.UtcNow;
       }
     }
     finally
@@ -288,12 +293,13 @@ public class QueueChatManager
         await botClient.CopyMessageAsync(
           new CopyMessageRequest()
           {
-            ChatId = Config.TopicId,
+            ChatId = Config.ForumId,
             MessageThreadId = dialogRecord.MessageThreadId,
             FromChatId = dialogRecord.ChatIdEmployee,
             MessageId = messageId
           }
         );
+        dialogRecord.LastMessageReceived = DateTime.UtcNow;
       }
       else
       {
@@ -343,7 +349,7 @@ public class QueueChatManager
         await botClient.SendMessageAsync(
           new SendMessageRequest()
           {
-            ChatId = Config.TopicId,
+            ChatId = Config.ForumId,
             MessageThreadId = dialogRecord.MessageThreadId,
             Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
           });
@@ -372,14 +378,14 @@ public class QueueChatManager
             await botClient.CloseForumTopicAsync(
               new CloseForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId
               });
 
             await botClient.EditForumTopicAsync(
               new EditForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId,
                 Name = dialogRecord.Token,
                 IconCustomEmojiId = Substitution.EmojiKeys["end"]
@@ -393,7 +399,7 @@ public class QueueChatManager
             await botClient.DeleteForumTopicAsync(
               new DeleteForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId
               });
           });
@@ -442,7 +448,7 @@ public class QueueChatManager
         await botClient.SendMessageAsync(
           new SendMessageRequest()
           {
-            ChatId = Config.TopicId,
+            ChatId = Config.ForumId,
             MessageThreadId = dialogRecord.MessageThreadId,
             Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
           });
@@ -471,14 +477,14 @@ public class QueueChatManager
             await botClient.CloseForumTopicAsync(
               new CloseForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId
               });
 
             await botClient.EditForumTopicAsync(
               new EditForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId,
                 Name = dialogRecord.Token,
                 IconCustomEmojiId = Substitution.EmojiKeys["end"]
@@ -492,7 +498,7 @@ public class QueueChatManager
             await botClient.DeleteForumTopicAsync(
               new DeleteForumTopicRequest()
               {
-                ChatId = Config.TopicId,
+                ChatId = Config.ForumId,
                 MessageThreadId = dialogRecord.MessageThreadId
               });
           });
