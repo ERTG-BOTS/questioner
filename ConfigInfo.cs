@@ -28,7 +28,7 @@ public class ConfigInfo
   public long ForumId = -1002199294331;
   public string TopicUrl = "https://t.me/c/2199294331";
 #else
-  public string BotToken { get; } = "6671363655:AAF3X2z4VTL4EPOenB6LR7BSjpwW1GeamgI";
+  public string BotToken { get; } = "6192641034:AAHn4fFQbILklFe_NdNNL8aFRb_KLZkOtm0";
   public long ForumId = -1002199294331;
   public string TopicUrl = "https://t.me/c/2199294331";
 #endif
