@@ -109,7 +109,7 @@ internal class BotAsync
               UserId = chatId,
               CanManageChat = true,
               CanDeleteMessages = true,
-              CanManageVideoChat = true,
+              CanManageVideoChats = true,
               CanRestrictMembers = true,
               CanPromoteMembers = true,
               CanChangeInfo = true,
@@ -639,10 +639,10 @@ internal class BotAsync
                                   InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month), "0")
                               },
                               [
-                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month - 1), "1")
+                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-1).Month), "1")
                               ],
                               [
-                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month - 2), "2")
+                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-2).Month), "2")
                               ]
                           })
                   }
