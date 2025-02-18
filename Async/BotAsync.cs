@@ -794,8 +794,8 @@ internal class BotAsync
             });
             if (currentData.Length == 1)
             {
-              await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.Month - int.Parse(currentData[0]));
-              await DocumentAsync.OldDialogHistoryExcel(currentUser.ChatId, DateTime.Now.Month - int.Parse(currentData[0]));
+              await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
+              await DocumentAsync.OldDialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
             }
 
             return;
