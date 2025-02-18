@@ -135,7 +135,7 @@ public class QueueChatManager
           ChatId = Config.ForumId,
           MessageThreadId = dialog.MessageThreadId,
           Name = dialog.FIOEmployee,
-          IconCustomEmojiId = "5417915203100613993"
+          IconCustomEmojiId = Substitution.EmojiKeys["new"]
         });
 
       await botClient.SendMessageAsync(

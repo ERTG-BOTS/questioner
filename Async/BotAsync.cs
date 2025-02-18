@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -764,7 +764,7 @@ internal class BotAsync
                                   .OrderBy(x => x.FirstMessageId)
                                   .ToList()
                                   .Where(x =>
-                                    DateTime.TryParse(x.StartQuestion, out var dateTime)
+                                    DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
                                     && dateTime > DateTime.UtcNow.AddDays(-1))
                                   .TakeLast(3)
                                   .ToList();

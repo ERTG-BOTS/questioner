@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Data;
@@ -115,7 +115,7 @@ public static class Substitution
     return convertedDate;
   }
 
-  public static string GetCorrectDateTime => DateTime.UtcNow.AddHours(5).ToString("dd.MM.yyyy HH:mm:ss");
+  public static string GetCorrectDateTime => DateTime.UtcNow.AddHours(3).ToString("dd.MM.yyyy HH:mm:ss");
 }
 
 public static class ListExtensions
