@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -12,8 +12,6 @@ using static QuestionBot.Data.Keyboards;
 using QuestionBot.Data.QueueModels;
 using Telegram.Bot.Requests;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Data.Common;
-using System.Security.Cryptography;
 using System.Globalization;
 
 namespace QuestionBot.Async;
@@ -58,7 +56,12 @@ internal class BotAsync
         if (isTopic)
           chatId = thisMessage?.From?.Id ?? 0;
 
-        if (chatId == Config.BotChatId) return;
+        if (chatId == Config.BotChatId && update.Type == UpdateType.CallbackQuery && update.CallbackQuery?.Data is not null) {
+          await HandleCallBackQuery(update.CallbackQuery, chatId);
+          return;
+        }
+        else if (chatId == Config.BotChatId)
+          return;
 
         currentUser = await GetCorrectUserAsync(isTopic, chatId, thisMessage?.Chat.Username ?? "Скрыто/не определено");
 
@@ -298,7 +301,16 @@ internal class BotAsync
                 ChatId = Config.ForumId,
                 MessageThreadId = message.MessageThreadId,
                 Text = $"Чат был закрыт {currentUser.FIO}",
-                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId },
+              });
+              await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = message.MessageThreadId,
+                Text = "Оцени диалог",
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId },
+                ReplyMarkup = DialogQualityRg(dialog.Token)
               });
           }
           else
@@ -631,20 +643,7 @@ internal class BotAsync
                   {
                     ChatId = chatId,
                     Text = "За какой месяц отправить?",
-                    ReplyMarkup = new InlineKeyboardMarkup(
-                          new[]
-                          {
-                              new InlineKeyboardButton[]
-                              {
-                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month), "0")
-                              },
-                              [
-                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-1).Month), "1")
-                              ],
-                              [
-                                  InlineKeyboardButton.WithCallbackData(russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-2).Month), "2")
-                              ]
-                          })
+                    ReplyMarkup = ReportMonthSelector()
                   }
                 );
                 return;
@@ -713,6 +712,7 @@ internal class BotAsync
   {
     try
     {
+      WriteLog("callback", $"{chatId} {callbackQuery.Data}");
       var message = (Message?)callbackQuery.Message;
       if (callbackQuery.Data == null || callbackQuery.Message == null || message?.Text == null)
       {
@@ -730,78 +730,103 @@ internal class BotAsync
         }
         return;
       }
+
       string[] currentData = callbackQuery.Data.Split('#');
       StringBuilder output = new();
+      using var db = new AppDbContext();
+
+      if (currentData.Length == 3 && currentData[0] == "rg" && chatId == Config.BotChatId)
+      {
+        var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[2]);
+        if (dialog != null)
+        {
+          dialog.DialogQualityRg = currentData[1] == "good";
+        }
+        db.SaveChanges();
+        await botClient.EditMessageTextAsync(
+              new EditMessageTextRequest
+              {
+                ChatId = Config.ForumId,
+                MessageId = message!.MessageId,
+                Text = "Оценка диалога проставлена",
+                ReplyMarkup = null
+              });
+        return;
+      }
+
       var currentUser = UsersList.First(x => x.ChatId == chatId);
 
-      using (var db = new AppDbContext())
-
-        switch (currentUser.CurrentMode)
-        {
-          #region Сотрудник
-          case 2 or 20:
-            if (currentData.Length == 2)
+      switch (currentUser.CurrentMode)
+      {
+        #region Сотрудник
+        case 2 or 20:
+          if (currentData.Length == 2)
+          {
+            var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[1]);
+            if (dialog != null)
             {
-              var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[1]);
-              if (dialog != null)
-              {
-                dialog.DialogQuality = currentData[0] == "good";
-              }
-              db.SaveChanges();
-              await botClient.EditMessageTextAsync(
-                    new EditMessageTextRequest
-                    {
-                      ChatId = chatId,
-                      MessageId = message!.MessageId,
-                      Text = "Оценка диалога проставлена",
-                      ReplyMarkup = null
-                    });
+              dialog.DialogQuality = currentData[0] == "good";
             }
-            else if (currentData.Length == 1)
-            {
-              var dialogList = db.DialogHistory
-                                  .Where(x => x.FIOEmployee == currentUser.FIO)
-                                  .OrderBy(x => x.FirstMessageId)
-                                  .ToList()
-                                  .Where(x =>
-                                    DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
-                                    && dateTime > DateTime.UtcNow.AddDays(-1))
-                                  .TakeLast(3)
-                                  .ToList();
-
-              if (int.TryParse(currentData[0], out var num) && dialogList.Count >= num)
-              {
-                await botClient.EditMessageReplyMarkupAsync(
-                  new EditMessageReplyMarkupRequest
+            db.SaveChanges();
+            await botClient.EditMessageTextAsync(
+                  new EditMessageTextRequest
                   {
                     ChatId = chatId,
                     MessageId = message!.MessageId,
+                    Text = "Оценка диалога проставлена",
                     ReplyMarkup = null
                   });
-                await QueueManager.AddDialogAsync(dialogList[num - 1], chatId);
-              }
-            }
-            return;
-          case 3 or 4 or 5: return;
-          #endregion
-          #region Администратор
-          case 100:
-            await botClient.EditMessageReplyMarkupAsync(new EditMessageReplyMarkupRequest()
-            {
-              ChatId = chatId,
-              MessageId = message!.MessageId,
-              ReplyMarkup = null
-            });
-            if (currentData.Length == 1)
-            {
-              await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
-              await DocumentAsync.OldDialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
-            }
+          }
+          
+          else if (currentData.Length == 1)
+          {
+            var dialogList = db.DialogHistory
+                                .Where(x => x.FIOEmployee == currentUser.FIO)
+                                .OrderBy(x => x.FirstMessageId)
+                                .ToList()
+                                .Where(x =>
+                                  DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
+                                  && dateTime > DateTime.UtcNow.AddDays(-1))
+                                .TakeLast(3)
+                                .ToList();
 
-            return;
-          #endregion
-          default: break;
-        }
+            if (int.TryParse(currentData[0], out var num) && dialogList.Count >= num)
+            {
+              await botClient.EditMessageReplyMarkupAsync(
+                new EditMessageReplyMarkupRequest
+                {
+                  ChatId = chatId,
+                  MessageId = message!.MessageId,
+                  ReplyMarkup = null
+                });
+              await QueueManager.AddDialogAsync(dialogList[num - 1], chatId);
+            }
+          }
+          return;
+        case 3 or 4 or 5: return;
+        #endregion
+        #region Администратор
+        case 100:
+          await botClient.EditMessageReplyMarkupAsync(new EditMessageReplyMarkupRequest()
+          {
+            ChatId = chatId,
+            MessageId = message!.MessageId,
+            ReplyMarkup = null
+          });
+          if (currentData.Length == 1)
+          {
+            if (currentData[0] == "3") {
+              await DocumentAsync.DialogHistoryExcel(currentUser.ChatId);
+              return;
+            }
+            await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
+            // await DocumentAsync.OldDialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
+          }
+
+          return;
+        #endregion
+        default: break;
+      }
       WriteLog("Error", $"CurrentMode : {currentUser.CurrentMode} CurrentData {string.Join(", ", currentData.Select((s, i) => $"[{i}] = {s}"))}");
       await botClient.EditMessageTextAsync(
             new EditMessageTextRequest

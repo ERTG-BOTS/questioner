@@ -37,7 +37,8 @@ public class AppDbContext : DbContext
                             MessageThreadId INT NOT NULL,
                             ListStartDialog NVARCHAR(MAX) NOT NULL,
                             ListEndDialog NVARCHAR(MAX) NOT NULL,
-                            DialogQuality bit
+                            DialogQuality bit,
+                            DialogQualityRg bit
                         );
                     END");
       }

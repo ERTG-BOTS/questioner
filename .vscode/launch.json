@@ -23,5 +23,16 @@
       "console": "internalConsole",
       "requireExactSource": false
     },
+    {
+      "name": "QuestionBot run Debug НТП",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build Debug НТП",
+      "program": "${workspaceFolder}/bin/DEBUG/net8.0/QuestionBot.dll",
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "requireExactSource": false
+    },
   ]
 }

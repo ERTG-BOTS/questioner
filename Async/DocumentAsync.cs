@@ -12,7 +12,7 @@ using iText.Layout.Element;
 using Telegram.Bot.Types.ReplyMarkups;
 using iText.IO.Image;
 using Telegram.Bot.Requests;
-using System.Globalization;
+using System.Diagnostics;
 
 namespace QuestionBot.Async;
 
@@ -38,7 +38,8 @@ public class DocumentAsync
         worksheet.Cells[1, 4].Value = "Время вопроса";
         worksheet.Cells[1, 5].Value = "Время ответа";
         worksheet.Cells[1, 6].Value = "Время завершения";
-        worksheet.Cells[1, 7].Value = "Оценка";
+        worksheet.Cells[1, 7].Value = "Оценка от специалиста";
+        worksheet.Cells[1, 8].Value = "Оценка от старшего";
 
         int row = 2;
 
@@ -52,6 +53,7 @@ public class DocumentAsync
           worksheet.Cells[row, 2].Value = dialog.FIOEmployee;
           worksheet.Cells[row, 4].Value = dialog.StartQuestion;
           worksheet.Cells[row, 7].Value = dialog.DialogQuality switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          worksheet.Cells[row, 8].Value = dialog.DialogQualityRg switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
           foreach (var item in dialog.ListFIOSupervisor.Split(";"))
           {
             worksheet.Cells[row + rowBuffer++, 3].Value = item;
@@ -99,7 +101,102 @@ public class DocumentAsync
     }
   }
 
+  public static async Task DialogHistoryExcel(long chatId)
+  {
+    Stopwatch sw = new Stopwatch();
+    sw.Start();
+    Substitution.WriteLog("debug", "start assembling excel");
+    using (AppDbContext dbContext = new())
+    {
+      var dialogHistory = dbContext.DialogHistory.ToList()
+                                   .Where(x => DateTime.ParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", russianCulture).CompareTo(DateTime.UtcNow.AddMonths(-3)) > 0)
+                                   .OrderBy(x => x.FirstMessageId)
+                                   .ToList();
+    Substitution.WriteLog("debug", $"got all dialogues: {sw.ElapsedMilliseconds} ms");
+    sw.Restart();
+      using (var package = new ExcelPackage())
+      {
+      Substitution.WriteLog("debug", $"package open: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за 3 месяца");
 
+        worksheet.Cells[1, 1].Value = "Token";
+        worksheet.Cells[1, 2].Value = "Специалист";
+        worksheet.Cells[1, 3].Value = "Старший";
+        worksheet.Cells[1, 4].Value = "Время вопроса";
+        worksheet.Cells[1, 5].Value = "Время ответа";
+        worksheet.Cells[1, 6].Value = "Время завершения";
+        worksheet.Cells[1, 7].Value = "Оценка от специалиста";
+        worksheet.Cells[1, 8].Value = "Оценка от старшего";
+
+        int row = 2;
+
+      Substitution.WriteLog("debug", $"populating started: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        foreach (var dialog in dialogHistory)
+        {
+          int rowBuffer = 0;
+          int rowBufferMax = 0;
+
+          worksheet.Cells[row, 1].Value = dialog.Token;
+          worksheet.Cells[row, 2].Value = dialog.FIOEmployee;
+          worksheet.Cells[row, 4].Value = dialog.StartQuestion;
+          worksheet.Cells[row, 7].Value = dialog.DialogQuality switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          worksheet.Cells[row, 8].Value = dialog.DialogQualityRg switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          foreach (var item in dialog.ListFIOSupervisor.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 3].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListStartDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 5].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListEndDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 6].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          row += rowBufferMax;
+        }
+       Substitution.WriteLog("debug", $"populated: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+      Substitution.WriteLog("debug", $"autofitted: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+
+        var fileName = $"DialogHistory_3m_{DateTime.UtcNow.AddHours(5): dd-MM-yy HH-mm}.xlsx";
+        var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
+        File.WriteAllBytes(filePath, package.GetAsByteArray());
+      Substitution.WriteLog("debug", $"file saved: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
+        {
+          InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
+          await botClient.SendDocumentAsync(
+                new SendDocumentRequest()
+                {
+                  ChatId = chatId,
+                  Document = inputFileFromStream
+                });
+        }
+        Substitution.WriteLog("debug", $"file sent: {sw.ElapsedMilliseconds} ms");
+        sw.Stop();
+      }
+    }
+  }
 
 
 

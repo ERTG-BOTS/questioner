@@ -93,4 +93,30 @@ class Keyboards
       new[]{ InlineKeyboardButton.WithCallbackData("Хорошо", $"good#{token}"), InlineKeyboardButton.WithCallbackData("Плохо", $"bad#{token}") },
     });
   }
+
+  public static InlineKeyboardMarkup DialogQualityRg(string token)
+  {
+    return new(new[]
+    {
+      new[]{ InlineKeyboardButton.WithCallbackData("Хорошо", $"rg#good#{token}"), InlineKeyboardButton.WithCallbackData("Плохо", $"rg#bad#{token}") },
+    });
+  }
+
+  public static InlineKeyboardMarkup ReportMonthSelector() {
+    return  new[] {
+        new InlineKeyboardButton[]
+        {
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month), "0")
+        },
+        [
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-1).Month), "1")
+        ],
+        [
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-2).Month), "2")
+        ],
+        [
+          InlineKeyboardButton.WithCallbackData("3 месяца", "3")
+        ]
+    };
+  }
 }

@@ -287,6 +287,7 @@ public class DialogHistories
   public required string ListStartDialog { get; set; }
   public required string ListEndDialog { get; set; }
   public bool? DialogQuality { get; set; }
+  public bool? DialogQualityRg { get; set; }
 
   public static DialogHistories GetDialogHistories(QueueModels.DialogChatRecord dialogRecord) =>
     new()

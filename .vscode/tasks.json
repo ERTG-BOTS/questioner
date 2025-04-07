@@ -37,8 +37,35 @@
       "args": [
         "build",
         "${workspaceFolder}/QuestionBot.csproj",
-        "/p:DefineConstants=DEBUG",
-        "/p:DefineConstants=НЦК",
+        "/p:DefineConstants=DEBUG%3BНЦК",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Build Release НТП",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "${workspaceFolder}/QuestionBot.csproj",
+        "/p:DefineConstants=НТП",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Build Debug НТП",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "${workspaceFolder}/QuestionBot.csproj",
+        "/p:DefineConstants=DEBUG%3BНТП",
       ],
       "group": {
         "kind": "build",

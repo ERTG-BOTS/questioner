@@ -7,7 +7,6 @@ using Telegram.Bot.Polling;
 using OfficeOpenXml;
 using static QuestionBot.Async.TasksAsync;
 using Telegram.Bot.Requests;
-using System.Security.Cryptography;
 
 namespace QuestionBot;
 
