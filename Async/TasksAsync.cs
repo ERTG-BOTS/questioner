@@ -2,6 +2,8 @@
 using QuestionBot.Data;
 using QuestionBot.Data.QueueModels;
 using Telegram.Bot;
+using Telegram.Bot.Requests;
+using Telegram.Bot.Types.Enums;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Async;
@@ -13,101 +15,74 @@ public class TasksAsync
     while (true)
     {
       await Substitution.DelayToTime(new TimeOnly(3, 30, 0));
-      await QueueManager.ClearAllQueuesAsync();
+      await QueueManager.ClearQuestionQueuesAsync();
     }
   }
 
   public static async Task MergeDialogTask()
   {
-    var readyQueueKeys = QueueManager.ReadyQueue.Keys.ToList();
     var questionQueueKeys = QueueManager.QuestionQueue.Keys.ToList();
+    var dialogCount = QueueManager.DialogChats.Count();
 
-    if (readyQueueKeys.Any() && questionQueueKeys.Any())
+    if (questionQueueKeys.Any() && (dialogCount < Config.DialogMaxCount || Config.DialogMaxCount == 0))
     {
-      int minReadyId = readyQueueKeys.Min();
       int minQuestionId = questionQueueKeys.Min();
-
-      var readyRecord = QueueManager.ReadyQueue[minReadyId];
       var questionRecord = QueueManager.QuestionQueue[minQuestionId];
 
-      await QueueManager.RemoveFromReadyQueueAsync(readyRecord.ChatId);
       await QueueManager.RemoveFromQuestionQueueAsync(questionRecord.ChatId);
 
-
       UsersList.First(x => x.ChatId == questionRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog"];
-      await botClient.SendTextMessageAsync(questionRecord.ChatId,
-          $"На твой вопрос отвечает {readyRecord.FIO}",
-          replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"]));
+      await botClient.SendMessageAsync(
+         new SendMessageRequest()
+         {
+           ChatId = questionRecord.ChatId,
+           Text = $"Вопрос передан на рассмотрение",
+           ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+         });
 
-      UsersList.First(x => x.ChatId == readyRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog rg"];
-      await botClient.SendTextMessageAsync(readyRecord.ChatId,
-          $"Вопрос от {questionRecord.FIO}",
-          replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog rg"]));
-      await botClient.CopyMessageAsync(readyRecord.ChatId, questionRecord.ChatId, questionRecord.StartMessageId);
-
-      var dialogRecord = new DialogChatRecord
-      {
-        ChatIdEmployee = questionRecord.ChatId,
-        ChatIdSupervisor = readyRecord.ChatId,
-        FIOEmployee = questionRecord.FIO,
-        FIOSupervisor = readyRecord.FIO,
-        TimeStart = DateTime.UtcNow,
-        TimeLast = DateTime.UtcNow,
-        MessageHistory = [(questionRecord.ChatId, questionRecord.StartMessageId)]
-      };
-
-      await QueueManager.AddToDialogQueueAsync(dialogRecord);
+      await QueueManager.AddDialogAsync(questionRecord);
     }
   }
 
-  public static async Task SendJsonToLine()
+  public static async Task ExpirationOverwatchTask()
   {
-    var readyQueueJson = QueueManager.ReadyQueue.Select(record =>
-        new
+    DateTime utcNow = DateTime.UtcNow;
+    foreach (var dialog in QueueManager.DialogChats.Where(x => x.LastMessageReceived != null && utcNow.Subtract((DateTime)x.LastMessageReceived).TotalMinutes > 2))
+    {
+      if (utcNow.Subtract((DateTime)dialog.LastMessageReceived!).TotalMinutes > 3)
+      {
+        await botClient.SendMessageAsync(new SendMessageRequest()
         {
-          id = record.Key,
-          name = record.Value.FIO,
-          status = "READY",
-          time = $"{(int)(DateTime.UtcNow - record.Value.TimeStart).TotalMinutes}:{(DateTime.UtcNow - record.Value.TimeStart).Seconds}"
-        }).ToList();
+          ChatId = dialog.ChatIdEmployee,
+          Text = "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+        });
 
-    var awaitQueueJson = QueueManager.AwaitQueue.Select(record =>
-        new
+        await botClient.SendMessageAsync(new SendMessageRequest()
         {
-          id = record.Key,
-          name = record.Value.FIO,
-          status = "FINISHING",
-          time = $"{(int)(DateTime.UtcNow - record.Value.TimeStart).TotalMinutes}:{(DateTime.UtcNow - record.Value.TimeStart).Seconds}"
-        }).ToList();
+          ChatId = Config.ForumId,
+          MessageThreadId = dialog.MessageThreadId,
+          Text = "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+        });
 
-    var dialogQueueJson = QueueManager.DialogQueue.Select(record =>
-        new
+        await QueueManager.EndDialogAsync(dialog);
+      }
+      else
+      {
+
+        await botClient.SendMessageAsync(new SendMessageRequest()
         {
-          id = record.Key,
-          name = record.Value.FIOSupervisor,
-          status = "IN_DIALOG",
-          time = $"{(int)(DateTime.UtcNow - record.Value.TimeStart).TotalMinutes}:{(DateTime.UtcNow - record.Value.TimeStart).Seconds}"
-        }).ToList();
+          ChatId = dialog.ChatIdEmployee,
+          Text = "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+        });
 
-    var questionQueueJson = QueueManager.QuestionQueue.Select(record =>
-        new
+        await botClient.SendMessageAsync(new SendMessageRequest()
         {
-          id = record.Key,
-          name = record.Value.FIO,
-          status = "AWAIT_ANSWER",
-          time = $"{(int)(DateTime.UtcNow - record.Value.TimeStart).TotalMinutes}:{(DateTime.UtcNow - record.Value.TimeStart).Seconds}"
-        }).ToList();
+          ChatId = Config.ForumId,
+          MessageThreadId = dialog.MessageThreadId,
+          Text = "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+        });
 
-    var allRecordsJson = readyQueueJson.ToList();
-    allRecordsJson.AddRange(awaitQueueJson);
-    allRecordsJson.AddRange(dialogQueueJson);
-    allRecordsJson.AddRange(questionQueueJson);
-
-    var json = JsonConvert.SerializeObject(allRecordsJson);
-#if НЦК
-    await Substitution.SendJsonToUrl("http://46.146.231.248/apinck", json);
-#else
-    await Substitution.SendJsonToUrl("http://46.146.231.248/apispsk", json);
-#endif
+      }
+    }
   }
 }

@@ -6,6 +6,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using OfficeOpenXml;
 using static QuestionBot.Async.TasksAsync;
+using Telegram.Bot.Requests;
 
 namespace QuestionBot;
 
@@ -16,12 +17,18 @@ public class Program
   public static ConfigInfo Config = new();
   public static QueueChatManager QueueManager = new();
   public static readonly CultureInfo russianCulture = new("ru-RU");
+  private static bool TryConnectAllTable()
+  {
+    using var db = new AppDbContext();
+    return !db.TryConnectAllTable();
+  }
   static async Task Main()
   {
     ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
     botClient = new TelegramBotClient(Config.BotToken);
-    Substitution.WriteLog("Start", $"Загрузка бота {botClient.GetMeAsync().Result.FirstName}...");
+    var botInfo = botClient.MakeRequestAsync(new GetMeRequest()).Result;
+    Substitution.WriteLog("Start", $"Загрузка бота {botInfo.FirstName}...");
     var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
 
     if (!Directory.Exists(bufferDirectory))
@@ -36,7 +43,14 @@ public class Program
       AllowedUpdates = { },
     };
 
+    Config.BotChatId = botInfo.Id;
     Config.PrintAllSettings();
+
+    if (TryConnectAllTable())
+    {
+      Environment.Exit(999);
+    }
+
 
     _ = Task.Run(async () =>
         {
@@ -51,25 +65,22 @@ public class Program
           }
         });
 
+    _ = Task.Run(EndDayTask);
+
     _ = Task.Run(async () =>
     {
       while (true)
       {
-        await Task.Delay(1000);
+          await Task.Delay(60 * 1000);
         try
         {
-          await SendJsonToLine();
-        }
-        catch { }
+          await ExpirationOverwatchTask();
+        } catch {}
       }
     });
 
-    _ = Task.Run(QueueManager.MonitorDialogActivity);
-
-    _ = Task.Run(EndDayTask);
-
     botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions, cancellationToken);
-    Substitution.WriteLog("Start", $"Бот {botClient.GetMeAsync().Result.FirstName} запущен.");
+    Substitution.WriteLog("Start", $"Бот {botInfo.FirstName} запущен.");
 
     await Task.Delay(Timeout.Infinite);
   }

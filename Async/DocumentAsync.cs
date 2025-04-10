@@ -11,16 +11,200 @@ using iText.Kernel.Pdf;
 using iText.Layout.Element;
 using Telegram.Bot.Types.ReplyMarkups;
 using iText.IO.Image;
+using Telegram.Bot.Requests;
+using System.Diagnostics;
 
 namespace QuestionBot.Async;
 
 public class DocumentAsync
 {
+
   public static async Task DialogHistoryExcel(long chatId, int month)
   {
     using (AppDbContext dbContext = new())
     {
-      var dialogHistory = dbContext.DialogHistoryModels
+      var dialogHistory = dbContext.DialogHistory
+                                   .ToList()
+                                   .Where(x => int.TryParse(x.StartQuestion.Split('.')[1], out int Month) && Month == month)
+                                   .OrderBy(x => x.FirstMessageId)
+                                   .ToList();
+      using (var package = new ExcelPackage())
+      {
+        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за {month} месяц");
+
+        worksheet.Cells[1, 1].Value = "Token";
+        worksheet.Cells[1, 2].Value = "Специалист";
+        worksheet.Cells[1, 3].Value = "Старший";
+        worksheet.Cells[1, 4].Value = "Время вопроса";
+        worksheet.Cells[1, 5].Value = "Время ответа";
+        worksheet.Cells[1, 6].Value = "Время завершения";
+        worksheet.Cells[1, 7].Value = "Оценка от специалиста";
+        worksheet.Cells[1, 8].Value = "Оценка от старшего";
+
+        int row = 2;
+
+
+        foreach (var dialog in dialogHistory)
+        {
+          int rowBuffer = 0;
+          int rowBufferMax = 0;
+
+          worksheet.Cells[row, 1].Value = dialog.Token;
+          worksheet.Cells[row, 2].Value = dialog.FIOEmployee;
+          worksheet.Cells[row, 4].Value = dialog.StartQuestion;
+          worksheet.Cells[row, 7].Value = dialog.DialogQuality switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          worksheet.Cells[row, 8].Value = dialog.DialogQualityRg switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          foreach (var item in dialog.ListFIOSupervisor.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 3].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListStartDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 5].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListEndDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 6].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          row += rowBufferMax;
+        }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        var fileName = $"DialogHistory_{russianCulture.DateTimeFormat.GetMonthName(month)}.xlsx";
+        var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
+        File.WriteAllBytes(filePath, package.GetAsByteArray());
+        using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
+        {
+          InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
+          await botClient.SendDocumentAsync(
+                new SendDocumentRequest()
+                {
+                  ChatId = chatId,
+                  Document = inputFileFromStream
+                });
+        }
+      }
+    }
+  }
+
+  public static async Task DialogHistoryExcel(long chatId)
+  {
+    Stopwatch sw = new Stopwatch();
+    sw.Start();
+    Substitution.WriteLog("debug", "start assembling excel");
+    using (AppDbContext dbContext = new())
+    {
+      var dialogHistory = dbContext.DialogHistory.ToList()
+                                   .Where(x => DateTime.ParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", russianCulture).CompareTo(DateTime.UtcNow.AddMonths(-3)) > 0)
+                                   .OrderBy(x => x.FirstMessageId)
+                                   .ToList();
+    Substitution.WriteLog("debug", $"got all dialogues: {sw.ElapsedMilliseconds} ms");
+    sw.Restart();
+      using (var package = new ExcelPackage())
+      {
+      Substitution.WriteLog("debug", $"package open: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        var worksheet = package.Workbook.Worksheets.Add($"Диалоги за 3 месяца");
+
+        worksheet.Cells[1, 1].Value = "Token";
+        worksheet.Cells[1, 2].Value = "Специалист";
+        worksheet.Cells[1, 3].Value = "Старший";
+        worksheet.Cells[1, 4].Value = "Время вопроса";
+        worksheet.Cells[1, 5].Value = "Время ответа";
+        worksheet.Cells[1, 6].Value = "Время завершения";
+        worksheet.Cells[1, 7].Value = "Оценка от специалиста";
+        worksheet.Cells[1, 8].Value = "Оценка от старшего";
+
+        int row = 2;
+
+      Substitution.WriteLog("debug", $"populating started: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        foreach (var dialog in dialogHistory)
+        {
+          int rowBuffer = 0;
+          int rowBufferMax = 0;
+
+          worksheet.Cells[row, 1].Value = dialog.Token;
+          worksheet.Cells[row, 2].Value = dialog.FIOEmployee;
+          worksheet.Cells[row, 4].Value = dialog.StartQuestion;
+          worksheet.Cells[row, 7].Value = dialog.DialogQuality switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          worksheet.Cells[row, 8].Value = dialog.DialogQualityRg switch { true => "Хорошо", false => "Плохо", _ => "Нет оценки" };
+          foreach (var item in dialog.ListFIOSupervisor.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 3].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListStartDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 5].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          rowBuffer = 0;
+          foreach (var item in dialog.ListEndDialog.Split(";"))
+          {
+            worksheet.Cells[row + rowBuffer++, 6].Value = item;
+          }
+          if (rowBufferMax < rowBuffer)
+          {
+            rowBufferMax = rowBuffer;
+          }
+          row += rowBufferMax;
+        }
+       Substitution.WriteLog("debug", $"populated: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+      Substitution.WriteLog("debug", $"autofitted: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+
+        var fileName = $"DialogHistory_3m_{DateTime.UtcNow.AddHours(5): dd-MM-yy HH-mm}.xlsx";
+        var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
+        File.WriteAllBytes(filePath, package.GetAsByteArray());
+      Substitution.WriteLog("debug", $"file saved: {sw.ElapsedMilliseconds} ms");
+      sw.Restart();
+        using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
+        {
+          InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
+          await botClient.SendDocumentAsync(
+                new SendDocumentRequest()
+                {
+                  ChatId = chatId,
+                  Document = inputFileFromStream
+                });
+        }
+        Substitution.WriteLog("debug", $"file sent: {sw.ElapsedMilliseconds} ms");
+        sw.Stop();
+      }
+    }
+  }
+
+
+
+  public static async Task OldDialogHistoryExcel(long chatId, int month)
+  {
+    using (AppDbContext dbContext = new())
+    {
+      var dialogHistory = dbContext.OldDialogHistory
                                    .Where(x => x.TimeDialogStart.Month == month)
                                    .OrderBy(x => x.TimeDialogStart)
                                    .ToList();
@@ -59,19 +243,24 @@ public class DocumentAsync
 
         worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
-        var fileName = $"DialogHistory_{DateTime.UtcNow:MM_yyyy_HH_mm}.xlsx";
+        var fileName = $"DialogHistory_{russianCulture.DateTimeFormat.GetMonthName(month)}.xlsx";
         var filePath = Path.Combine($"{AppContext.BaseDirectory}", "buffer", "dialoghistory.xlsx");
         File.WriteAllBytes(filePath, package.GetAsByteArray());
         using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
         {
           InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-          await botClient.SendDocumentAsync(chatId, inputFileFromStream);
+          await botClient.SendDocumentAsync(
+                new SendDocumentRequest()
+                {
+                  ChatId = chatId,
+                  Document = inputFileFromStream
+                });
         }
       }
     }
   }
 
-  public static async Task DialogHistoryPDF(long chatId, DialogHistoryModels currentDialog)
+  public static async Task DialogHistoryPDF(long chatId, OldDialogHistoryModels currentDialog)
   {
     string[] dialogHistory = currentDialog.DialogHistory.Split('@');
     if (currentDialog.FIOSupervisor == currentDialog.FIOEmployee)
@@ -87,12 +276,16 @@ public class DocumentAsync
         }
       }
     }
-    await botClient.SendTextMessageAsync(chatId,
-        string.Format("Найден диалог {0} с {1} в {2} - {3}",
+    await botClient.SendMessageAsync(
+      new SendMessageRequest()
+      {
+        ChatId = chatId,
+        Text = string.Format("Найден диалог {0} с {1} в {2} - {3}",
             currentDialog.FIOSupervisor,
             currentDialog.FIOEmployee,
             currentDialog.TimeDialogStart.AddHours(3).ToString("dd.MM.yyyy HH:mm:ss", russianCulture),
-            currentDialog.TimeDialogEnd.AddHours(3).ToString("HH:mm:ss", russianCulture)));
+            currentDialog.TimeDialogEnd.AddHours(3).ToString("HH:mm:ss", russianCulture))
+      });
 
     string fileName = $"Диалог_{currentDialog.TokenDialog}.pdf";
 
@@ -165,8 +358,20 @@ public class DocumentAsync
         if (message == "") break;
         string[] messageSplit = message.Split('#');
         long currentChatId = long.Parse(messageSplit[0]);
-        MessageId thisMessageId = await botClient.CopyMessageAsync(5405986946, currentChatId, int.Parse(messageSplit[1]));
-        Message thisMessage = await botClient.EditMessageReplyMarkupAsync(5405986946, thisMessageId.Id, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1")));
+        MessageId thisMessageId = await botClient.CopyMessageAsync(
+                                        new CopyMessageRequest()
+                                        {
+                                          ChatId = 5405986946,
+                                          FromChatId = currentChatId,
+                                          MessageId = int.Parse(messageSplit[1])
+                                        });
+        Message thisMessage = await botClient.EditMessageReplyMarkupAsync(
+                                        new EditMessageReplyMarkupRequest()
+                                        {
+                                          ChatId = 5405986946,
+                                          MessageId = thisMessageId.Id,
+                                          ReplyMarkup = new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1"))
+                                        });
 
         string sender = currentChatId == usersInDialog[0]
                         ? currentDialog.FIOEmployee
@@ -183,7 +388,9 @@ public class DocumentAsync
 
         if (thisMessage.Photo != null)
         {
-          var messagePhoto = await botClient.GetFileAsync(thisMessage.Photo.Last().FileId);
+          var messagePhoto = await botClient.GetFileAsync(
+            new GetFileRequest()
+            { FileId = thisMessage.Photo.Last().FileId });
           FileStream downloadPhoto = new FileStream(messagePhotoPath, FileMode.Create);
           await botClient.DownloadFileAsync(messagePhoto!.FilePath!, downloadPhoto);
           downloadPhoto.Dispose();
@@ -199,7 +406,9 @@ public class DocumentAsync
         {
           AddTextToDocument($"Документ {documentNumber}");
 
-          Telegram.Bot.Types.File file = await botClient.GetFileAsync(thisMessage.Document.FileId);
+          Telegram.Bot.Types.File file = await botClient.GetFileAsync(
+            new GetFileRequest()
+            { FileId = thisMessage.Document.FileId });
           using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Create))
           {
             await botClient.DownloadFileAsync(file.FilePath!, fileStream);
@@ -208,16 +417,31 @@ public class DocumentAsync
           using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Open, FileAccess.Read))
           {
             InputFile inputFileFromStream = InputFile.FromStream(fileStream, $"Документ_{documentNumber++}_{thisMessage.Document.FileName}");
-            await botClient.SendDocumentAsync(chatId, inputFileFromStream);
+            await botClient.SendDocumentAsync(
+              new SendDocumentRequest()
+              {
+                ChatId = chatId,
+                Document = inputFileFromStream
+              });
           }
 
-          await botClient.EditMessageCaptionAsync(5405986946, thisMessageId.Id, "0");
+          await botClient.EditMessageCaptionAsync(new EditMessageCaptionRequest()
+          {
+            ChatId = 5405986946,
+            MessageId = thisMessageId.Id,
+            Caption = "0"
+          });
         }
 
         if (thisMessage.Sticker != null)
           AddTextToDocument("Телеграмм стикер");
 
-        await botClient.DeleteMessageAsync(5405986946, thisMessageId.Id);
+        await botClient.DeleteMessageAsync(
+          new DeleteMessageRequest()
+          {
+            ChatId = 5405986946,
+            MessageId = thisMessageId.Id
+          });
         await Task.Delay(500);
       }
 
@@ -227,14 +451,23 @@ public class DocumentAsync
       using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
       {
         InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-        await botClient.SendDocumentAsync(chatId, inputFileFromStream);
+        await botClient.SendDocumentAsync(
+          new SendDocumentRequest()
+          {
+            ChatId = chatId,
+            Document = inputFileFromStream
+          });
       }
     }
     catch (Exception ex)
     {
       Substitution.WriteLog("Error", $"Ошибка при создании PDF: {ex.Message}\n{ex.StackTrace}");
-      await botClient.SendTextMessageAsync(chatId,
-          "Ошибка при формировании файла диалога");
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = chatId,
+          Text = "Ошибка при формировании файла диалога"
+        });
       return;
     }
   }

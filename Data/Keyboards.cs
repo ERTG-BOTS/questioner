@@ -11,10 +11,13 @@ class Keyboards
   /// <returns>готовую клавиатуру</returns>
   public static ReplyKeyboardMarkup GetCurrentKeyboard(int modeCode) => modeCode switch
   {
-    2 => new ReplyKeyboardMarkup(new KeyboardButton[][]
+    2 or 20 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
           new("Задать вопрос")
+        ],
+        [
+          new("Вернуть вопрос")
         ]
       })
     { ResizeKeyboard = true },
@@ -25,48 +28,20 @@ class Keyboards
         ]
       })
     { ResizeKeyboard = true },
-    10 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Готов")
-        ]
-      })
-    { ResizeKeyboard = true },
-    11 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Не готов")
-        ]
-      })
-    { ResizeKeyboard = true },
-    5 or 12 => new ReplyKeyboardMarkup(new KeyboardButton[][]
+    5 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
           new ("Завершить диалог")
         ]
       })
     { ResizeKeyboard = true },
-    13 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Готов")
-        ],
-        [
-          new ("Не готов")
-        ],
-      })
-    { ResizeKeyboard = true },
-    20 => new ReplyKeyboardMarkup(new KeyboardButton[][]
-      {
-        [
-          new ("Стать спецом"), new("Стать старшим")
-        ]
-      })
-    { ResizeKeyboard = true },
     100 => new ReplyKeyboardMarkup(new KeyboardButton[][]
       {
         [
-          new ("Стать спецом"), new("Стать старшим")
+          new ("Стать спецом")
+        ],
+        [
+          new ("Максмум диалогов")
         ],
         [
           new("Файл с диалогами")
@@ -117,5 +92,31 @@ class Keyboards
     {
       new[]{ InlineKeyboardButton.WithCallbackData("Хорошо", $"good#{token}"), InlineKeyboardButton.WithCallbackData("Плохо", $"bad#{token}") },
     });
+  }
+
+  public static InlineKeyboardMarkup DialogQualityRg(string token)
+  {
+    return new(new[]
+    {
+      new[]{ InlineKeyboardButton.WithCallbackData("Хорошо", $"rg#good#{token}"), InlineKeyboardButton.WithCallbackData("Плохо", $"rg#bad#{token}") },
+    });
+  }
+
+  public static InlineKeyboardMarkup ReportMonthSelector() {
+    return  new[] {
+        new InlineKeyboardButton[]
+        {
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.Month), "0")
+        },
+        [
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-1).Month), "1")
+        ],
+        [
+            InlineKeyboardButton.WithCallbackData(Program.russianCulture.DateTimeFormat.GetMonthName(DateTime.Now.AddMonths(-2).Month), "2")
+        ],
+        [
+          InlineKeyboardButton.WithCallbackData("3 месяца", "3")
+        ]
+    };
   }
 }

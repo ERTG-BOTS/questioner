@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Data;
@@ -16,16 +16,21 @@ public static class Substitution
     {"blocked" , -1 },
     {"default" , 0 },
     {"signed" , 2 },
+    {"signed supervisor" , 20 },
     {"question" , 3 },
     {"await answer" , 4 },
     {"in dialog" , 5 },
-    {"signed rg", 10 },
-    {"ready rg", 11},
-    {"in dialog rg", 12},
-    {"await ready rg", 13},
-    {"signed supervisor" , 20 },
+    {"supervisor" , 30 },
     {"signed root" , 100 },
     {"test" , 999 },
+  };
+
+  public static readonly Dictionary<string, string> EmojiKeys = new()
+  {
+    {"new", "5417915203100613993"},
+    {"start", "5368808634392257474"},
+    {"end", "5312315739842026755"},
+    {"lost", "5372819184658949787"},
   };
 
   /// <summary>
@@ -37,6 +42,8 @@ public static class Substitution
     {"Config", "[\x1b[32mCONFIG\x1b[0m]"},
     {"Диалог", "[\x1b[96mДИАЛОГ\x1b[0m]"},
     {"Сообщение", "[\x1b[93mСООБЩЕНИЕ\x1b[0m]"},
+    {"callback", "[\x1b[93mCALLBACK\x1b[0m]"},
+    {"debug", "[\x1b[32mDEBUG\x1b[0m]"},
   };
 
   ///<summary>
@@ -109,6 +116,8 @@ public static class Substitution
 
     return convertedDate;
   }
+
+  public static string GetCorrectDateTime => DateTime.UtcNow.AddHours(3).ToString("dd.MM.yyyy HH:mm:ss");
 }
 
 public static class ListExtensions

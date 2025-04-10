@@ -10,6 +10,9 @@ using static QuestionBot.Data.Models.UserModel;
 using static QuestionBot.Program;
 using static QuestionBot.Data.Keyboards;
 using QuestionBot.Data.QueueModels;
+using Telegram.Bot.Requests;
+using Telegram.Bot.Types.ReplyMarkups;
+using System.Globalization;
 
 namespace QuestionBot.Async;
 
@@ -41,40 +44,339 @@ internal class BotAsync
   {
     try
     {
-      var thisMessage = update.Message
-                  ?? update.CallbackQuery?.Message;
-      if (thisMessage == null
-          || thisMessage.Type == MessageType.MessagePinned
-          || thisMessage.Type == MessageType.Unknown) { return; }
+      var thisMessage = update.Message ??
+                  (Message?)update.CallbackQuery?.Message;
+      if (thisMessage == null) { return; }
       UserModel? currentUser;
       if (update.Message != null || update.CallbackQuery != null)
       {
-        long chatId = thisMessage.Chat.Id;
-        currentUser = await GetCorrectUserAsync(chatId, thisMessage.Chat.Username ?? "Скрыто/не определено");
+        long chatId = thisMessage?.Chat.Id ?? 0;
+
+        bool isTopic = chatId == Config.ForumId;
+        if (isTopic)
+          chatId = thisMessage?.From?.Id ?? 0;
+
+        if (chatId == Config.BotChatId && update.Type == UpdateType.CallbackQuery && update.CallbackQuery?.Data is not null) {
+          await HandleCallBackQuery(update.CallbackQuery, chatId);
+          return;
+        }
+        else if (chatId == Config.BotChatId)
+          return;
+
+        currentUser = await GetCorrectUserAsync(isTopic, chatId, thisMessage?.Chat.Username ?? "Скрыто/не определено");
 
         if (currentUser == null) { return; }
 
         string thisMessageText = update.Type == UpdateType.Message
-            ? thisMessage.Caption
-              ?? thisMessage.Text
-              ?? thisMessage.WebAppData?.ButtonText
-              ?? thisMessage.Document?.FileName
+            ? thisMessage!.Caption
+              ?? thisMessage!.Text
+              ?? thisMessage!.WebAppData?.ButtonText
+              ?? thisMessage!.Document?.FileName
               ?? "Сообщение не содержит текста"
             : update.CallbackQuery?.Data
               ?? "Callback без Data";
 
         WriteLog("Сообщение", $"{currentUser.Username} {currentUser.ChatId} {thisMessageText}");
+        if (isTopic && update.Type == UpdateType.Message && update.Message != null)
+          await HandleTopicAsync(update.Message, currentUser.ChatId);
+        else if (update.Type == UpdateType.Message && update.Message != null)
+          await HandleMessageAsync(update.Message, currentUser.ChatId);
+        else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
+          await HandleCallBackQuery(update.CallbackQuery, currentUser.ChatId);
       }
       else return;
-      if (update.Type == UpdateType.Message && update.Message != null)
-        await HandleMessageAsync(update.Message, currentUser.ChatId);
-      else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
-        await HandleCallBackQuery(update.CallbackQuery, currentUser.ChatId);
     }
     catch (Exception ex)
     {
       WriteLog("Error", $"Error in HandleUpdate. {ex.Message}\n{ex.StackTrace}");
     }
+  }
+
+  static async Task HandleTopicAsync(Message message, long chatId)
+  {
+
+    var currentUser = UsersList.First(x => x.ChatId == chatId);
+    if (message.MessageThreadId == null
+      || message.MessageThreadId == 3
+      || chatId == Config.BotChatId
+      || message.MessageThreadId == 1)
+    {
+      try
+      {
+        if (currentUser.DefaultMode == ModeCode["signed root"])
+        {
+          await botClient.PromoteChatMemberAsync(
+            new PromoteChatMemberRequest()
+            {
+              ChatId = Config.ForumId,
+              UserId = chatId,
+              CanManageChat = true,
+              CanDeleteMessages = true,
+              CanManageVideoChats = true,
+              CanRestrictMembers = true,
+              CanPromoteMembers = true,
+              CanChangeInfo = true,
+              CanInviteUsers = true,
+              CanPostMessages = true,
+              CanPinMessages = true,
+              CanManageTopics = true
+            });
+        }
+      }
+      catch { }
+      return;
+    }
+
+    #region Старший
+    string currentMessage = message.Text?.ToLower().Split('@')[0] ?? "";
+    var dialog = QueueManager.DialogChats.FirstOrDefault(x => x.MessageThreadId == message.MessageThreadId);
+    if (dialog == null)
+    {
+      using var db = new AppDbContext();
+      {
+        var checkDialog = db.DialogHistory.FirstOrDefault(x => x.MessageThreadId == message.MessageThreadId);
+
+        if (checkDialog != null)
+        {
+          await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = Config.ForumId,
+              MessageThreadId = message.MessageThreadId,
+              Text = "Диалога в данном чате не найдено\nЧат будет закрыт"
+            }
+          );
+          try
+          {
+            await botClient.EditForumTopicAsync(
+              new EditForumTopicRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = (int)message.MessageThreadId,
+                IconCustomEmojiId = "5312315739842026755",
+                Name = checkDialog.Token
+              }
+            );
+          }
+          catch { }
+          try
+          {
+            await botClient.CloseForumTopicAsync(
+              new CloseForumTopicRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = (int)message.MessageThreadId
+              }
+            );
+          }
+          catch { }
+          return;
+        }
+      }
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = Config.ForumId,
+          MessageThreadId = message.MessageThreadId,
+          Text = "Диалога в данном чате не найдено\nЧат будет закрыт"
+        });
+      await botClient.CloseForumTopicAsync(
+        new CloseForumTopicRequest()
+        {
+          ChatId = Config.ForumId,
+          MessageThreadId = (int)message.MessageThreadId
+        });
+      await botClient.EditForumTopicAsync(
+        new EditForumTopicRequest()
+        {
+          ChatId = Config.ForumId,
+          MessageThreadId = (int)message.MessageThreadId,
+          IconCustomEmojiId = EmojiKeys["lost"]
+        });
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = Config.ForumId,
+          MessageThreadId = 3,
+          Text = $"Не найден диалог в чате {Config.TopicUrl}/{message.MessageThreadId}"
+        });
+      return;
+    }
+    if (message.Type == MessageType.Text)
+    {
+      switch (currentMessage.Split('@')[0])
+      {
+        case "/help":
+          await botClient.SendMessageAsync(
+            new SendMessageRequest()
+            {
+              ChatId = Config.ForumId,
+              MessageThreadId = message.MessageThreadId,
+              Text =
+@"Инструкция для работы с диалогами для старших
+
+Создание тем для диалогов:
+- Если ограничение на количество диалогов в группе не достигнуто, создается тема, название которой соответствует ФИО Специалиста.
+- На теме появляется значок 💬.
+
+Забрать диалог:
+- Каждый диалог с значком 💬 может быть забран одним из Старших с помощью команды 
+- Диалог будет взят в работу после первого сообщения, если ранее его никто не взял
+- В диалоге может быть только один старший. Сообщения других старших не дойдут до специалиста, и бот ответит ""Это не твой чат"".
+
+Диалог в работе:
+- После того, как диалог забрали, значок меняется на 💅.
+- Сообщения Старшего, который забрал диалог, будут пересылаться специалисту в бота.
+
+Завершение или освобождение диалога:
+- Диалог может завершить Специалист или Старший, который забрал этот диалог.
+- Диалог может освободить Старший, который забрал этот диалог.
+- Завершить или освободить чат до того, как его забрали, нельзя.
+
+Команды для управления диалогом:
+- Чтобы завершить диалог, нужно написать 
+<copy>/end</copy>
+ После этого бот напишет ""Диалог завершен"", закроет тему, название поменяется на уникальный токен, а значок на 🏆.
+- Чтобы освободить диалог, нужно написать 
+<copy>/release</copy>
+В этом случае значок меняется на 💬, и чат может забрать любой Старший.",
+              ParseMode = ParseMode.Html,
+              ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+            });
+          return;
+        case "/release":
+          if (dialog.ChatIdLastSupervisor == currentUser.ChatId)
+          {
+            await QueueManager.dialogSemaphore.WaitAsync();
+            try
+            {
+              dialog.ChatIdLastSupervisor = 0;
+              dialog.ListEndDialog.Add(GetCorrectDateTime);
+              await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = Config.ForumId,
+                  MessageThreadId = message.MessageThreadId,
+                  Text = $"Чат был освобожден {currentUser.FIO}",
+                  ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+                });
+              await botClient.EditForumTopicAsync(
+                new EditForumTopicRequest()
+                {
+                  ChatId = Config.ForumId,
+                  MessageThreadId = (int)message.MessageThreadId,
+                  IconCustomEmojiId = EmojiKeys["new"]
+                });
+              await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = dialog.ChatIdEmployee,
+                  Text = $"Старший вышел из чата, твой вопрос сейчас на рассмотрении"
+                });
+            }
+            finally
+            {
+              QueueManager.dialogSemaphore.Release();
+            }
+          }
+          else
+          {
+            await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = message.MessageThreadId,
+                Text = $"Это не твой чат",
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+              });
+          }
+          return;
+        case "/end":
+          if (dialog.ChatIdLastSupervisor == currentUser.ChatId)
+          {
+            await QueueManager.EndDialogAsync(dialog);
+            await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = message.MessageThreadId,
+                Text = $"Чат был закрыт {currentUser.FIO}",
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId },
+              });
+              await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = message.MessageThreadId,
+                Text = "Оцени диалог",
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId },
+                ReplyMarkup = DialogQualityRg(dialog.Token)
+              });
+          }
+          else
+          {
+            await botClient.SendMessageAsync(
+              new SendMessageRequest()
+              {
+                ChatId = Config.ForumId,
+                MessageThreadId = message.MessageThreadId,
+                Text = $"Это не твой чат",
+                ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+              });
+          }
+          return;
+        default: break;
+      }
+    }
+    if (dialog.ChatIdLastSupervisor == 0)
+    {
+      await QueueManager.dialogSemaphore.WaitAsync();
+      try
+      {
+        dialog.ChatIdLastSupervisor = chatId;
+        dialog.ListFIOSupervisor.Add(currentUser.FIO);
+        dialog.ListStartDialog.Add(GetCorrectDateTime);
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = Config.ForumId,
+            MessageThreadId = message.MessageThreadId,
+            Text = $"Чат в работу был взят {currentUser.FIO}",
+            ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+          });
+        await botClient.EditForumTopicAsync(
+          new EditForumTopicRequest()
+          {
+            ChatId = Config.ForumId,
+            MessageThreadId = (int)message.MessageThreadId,
+            IconCustomEmojiId = EmojiKeys["start"]
+          });
+        await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = dialog.ChatIdEmployee,
+            Text = $"На твой вопрос отвечает {currentUser.FIO}"
+          });
+      }
+      finally
+      {
+        QueueManager.dialogSemaphore.Release();
+      }
+    }
+    if (dialog.ChatIdLastSupervisor == chatId)
+      await QueueManager.DeliveryMessageDialogAsync(dialog, message.MessageId);
+    else
+    {
+      await botClient.SendMessageAsync(
+        new SendMessageRequest()
+        {
+          ChatId = Config.ForumId,
+          MessageThreadId = message.MessageThreadId,
+          Text = $"Это не твой чат",
+          ReplyParameters = new ReplyParameters() { MessageId = message.MessageId }
+        });
+    }
+    #endregion
   }
 
   /// <summary>
@@ -90,36 +392,22 @@ internal class BotAsync
     || message.Type == MessageType.Video
     || message.Type == MessageType.Sticker)
     {
+      SendMessageRequest sendMessageRequest(string text, int mode) => new()
+      {
+        ChatId = chatId,
+        Text = text,
+        ReplyMarkup = GetCurrentKeyboard(mode),
+        ParseMode = ParseMode.Html
+      };
+
       UserModel currentUser = UsersList.First(x => x.ChatId == chatId);
       StringBuilder output = new();
-
       using AppDbContext db = new();
       var resultDb = db.RegisteredUsers.FirstOrDefault(x => x.ChatId == chatId);
       if (resultDb == null && currentUser.DefaultMode != ModeCode["default"])
-        currentUser = await GetCorrectUserAsync(chatId) ?? throw new Exception($"Не удалось получить пользователя {chatId}");
+        currentUser = await GetCorrectUserAsync(message.Chat.Id == Config.ForumId, chatId) ?? throw new Exception($"Не удалось получить пользователя {chatId}");
 
       string currentMessage = message.Text?.ToLower() ?? message.Caption?.ToLower() ?? "";
-
-      #region Общее
-      if (currentUser.DefaultMode != ModeCode["default"])
-      {
-        switch (currentMessage)
-        {
-          case "/line":
-            await botClient.SendTextMessageAsync(chatId,
-                "Линия доступна по ссылке http://46.146.231.248/linenck\nЛогин : <code>admin</code>\nПароль : <code>RO0admin</code>",
-                parseMode: ParseMode.Html);
-            return;
-          case "/reset":
-            currentUser.CurrentMode = currentUser.DefaultMode;
-            await botClient.SendTextMessageAsync(chatId,
-                "Статус сброшен",
-                replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-            return;
-          default: break;
-        }
-      }
-      #endregion
 
       if (currentUser.FIO == null) return;
 
@@ -128,14 +416,128 @@ internal class BotAsync
         switch (currentUser.CurrentMode)
         {
           #region Сотрудник
-          case 2:
+          case 2 or 20:
             switch (currentMessage)
             {
+              case "/release":
+                currentUser.CurrentMode = currentUser.DefaultMode;
+                return;
+              case "/help":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text =
+@"Задаем вопрос:
+- Нажмите кнопку ""Задать вопрос"".
+- Напишите одно сообщение с текстом вопроса.
+- Постарайтесь сформулировать вопрос максимально понятно, чтобы тебе было проще его идентифицировать.
+
+Очередь вопросов:
+- Как только вопрос задан, он попадает в очередь. Бот сообщит: ""Вопрос был добавлен в очередь"".
+- Если есть свободные слоты, чат передается Старший. Бот сообщит: ""Вопрос передан на рассмотрение"".
+
+Обмен сообщениями с Старшим:
+- После передачи вопроса на рассмотрение можно отправлять любое количество сообщений, которые Старший получит.
+- Когда свободный Старший возьмет твой диалог в работу, ты получишь сообщение: ""На твой вопрос отвечает XXXXXXX"".
+
+Передача вопроса между специалистами:
+- Старший может передать ваш вопрос другому старшему, если это потребуется. Бот сообщит: ""Старший вышел из чата, твой вопрос сейчас на рассмотрении"".
+- Впоследствии вопрос заберет другой Старший.
+
+Закрытие вопроса:
+- Вопрос может закрыть как старший специалист, так и Старший.
+
+Возврат чатов специалистом:
+- Специалист может вернуть один из трех последних чатов.
+- Идентифицировать вопрос можно по первому сообщению или времени, когда был задан вопрос.
+- История общения по этому вопросу будет у Старшего."
+                  }
+                );
+                return;
               case "задать вопрос":
                 currentUser.CurrentMode = ModeCode["question"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Отправь вопрос и вложения одним сообщением",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+                SendMessageRequest sendMessage = new()
+                {
+                  ChatId = chatId,
+                  Text = "Отправь вопрос и вложения одним сообщением",
+                  ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                };
+                await botClient.SendMessageAsync(sendMessage);
+                return;
+              case "вернуть вопрос":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text = "Загружаю список вопросов",
+                  });
+                var dialogList = db.DialogHistory
+                                  .Where(x => x.FIOEmployee == currentUser.FIO)
+                                  .OrderBy(x => x.FirstMessageId)
+                                  .ToList()
+                                  .Where(x =>
+                                    DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
+                                      && dateTime > DateTime.UtcNow.AddDays(-1))
+                                  .TakeLast(3);
+
+                if (dialogList.Count() != 0)
+                {
+                  List<string> sendDialog = [];
+                  int counter = 1;
+                  foreach (var dialog in dialogList)
+                  {
+                    try
+                    {
+                      var firstMessage = await botClient.EditMessageReplyMarkupAsync(
+                      new EditMessageReplyMarkupRequest()
+                      {
+                        ChatId = Config.ForumId,
+                        MessageId = dialog.FirstMessageId,
+                        ReplyMarkup = new InlineKeyboardMarkup(
+                          new[]
+                          {
+                              new InlineKeyboardButton[]
+                              {
+                                  InlineKeyboardButton.WithCallbackData("1", "callback_data_1")
+                              }
+                          })
+                      });
+
+                      await botClient.EditMessageReplyMarkupAsync(
+                        new EditMessageReplyMarkupRequest()
+                        {
+                          ChatId = Config.ForumId,
+                          MessageId = dialog.FirstMessageId,
+                          ReplyMarkup = null
+                        });
+
+                      sendDialog.Add(@$"{counter++}. {dialog.StartQuestion}
+{firstMessage.Text ?? firstMessage.Caption ?? "Текста нет"}");
+                    }
+                    catch (Exception ex)
+                    {
+                      WriteLog("Error", ex.Message);
+                    }
+                  }
+
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = string.Join("\n\n", sendDialog),
+                      ReplyMarkup = new InlineKeyboardMarkup(KeyboardButtonsEmployees(dialogList.Count()))
+                    });
+                }
+                else
+                {
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = "Список вопросов пуст, вернуть нечего"
+                    });
+                }
                 return;
               default:
                 await SendDefault(currentUser);
@@ -145,13 +547,15 @@ internal class BotAsync
             switch (currentMessage)
             {
               case "отменить вопрос":
-                currentUser.CurrentMode = ModeCode["signed"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Чтобы задать вопрос нажми \"Задать вопрос\"",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
+                {
+                  currentUser.CurrentMode = ModeCode["signed"];
+                  var sendMessage = sendMessageRequest("Чтобы задать вопрос нажми \"Задать вопрос\"", currentUser.CurrentMode);
+                  await botClient.SendMessageAsync(sendMessage);
+                  return;
+                }
               default:
-                if (await QueueManager.AddToQuestionQueueAsync(
+                {
+                  if (await QueueManager.AddToQuestionQueueAsync(
                       new QuestionChatRecord()
                       {
                         ChatId = chatId,
@@ -159,171 +563,126 @@ internal class BotAsync
                         StartMessageId = message.MessageId,
                         TimeStart = DateTime.UtcNow
                       }))
-                {
-                  currentUser.CurrentMode = ModeCode["await answer"];
-                  await botClient.SendTextMessageAsync(chatId,
-                      "Вопрос был добавлен в очередь",
-                      replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+                  {
+                    currentUser.CurrentMode = ModeCode["await answer"];
+                    var sendMessage = sendMessageRequest("Вопрос был добавлен в очередь", currentUser.CurrentMode);
+                    await botClient.SendMessageAsync(sendMessage);
+                  }
+                  else
+                  {
+                    var sendMessage = sendMessageRequest("Вопрос не был добавлен в очередь\n\nПопробуй еще раз", currentUser.CurrentMode);
+                    await botClient.SendMessageAsync(sendMessage);
+                  }
+                  return;
                 }
-                else
-                {
-                  await botClient.SendTextMessageAsync(chatId,
-                      "Вопрос не был добавлен в очередь\n\nПопробуй еще раз",
-                      replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                }
-                return;
             }
           case 4:
             switch (currentMessage)
             {
               case "отменить вопрос":
-                currentUser.CurrentMode = ModeCode["signed"];
-                await QueueManager.RemoveFromQuestionQueueAsync(chatId);
-                await botClient.SendTextMessageAsync(chatId,
-                    "Чтобы задать вопрос нажми \"Задать вопрос\"",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
+                {
+                  currentUser.CurrentMode = ModeCode["signed"];
+                  await QueueManager.RemoveFromQuestionQueueAsync(chatId);
+                  var sendMessage = sendMessageRequest("Чтобы задать вопрос нажми \"Задать вопрос\"", currentUser.CurrentMode);
+                  await botClient.SendMessageAsync(sendMessage);
+                  return;
+                }
               default:
-                await botClient.SendTextMessageAsync(chatId,
-                    "Вопрос уже в очереди",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
+                {
+                  var sendMessage = sendMessageRequest("Вопрос уже в очереди", currentUser.CurrentMode);
+                  await botClient.SendMessageAsync(sendMessage);
+                  return;
+                }
             }
-          #endregion
-          #region Старший
-          case 20:
-            switch (currentMessage)
-            {
-              case "стать спецом":
-                currentUser.CurrentMode = ModeCode["signed"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты специалист",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              case "стать старшим":
-                currentUser.CurrentMode = ModeCode["signed rg"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты специалист",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              default:
-                await SendDefault(currentUser);
-                return;
-            }
-          case 10:
-            switch (currentMessage)
-            {
-              case "готов":
-                currentUser.CurrentMode = ModeCode["ready rg"];
-                await QueueManager.AddToReadyQueueAsync(
-                      new ReadyChatRecord()
-                      {
-                        ChatId = chatId,
-                        FIO = currentUser.FIO,
-                        TimeStart = DateTime.UtcNow
-                      });
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты готов",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              default:
-                await SendDefault(currentUser);
-                return;
-            }
-          case 11:
-            switch (currentMessage)
-            {
-              case "не готов":
-                currentUser.CurrentMode = ModeCode["signed rg"];
-                await QueueManager.RemoveFromReadyQueueAsync(chatId);
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты не готов",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              default:
-                await SendDefault(currentUser);
-                return;
-            }
-          case 13:
-            switch (currentMessage)
-            {
-              case "готов":
-                await QueueManager.RemoveFromAwaitQueueAsync(chatId);
-                currentUser.CurrentMode = ModeCode["ready rg"];
-                await QueueManager.AddToReadyQueueAsync(new ReadyChatRecord() { ChatId = chatId, FIO = currentUser.FIO, TimeStart = DateTime.UtcNow });
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты готов",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              case "не готов":
-                await QueueManager.RemoveFromAwaitQueueAsync(chatId);
-                currentUser.CurrentMode = ModeCode["signed rg"];
-                await QueueManager.RemoveFromReadyQueueAsync(chatId);
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты не готов",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              default:
-                await SendDefault(currentUser);
-                return;
-            }
-          #endregion
-          #region Диалог
-          case 5 or 12:
+          case 5:
             switch (currentMessage)
             {
               case "завершить диалог":
                 await QueueManager.EndDialogAsync(chatId);
                 return;
               default:
-                await QueueManager.AddToMessageHistoryAsync(chatId, message.MessageId);
+                await QueueManager.DeliveryMessageDialogAsync(chatId, message.MessageId);
                 return;
             }
           #endregion
+
           #region Администратор
           case 100:
             switch (currentMessage)
             {
               case "стать спецом":
-                currentUser.CurrentMode = ModeCode["signed"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты специалист",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
-                return;
-              case "стать старшим":
-                currentUser.CurrentMode = ModeCode["signed rg"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь ты старший",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+                {
+                  var a = await botClient.GetForumTopicIconStickersAsync(new GetForumTopicIconStickersRequest());
+                  List<string> strings = [];
+                  foreach (var item in a)
+                  {
+                    strings.Add($"{item.Emoji} | {item.CustomEmojiId}");
+                  }
+                  currentUser.CurrentMode = ModeCode["signed"];
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = $"Теперь ты специалист",
+                      ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                    });
+                  return;
+                }
+              case "максмум диалогов":
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text = $"Текущее максимальное количество диалогов {Config.DialogMaxCount}\nЧтобы изменить максмальное количество диалогов, отправь число\n0 - снять ограничение",
+                    ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                  });
                 return;
               case "файл с диалогами":
-                await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.Month);
-                return;
-              case "debug":
-                await QueueManager.AddToDialogQueueAsync(new DialogChatRecord
-                {
-                  ChatIdEmployee = chatId,
-                  FIOEmployee = currentUser.FIO,
-                  ChatIdSupervisor = chatId,
-                  FIOSupervisor = currentUser.FIO,
-                  TimeStart = DateTime.UtcNow,
-                  TimeLast = DateTime.UtcNow,
-                  MessageHistory = []
-                });
-                currentUser.CurrentMode = ModeCode["in dialog"];
-                await botClient.SendTextMessageAsync(chatId,
-                    "Теперь в диалоге",
-                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+                await botClient.SendMessageAsync(
+                  new SendMessageRequest()
+                  {
+                    ChatId = chatId,
+                    Text = "За какой месяц отправить?",
+                    ReplyMarkup = ReportMonthSelector()
+                  }
+                );
                 return;
               default:
-                var dialogHistory = db.DialogHistoryModels.FirstOrDefault(x => x.TokenDialog == message.Text);
+                var dialogHistory = db.DialogHistory.FirstOrDefault(x => x.Token == message.Text);
                 if (dialogHistory != null)
                 {
-                  _ = Task.Run(async () => await DocumentAsync.DialogHistoryPDF(currentUser.ChatId, dialogHistory));
+                  await botClient.SendMessageAsync(
+                    new SendMessageRequest()
+                    {
+                      ChatId = chatId,
+                      Text = $"{Config.TopicUrl}/{dialogHistory.FirstMessageId}",
+                      ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                    }
+                  );
                 }
                 else
                 {
-                  await SendDefault(currentUser);
+                  var oldDiaglogHistory = db.OldDialogHistory.FirstOrDefault(x => x.TokenDialog == message.Text);
+                  if (oldDiaglogHistory is not null)
+                  {
+                    _ = Task.Run(() => DocumentAsync.DialogHistoryPDF(chatId, oldDiaglogHistory));
+                  }
+                  else
+                  {
+                    if (int.TryParse(message.Text, out var count) && count >= 0)
+                    {
+                      Config.DialogMaxCount = count;
+                      await botClient.SendMessageAsync(
+                        new SendMessageRequest()
+                        {
+                          ChatId = chatId,
+                          Text = $"Максимальное количество диалогов установлено на {count}",
+                          ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+                        });
+                      return;
+                    }
+                    await SendDefault(currentUser);
+                  }
                 }
                 return;
             }
@@ -334,9 +693,9 @@ internal class BotAsync
       catch (Exception ex)
       {
         WriteLog("Error", $"{ex.Message}\n{ex.StackTrace}");
-        await botClient.SendTextMessageAsync(chatId,
-            "Произошла непредвиденная ошибка. Вы были возвращены к началу.",
-            replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+        var sendMessage =
+                  sendMessageRequest("Произошла непредвиденная ошибка. Вы были возвращены к началу.", currentUser.CurrentMode);
+        await botClient.SendMessageAsync(sendMessage);
         return;
       }
     }
@@ -353,51 +712,130 @@ internal class BotAsync
   {
     try
     {
-      if (callbackQuery.Data == null || callbackQuery.Message == null || callbackQuery.Message.Text == null)
+      WriteLog("callback", $"{chatId} {callbackQuery.Data}");
+      var message = (Message?)callbackQuery.Message;
+      if (callbackQuery.Data == null || callbackQuery.Message == null || message?.Text == null)
       {
-        WriteLog("Error", $" Ошибка CallbackQuery. ChatId : {chatId} , Data : {callbackQuery.Data ?? "NULL"} , MessageText : {callbackQuery.Message?.Text ?? "NULL"}");
+        WriteLog("Error", $" Ошибка CallbackQuery. ChatId : {chatId} , Data : {callbackQuery.Data ?? "NULL"} , MessageText : {message?.Text ?? "NULL"}");
         if (callbackQuery.Message != null)
-          await botClient.EditMessageTextAsync(chatId,
-              callbackQuery.Message.MessageId,
-              "Произошла ошибка",
-              replyMarkup: null);
+        {
+          await botClient.EditMessageTextAsync(
+                new EditMessageTextRequest
+                {
+                  ChatId = chatId,
+                  MessageId = message!.MessageId,
+                  Text = "Произошла ошибка",
+                  ReplyMarkup = null
+                });
+        }
         return;
       }
+
       string[] currentData = callbackQuery.Data.Split('#');
       StringBuilder output = new();
+      using var db = new AppDbContext();
+
+      if (currentData.Length == 3 && currentData[0] == "rg" && chatId == Config.BotChatId)
+      {
+        var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[2]);
+        if (dialog != null)
+        {
+          dialog.DialogQualityRg = currentData[1] == "good";
+        }
+        db.SaveChanges();
+        await botClient.EditMessageTextAsync(
+              new EditMessageTextRequest
+              {
+                ChatId = Config.ForumId,
+                MessageId = message!.MessageId,
+                Text = "Оценка диалога проставлена",
+                ReplyMarkup = null
+              });
+        return;
+      }
+
       var currentUser = UsersList.First(x => x.ChatId == chatId);
 
-      using (var db = new AppDbContext())
-
-        switch (currentUser.CurrentMode)
-        {
-          #region Сотрудник
-          case 2:
-            var dialog = db.DialogHistoryModels.FirstOrDefault(x => x.TokenDialog == currentData[1]);
+      switch (currentUser.CurrentMode)
+      {
+        #region Сотрудник
+        case 2 or 20:
+          if (currentData.Length == 2)
+          {
+            var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[1]);
             if (dialog != null)
             {
               dialog.DialogQuality = currentData[0] == "good";
             }
             db.SaveChanges();
-            await botClient.EditMessageTextAsync(chatId,
-                callbackQuery.Message!.MessageId,
-                "Оценка диалога проставлена",
-                replyMarkup: null);
-            return;
-          #endregion
-          #region Старший
-          case 10:
-          #endregion
-          #region Администратор
-          case 100:
-          #endregion
-          default: break;
-        }
+            await botClient.EditMessageTextAsync(
+                  new EditMessageTextRequest
+                  {
+                    ChatId = chatId,
+                    MessageId = message!.MessageId,
+                    Text = "Оценка диалога проставлена",
+                    ReplyMarkup = null
+                  });
+          }
+          
+          else if (currentData.Length == 1)
+          {
+            var dialogList = db.DialogHistory
+                                .Where(x => x.FIOEmployee == currentUser.FIO)
+                                .OrderBy(x => x.FirstMessageId)
+                                .ToList()
+                                .Where(x =>
+                                  DateTime.TryParseExact(x.StartQuestion, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime)
+                                  && dateTime > DateTime.UtcNow.AddDays(-1))
+                                .TakeLast(3)
+                                .ToList();
+
+            if (int.TryParse(currentData[0], out var num) && dialogList.Count >= num)
+            {
+              await botClient.EditMessageReplyMarkupAsync(
+                new EditMessageReplyMarkupRequest
+                {
+                  ChatId = chatId,
+                  MessageId = message!.MessageId,
+                  ReplyMarkup = null
+                });
+              await QueueManager.AddDialogAsync(dialogList[num - 1], chatId);
+            }
+          }
+          return;
+        case 3 or 4 or 5: return;
+        #endregion
+        #region Администратор
+        case 100:
+          await botClient.EditMessageReplyMarkupAsync(new EditMessageReplyMarkupRequest()
+          {
+            ChatId = chatId,
+            MessageId = message!.MessageId,
+            ReplyMarkup = null
+          });
+          if (currentData.Length == 1)
+          {
+            if (currentData[0] == "3") {
+              await DocumentAsync.DialogHistoryExcel(currentUser.ChatId);
+              return;
+            }
+            await DocumentAsync.DialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
+            // await DocumentAsync.OldDialogHistoryExcel(currentUser.ChatId, DateTime.Now.AddMonths( - int.Parse(currentData[0])).Month);
+          }
+
+          return;
+        #endregion
+        default: break;
+      }
       WriteLog("Error", $"CurrentMode : {currentUser.CurrentMode} CurrentData {string.Join(", ", currentData.Select((s, i) => $"[{i}] = {s}"))}");
-      await botClient.EditMessageTextAsync(chatId,
-          callbackQuery.Message.MessageId,
-          "Произошла ошибка",
-          replyMarkup: null);
+      await botClient.EditMessageTextAsync(
+            new EditMessageTextRequest
+            {
+              ChatId = chatId,
+              MessageId = message!.MessageId,
+              Text = "Произошла ошибка",
+              ReplyMarkup = null
+            });
       return;
     }
     catch (Exception ex)
@@ -405,13 +843,25 @@ internal class BotAsync
       WriteLog("Error", $"Ошибка в HandleCallBackQuery: {ex.Message}\n{ex.StackTrace}");
       try
       {
-        await botClient.EditMessageReplyMarkupAsync(chatId,
-          callbackQuery.Message!.MessageId,
-          replyMarkup: null);
+        await botClient.EditMessageReplyMarkupAsync(
+              new EditMessageReplyMarkupRequest()
+              {
+                ChatId = chatId,
+                MessageId = ((Message?)callbackQuery.Message)!.MessageId,
+                ReplyMarkup = null
+              });
       }
       finally
       {
-        try { await botClient.SendTextMessageAsync(chatId, "Произошла ошибка попробуй другую кнопку"); }
+        try
+        {
+          await botClient.SendMessageAsync(
+                new SendMessageRequest()
+                {
+                  ChatId = chatId,
+                  Text = "Произошла ошибка. Попробуй другую кнопку",
+                });
+        }
         catch { }
       }
       return;
@@ -420,8 +870,12 @@ internal class BotAsync
 
   public static async Task SendDefault(UserModel currentUser)
   {
-    await botClient.SendTextMessageAsync(currentUser.ChatId,
-        "Не распознал твоё сообщение 😓\nВоспользуйся всплывающей клавиатурой",
-        replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode));
+    await botClient.SendMessageAsync(
+          new SendMessageRequest()
+          {
+            ChatId = currentUser.ChatId,
+            Text = "Не распознал твоё сообщение 😓\nВоспользуйся всплывающей клавиатурой",
+            ReplyMarkup = GetCurrentKeyboard(currentUser.CurrentMode)
+          });
   }
 }
