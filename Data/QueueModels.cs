@@ -336,23 +336,26 @@ public class QueueChatManager
                 await botClient.SendMessage(
                     Config.ForumId,
                     messageThreadId: dialogRecord.MessageThreadId,
-                    text: "Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+                    text: "<b>🔥 Диалог завершен</b>\n\n" + (dialogRecord.ListStartDialog.Count == 0 ? "Диалог удалится через 5 сек" : ""),
+                    parseMode: ParseMode.Html
                 );
 
                 UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode =
                     Substitution.ModeCode["signed"];
                 await botClient.SendMessage(
                     dialogRecord.ChatIdEmployee,
-                    "Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
-                    replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+                    "<b>🔥 Диалог завершен</b>\n\n" + (dialogRecord.ListStartDialog.Count == 0 ? "Диалог удалится через 5 сек" : ""),
+                    replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"]),
+                    parseMode: ParseMode.Html
                 );
 
                 if (dialogRecord.ListStartDialog.Count != 0)
                 {
                     await botClient.SendMessage(
                         dialogRecord.ChatIdEmployee,
-                        "Оцени диалог",
-                        replyMarkup: Keyboards.DialogQuality(dialogRecord.Token)
+                        "<b>⭐ Оценка диалога</b>\n\nОцени, помогли ли тебе решить вопрос",
+                        replyMarkup: Keyboards.DialogQuality(dialogRecord.Token),
+                        parseMode: ParseMode.Html
                     );
                     _ = Task.Run(async () =>
                     {
@@ -428,23 +431,26 @@ public class QueueChatManager
                 await botClient.SendMessage(
                     Config.ForumId,
                     messageThreadId: dialogRecord.MessageThreadId,
-                    text: "Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+                    text: "<b>🔥 Диалог завершен</b>\n\n" + (dialogRecord.ListStartDialog.Count == 0 ? "Диалог удалится через 5 сек" : ""),
+                    parseMode: ParseMode.Html
                 );
 
                 UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode =
                     Substitution.ModeCode["signed"];
                 await botClient.SendMessage(
                     dialogRecord.ChatIdEmployee,
-                    "Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
-                    replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+                    "<b>🔥 Диалог завершен</b>\n\n" + (dialogRecord.ListStartDialog.Count == 0 ? "Диалог удалится через 5 сек" : ""),
+                    replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"]),
+                    parseMode: ParseMode.Html
                 );
 
                 if (dialogRecord.ListStartDialog.Count != 0)
                 {
                     await botClient.SendMessage(
                         dialogRecord.ChatIdEmployee,
-                        "Оцени диалог",
-                        replyMarkup: Keyboards.DialogQuality(dialogRecord.Token)
+                        "<b>⭐ Оценка диалога</b>\n\nОцени, помогли ли тебе решить вопрос",
+                        replyMarkup: Keyboards.DialogQuality(dialogRecord.Token),
+                        parseMode: ParseMode.Html
                     );
                     _ = Task.Run(async () =>
                     {

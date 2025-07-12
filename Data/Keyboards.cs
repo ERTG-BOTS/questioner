@@ -91,8 +91,8 @@ internal class Keyboards
         {
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("Хорошо", $"good#{token}"),
-                InlineKeyboardButton.WithCallbackData("Плохо", $"bad#{token}")
+                InlineKeyboardButton.WithCallbackData("Да", $"good#{token}"),
+                InlineKeyboardButton.WithCallbackData("Нет", $"bad#{token}")
             }
         });
     }

@@ -354,8 +354,9 @@ internal class BotAsync
                                 currentUser.CurrentMode = ModeCode["question"];
                                 await botClient.SendMessage(
                                     chatId,
-                                    "Отправь вопрос и вложения одним сообщением",
-                                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode)
+                                    "<b>🤔 Суть вопроса</b>\n\nОтправь вопрос и вложения одним сообщением",
+                                    replyMarkup: GetCurrentKeyboard(currentUser.CurrentMode),
+                                    parseMode: ParseMode.Html
                                 );
                                 return;
                             case "вернуть вопрос":
@@ -442,7 +443,8 @@ internal class BotAsync
                             default:
                             {
                                 await botClient.SendMessage(chatId: currentUser.ChatId,
-                                    text: "Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос");
+                                    text: "<b>🗃️ Регламент</b>\n\nПрикрепи ссылку на регламент из клевера, по которому у тебя вопрос",
+                                    parseMode: ParseMode.Html);
                                 currentUser.CurrentMode = ModeCode["clever"];
                                 break;
                             }
@@ -468,7 +470,7 @@ internal class BotAsync
                                 {
                                     await botClient.SendMessage(chatId: message.Chat.Id,
                                         text:
-                                        "<b>Сообщение не содержит ссылку на клевер</b>\nОтправь ссылку на регламент из клевера, по которому у тебя вопрос", parseMode: ParseMode.Html);
+                                        "<b>Сообщение не содержит ссылку на клевер</b>\n\nОтправь ссылку на регламент из клевера, по которому у тебя вопрос", parseMode: ParseMode.Html);
                                     return;
                                 }
                                 
@@ -669,8 +671,9 @@ internal class BotAsync
                     await botClient.EditMessageText(
                         Config.ForumId,
                         message!.MessageId,
-                        "Оценка диалога проставлена",
-                        replyMarkup: null
+                        "<b>⭐ Оценка диалога</b>\n\nСпасибо за оценку!",
+                        replyMarkup: null,
+                        parseMode: ParseMode.Html
                     );
                 }
                 else
@@ -696,8 +699,9 @@ internal class BotAsync
                         await botClient.EditMessageText(
                             chatId,
                             message!.MessageId,
-                            "Оценка диалога проставлена",
-                            replyMarkup: null
+                            "<b>⭐ Оценка диалога</b>\n\nСпасибо за оценку!",
+                            replyMarkup: null,
+                            parseMode: ParseMode.Html
                         );
                     }
 

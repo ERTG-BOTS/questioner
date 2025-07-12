@@ -1,6 +1,7 @@
 ﻿using QuestionBot.Data;
 using QuestionBot.Data.Models;
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 using static QuestionBot.Program;
 
 namespace QuestionBot.Async;
@@ -45,8 +46,9 @@ public class TasksAsync
             UsersList.First(x => x.ChatId == questionRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog"];
             await botClient.SendMessage(
                 questionRecord.ChatId,
-                "Вопрос передан на рассмотрение",
-                replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+                "<b>✅ Успешно</b>\n\nВопрос передан на рассмотрение, в скором времени тебе ответят",
+                replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"]),
+                parseMode: ParseMode.Html
             );
 
             await QueueManager.AddDialogAsync(questionRecord);
@@ -63,13 +65,15 @@ public class TasksAsync
             {
                 await botClient.SendMessage(
                     dialog.ChatIdEmployee,
-                    "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+                    "<b>🔒 Отсутствие активности | Закрытие</b>\n\nЧат был неактивен в течение 3 минут и сейчас будет закрыт",
+                    parseMode: ParseMode.Html
                 );
 
                 await botClient.SendMessage(
                     Config.ForumId,
                     messageThreadId: dialog.MessageThreadId,
-                    text: "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+                    text: "<b>🔒 Отсутствие активности | Закрытие</b>\n\nЧат был неактивен в течение 3 минут и сейчас будет закрыт",
+                    parseMode: ParseMode.Html
                 );
 
                 await QueueManager.EndDialogAsync(dialog);
@@ -78,14 +82,18 @@ public class TasksAsync
             {
                 await botClient.SendMessage(
                     dialog.ChatIdEmployee,
-                    "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+                    "<b>🚩 Отсутствие активности | Предупреждение</b>\n\nЧат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности" +
+                    "\nЕсли вопрос неактуален, закройте диалог",
+                    parseMode: ParseMode.Html
                 );
 
                 await botClient.SendMessage(
                     Config.ForumId,
                     messageThreadId: dialog.MessageThreadId,
                     text:
-                    "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+                    "<b>🚩 Отсутствие активности | Предупреждение</b>\n\nЧат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности" +
+                    "\nЕсли вопрос неактуален, закройте диалог",
+                    parseMode: ParseMode.Html
                 );
             }
     }
