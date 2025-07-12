@@ -623,18 +623,30 @@ internal class BotAsync
             var currentData = callbackQuery.Data.Split('#');
             StringBuilder output = new();
             using var db = new AppDbContext();
-
+            
             if (currentData.Length == 3 && currentData[0] == "rg" && chatId == Config.BotChatId)
             {
                 var dialog = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[2]);
-                if (dialog != null) dialog.DialogQualityRg = currentData[1] == "good";
-                db.SaveChanges();
-                await botClient.EditMessageText(
-                    Config.ForumId,
-                    message!.MessageId,
-                    "Оценка диалога проставлена",
-                    replyMarkup: null
-                );
+                
+                var topicSupervisor = GetUser(callbackQuery.From.Id);
+                var topicSupervisorsList = db.DialogHistory.FirstOrDefault(x => x.Token == currentData[2])?.ListFIOSupervisor;
+
+                if (topicSupervisor != null && topicSupervisorsList != null && topicSupervisorsList.Contains(topicSupervisor.FIO))
+                {
+                    if (dialog != null) dialog.DialogQualityRg = currentData[1] == "good";
+                    await db.SaveChangesAsync();
+                    await botClient.EditMessageText(
+                        Config.ForumId,
+                        message!.MessageId,
+                        "Оценка диалога проставлена",
+                        replyMarkup: null
+                    );
+                }
+                else
+                {
+                    await botClient.AnswerCallbackQuery(callbackQuery.Id, "Это не твой чат");
+                }
+
                 return;
             }
 
