@@ -1,4 +1,5 @@
 ﻿using QuestionBot.Data;
+using QuestionBot.Data.Models;
 using Telegram.Bot;
 using static QuestionBot.Program;
 
@@ -12,6 +13,20 @@ public class TasksAsync
         {
             await Substitution.DelayToTime(new TimeOnly(3, 30, 0));
             await QueueManager.ClearQuestionQueuesAsync();
+        }
+    }
+    
+    public static async Task RemoveOldTopics()
+    {
+        while (true)
+        {
+            await Substitution.DelayToTime(new TimeOnly(3, 30, 0));
+
+            var oldTopics = DialogHistories.GetOldDialogHistories();
+            var topicsLength = oldTopics.Length;
+            Substitution.WriteLog("Топики", $"Найдено старых топиков: {topicsLength}");
+            await BotAsync.DeleteOldTopics(oldTopics); // Удаление топиков из бота
+            DialogHistories.RemoveOldDialogHistories(oldTopics); // Удаление топиков из базы данных
         }
     }
 

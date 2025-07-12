@@ -44,7 +44,8 @@ public static class Substitution
         { "Диалог", "[\x1b[96mДИАЛОГ\x1b[0m]" },
         { "Сообщение", "[\x1b[93mСООБЩЕНИЕ\x1b[0m]" },
         { "callback", "[\x1b[93mCALLBACK\x1b[0m]" },
-        { "debug", "[\x1b[32mDEBUG\x1b[0m]" }
+        { "debug", "[\x1b[32mDEBUG\x1b[0m]" },
+        { "Топики", "[\x1b[32mТОПИКИ\x1b[0m]" }
     };
 
     /// <summary>

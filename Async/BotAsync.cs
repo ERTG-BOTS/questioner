@@ -769,6 +769,22 @@ internal class BotAsync
         );
     }
 
+    public static async Task DeleteOldTopics(DialogHistories[] topicList)
+    {
+        foreach (var topic in topicList)
+        {
+            try
+            {
+                await botClient.DeleteForumTopic(chatId: Config.ForumId, messageThreadId: topic.MessageThreadId);
+                WriteLog("Топики", $"Удален топик {topic.MessageThreadId} ({topic.Token})");
+            }catch (Exception ex)
+            {
+                WriteLog("Топики", $"Не удалось удалить топик {topic.MessageThreadId} ({topic.Token}). Ошибка:  {ex.Message}");
+            }
+            
+        }
+    }
+
 #pragma warning disable IDE0060 // Удалите неиспользуемый параметр
   /// <summary>
   ///     Хук ошибок от API Телеграмм

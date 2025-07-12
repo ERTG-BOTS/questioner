@@ -61,6 +61,8 @@ public class Program
 
         _ = Task.Run(EndDayTask);
 
+        _ = Task.Run(RemoveOldTopics);
+        
         _ = Task.Run(async () =>
         {
             while (true)

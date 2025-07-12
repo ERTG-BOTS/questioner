@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using QuestionBot.Data.QueueModels;
 using Telegram.Bot;
@@ -328,6 +329,25 @@ public class DialogHistories
             ListStartDialog = string.Join(";", dialogRecord.ListStartDialog),
             ListEndDialog = string.Join(";", dialogRecord.ListEndDialog)
         };
+    }
+
+    public static DialogHistories[] GetOldDialogHistories()
+    {
+        using AppDbContext db = new();
+        var twoMonthsAgo = DateTime.Now.AddMonths(-2);
+        return db.DialogHistory
+            .AsEnumerable()
+            .Where(d => DateTime.TryParseExact(d.StartQuestion, "dd.MM.yyyy HH:mm:ss", 
+                            new CultureInfo("ru-RU"), DateTimeStyles.None, out var date)
+                        && date < twoMonthsAgo)
+            .ToArray();
+    }
+
+    public static void RemoveOldDialogHistories(DialogHistories[] dialogHistories)
+    {
+        using AppDbContext db = new();
+        db.DialogHistory.RemoveRange(dialogHistories);
+        db.SaveChanges();
     }
 }
 
