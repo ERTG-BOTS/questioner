@@ -208,10 +208,21 @@ public class QueueChatManager
 
             DialogChats.Add(dialogRecord);
 
-            await botClient.ReopenForumTopic(
-                Config.ForumId,
-                newTopic.MessageThreadId
-            );
+            try
+            {
+                await botClient.ReopenForumTopic(
+                    Config.ForumId,
+                    newTopic.MessageThreadId
+                );
+            }
+            catch (Exception ex)
+            {
+                Substitution.WriteLog("Error", "Ошибка при открытии топика: " + ex.Message);
+                await botClient.ReopenForumTopic(
+                    Config.ForumId,
+                    newTopic.MessageThreadId
+                );
+            }
         }
         finally
         {
