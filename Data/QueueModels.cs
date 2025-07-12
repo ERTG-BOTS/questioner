@@ -93,7 +93,7 @@ public class QueueChatManager
     {
       await botClient.SendMessage(
               chatId: item.ChatId,
-              text: "Твой вопрос был отменен",
+              text: "Твой вопрос был отменен"
             );
     }
     QuestionQueue.Clear();

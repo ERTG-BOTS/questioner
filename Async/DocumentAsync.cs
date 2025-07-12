@@ -394,15 +394,13 @@ public class DocumentAsync
         {
           AddTextToDocument($"Документ {documentNumber}");
 
-          Telegram.Bot.Types.InputFile file = await botClient.GetFile(
-            fileId: thisMessage.Document.FileId
-            );
-          using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Create))
+          var file = await botClient.GetFile(thisMessage.Document.FileId);
+          await using (var fileStream = new FileStream(dialogDocument, FileMode.Create))
           {
             await botClient.DownloadFile(file.FilePath!, fileStream);
           }
 
-          using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Open, FileAccess.Read))
+          await using (var fileStream = new FileStream(dialogDocument, FileMode.Open, FileAccess.Read))
           {
             InputFile inputFileFromStream = InputFile.FromStream(fileStream, $"Документ_{documentNumber++}_{thisMessage.Document.FileName}");
             await botClient.SendDocument(
