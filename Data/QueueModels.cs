@@ -12,6 +12,7 @@ public class QuestionChatRecord
     public required string FIO { get; set; }
     public DateTime TimeStart { get; set; }
     public int StartMessageId { get; set; }
+    public string CleverLink { get; set; }
 }
 
 public class DialogChatRecord
@@ -26,6 +27,7 @@ public class DialogChatRecord
     public int MessageThreadId { get; set; }
     public required List<string> ListStartDialog { get; set; }
     public required List<string> ListEndDialog { get; set; }
+    public required string CleverLink { get; set; }
     public DateTime? LastMessageReceived { get; set; }
 }
 
@@ -112,7 +114,8 @@ public class QueueChatManager
                 MessageThreadId = dialog.MessageThreadId,
                 ListStartDialog = [.. dialog.ListStartDialog.Split(";")],
                 ListEndDialog = [.. dialog.ListEndDialog.Split(";")],
-                LastMessageReceived = DateTime.UtcNow
+                LastMessageReceived = DateTime.UtcNow,
+                CleverLink = dialog.CleverLink
             });
 
             await botClient.ReopenForumTopic(
@@ -173,7 +176,8 @@ public class QueueChatManager
             string text;
             if (user != null)
                 text = $"Вопрос задает <b>{question.FIO}</b> (@{user.Username})\n\n" +
-                       $"<i>РГ: <b>{user.Boss}</b></i>";
+                       $"<b>🗃️ Регламент:</b> <a href='{question.CleverLink}'>тык</a>\n" +
+                       $"<b>👑 РГ:</b> {user.Boss}";
             else
                 text = $"Вопрос задает <b>{question.FIO}</b>";
 
@@ -203,7 +207,8 @@ public class QueueChatManager
                 ChatIdLastSupervisor = 0,
                 ListStartDialog = [],
                 ListEndDialog = [],
-                LastMessageReceived = DateTime.UtcNow
+                LastMessageReceived = DateTime.UtcNow,
+                CleverLink = question.CleverLink
             };
 
             DialogChats.Add(dialogRecord);

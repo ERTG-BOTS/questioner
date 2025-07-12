@@ -433,6 +433,28 @@ internal class BotAsync
                             case "отменить вопрос":
                             {
                                 currentUser.CurrentMode = ModeCode["signed"];
+                                await botClient.SendMessage(
+                                    text: "Чтобы задать вопрос нажми \"Задать вопрос\"",
+                                    chatId: currentUser.CurrentMode
+                                );
+                                return;
+                            }
+                            default:
+                            {
+                                await botClient.SendMessage(chatId: currentUser.ChatId,
+                                    text: "Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос");
+                                currentUser.CurrentMode = ModeCode["clever"];
+                                break;
+                            }
+                        }
+
+                        break;
+                    case 33:
+                        switch (currentMessage)
+                        {
+                            case "отменить вопрос":
+                            {
+                                currentUser.CurrentMode = ModeCode["signed"];
                                 // var sendMessage = sendMessageRequest("Чтобы задать вопрос нажми \"Задать вопрос\"", currentUser.CurrentMode);
                                 await botClient.SendMessage(
                                     text: "Чтобы задать вопрос нажми \"Задать вопрос\"",
@@ -442,13 +464,22 @@ internal class BotAsync
                             }
                             default:
                             {
+                                if (!message.Text.Contains("clever.ertelecom.ru/content/space/") && currentUser.Role != 10)
+                                {
+                                    await botClient.SendMessage(chatId: message.Chat.Id,
+                                        text:
+                                        "<b>Сообщение не содержит ссылку на клевер</b>\nОтправь ссылку на регламент из клевера, по которому у тебя вопрос", parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                
                                 if (await QueueManager.AddToQuestionQueueAsync(
                                         new QuestionChatRecord
                                         {
                                             ChatId = chatId,
                                             FIO = currentUser.FIO,
                                             StartMessageId = message.MessageId,
-                                            TimeStart = DateTime.UtcNow
+                                            TimeStart = DateTime.UtcNow,
+                                            CleverLink = currentUser.CurrentMode == 10 ? "Заглушка" : message.Text
                                         }))
                                 {
                                     currentUser.CurrentMode = ModeCode["await answer"];

@@ -25,7 +25,7 @@ public class RegisteredUsersModel
 
     public string? Boss { get; set; } // Представляет босса пользователя в организации.
     public string? Email { get; set; } // Представляет адрес электронной почты пользователя.
-    public byte? Role { get; set; } // Представляет состояние администратора пользователя.
+    public byte Role { get; set; } // Представляет состояние администратора пользователя.
 
     /// <summary>
     ///     Создает новую модель данных для нового пользователя.
@@ -123,6 +123,9 @@ public class UserModel
 
     // Текущее состояние пользователя
     public short CurrentMode { get; set; }
+
+    // Текущая роль пользователя
+    public byte Role { get; set; }
 
     public override bool Equals(object? obj)
     {
@@ -284,7 +287,8 @@ public class UserModel
             Boss = user?.Boss,
             Position = position,
             DefaultMode = mode,
-            CurrentMode = mode
+            CurrentMode = mode, 
+            Role = user.Role
         };
     }
 
@@ -315,6 +319,7 @@ public class DialogHistories
     public required string ListEndDialog { get; set; }
     public bool? DialogQuality { get; set; }
     public bool? DialogQualityRg { get; set; }
+    public required string CleverLink { get; set; }
 
     public static DialogHistories GetDialogHistories(DialogChatRecord dialogRecord)
     {
@@ -327,7 +332,8 @@ public class DialogHistories
             FirstMessageId = dialogRecord.FirstMessageId,
             MessageThreadId = dialogRecord.MessageThreadId,
             ListStartDialog = string.Join(";", dialogRecord.ListStartDialog),
-            ListEndDialog = string.Join(";", dialogRecord.ListEndDialog)
+            ListEndDialog = string.Join(";", dialogRecord.ListEndDialog),
+            CleverLink = dialogRecord.CleverLink
         };
     }
 

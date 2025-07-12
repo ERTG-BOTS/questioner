@@ -18,6 +18,7 @@ public static class Substitution
         { "signed", 2 },
         { "signed supervisor", 20 },
         { "question", 3 },
+        { "clever", 33 },
         { "await answer", 4 },
         { "in dialog", 5 },
         { "supervisor", 30 },
