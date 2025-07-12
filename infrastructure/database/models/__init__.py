@@ -1,3 +1,3 @@
 from .base import Base
-from .users import Users
-from .dialogHistories import DialogHistories
+from .user import User
+from .dialogHistory import DialogHistory

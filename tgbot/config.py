@@ -24,6 +24,8 @@ class TgBot:
     use_redis: bool
     division: str
 
+    forum_id: str
+
     @staticmethod
     def from_env(env: Env):
         """
@@ -37,9 +39,11 @@ class TgBot:
         use_redis = env.bool("USE_REDIS")
         division = env.str("DIVISION")
 
+        forum_id = env.str("FORUM_ID")
+
         if division != "NTP" and division != "NCK":
             raise ValueError("[CONFIG] DIVISION must be NTP or NCK")
-        return TgBot(token=token, use_redis=use_redis, division=division)
+        return TgBot(token=token, use_redis=use_redis, division=division, forum_id=forum_id)
 
 
 @dataclass
@@ -69,10 +73,8 @@ class DbConfig:
     password: str
 
     main_db: str
-    ntp_achievements_db: str
-    nck_achievements_db: str
 
-    def construct_sqlalchemy_url(self, db_name=None, driver="aioodbc",) -> URL:
+    def construct_sqlalchemy_url(self, db_name=None, driver="aioodbc", ) -> URL:
         """
         Constructs and returns a SQLAlchemy URL for SQL Server database configuration.
         """
@@ -98,13 +100,8 @@ class DbConfig:
         password = env.str("DB_PASS")
 
         main_db = env.str("DB_MAIN_NAME")
-        ntp_achievements_db = env.str("DB_NTP_ACHIEVEMENTS_NAME")
-        nck_achievements_db = env.str("DB_NCK_ACHIEVEMENTS_NAME")
 
-        return DbConfig(
-            host=host, user=user, password=password, main_db=main_db, ntp_achievements_db=ntp_achievements_db,
-            nck_achievements_db=nck_achievements_db
-        )
+        return DbConfig(host=host, user=user, password=password, main_db=main_db)
 
 
 @dataclass

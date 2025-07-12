@@ -4,7 +4,7 @@ from typing import Optional, List, Sequence
 from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
 
-from infrastructure.database.models.users import Users
+from infrastructure.database.models.user import User
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.services.logger import setup_logging
 
@@ -18,7 +18,7 @@ class UserRepo(BaseRepo):
             username: Optional[str] = None,
             fullname: Optional[str] = None,
             email: Optional[str] = None
-    ) -> Optional[Users]:
+    ) -> Optional[User]:
         """
         Поиск пользователя в БД по фильтрам
 
@@ -34,19 +34,19 @@ class UserRepo(BaseRepo):
         filters = []
 
         if user_id:
-            filters.append(Users.ChatId == user_id)
+            filters.append(User.ChatId == user_id)
         if username:
-            filters.append(Users.Username == username)
+            filters.append(User.Username == username)
         if fullname:
-            filters.append(Users.FIO == fullname)
+            filters.append(User.FIO == fullname)
         if email:
-            filters.append(Users.Email == email)
+            filters.append(User.Email == email)
 
         if not filters:
             raise ValueError("At least one parameter must be provided to get_user()")
 
         # Combine all filters using OR
-        query = select(Users).where(*filters)
+        query = select(User).where(*filters)
 
         try:
             result = await self.session.execute(query)
@@ -59,7 +59,7 @@ class UserRepo(BaseRepo):
             self,
             fullname: str,
             limit: int = 10
-    ) -> Sequence[Users]:
+    ) -> Sequence[User]:
         """
         Поиск пользователей по частичному совпадению ФИО
         Возвращает список пользователей для случаев, когда найдено несколько совпадений
@@ -78,10 +78,10 @@ class UserRepo(BaseRepo):
         # Создаём условия для каждой части имени
         like_conditions = []
         for part in name_parts:
-            like_conditions.append(Users.FIO.ilike(f"%{part}%"))
+            like_conditions.append(User.FIO.ilike(f"%{part}%"))
 
         # Все части должны присутствовать в ФИО (AND)
-        query = select(Users).where(and_(*like_conditions)).limit(limit)
+        query = select(User).where(and_(*like_conditions)).limit(limit)
 
         try:
             result = await self.session.execute(query)

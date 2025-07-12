@@ -71,7 +71,7 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
-    stp_db_engine = create_engine(config.db, db_name="STPMain")
+    stp_db_engine = create_engine(config.db, db_name=config.db.main_db)
 
     stp_db = create_session_pool(stp_db_engine)
 

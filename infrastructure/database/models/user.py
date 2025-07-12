@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base, TableNameMixin
 
 
-class Users(Base, TableNameMixin):
+class User(Base, TableNameMixin):
     """
     Класс, представляющий сущность пользователя в БД.
 

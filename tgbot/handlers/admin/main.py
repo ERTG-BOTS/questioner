@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from infrastructure.database.models import Users
+from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 async def admin_start(message: Message, stp_db, state: FSMContext):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        user: Users = await repo.users.get_user(user_id=message.from_user.id)
+        user: User = await repo.users.get_user(user_id=message.from_user.id)
 
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
 
@@ -41,7 +41,6 @@ async def admin_start(message: Message, stp_db, state: FSMContext):
 Я - бот-вопросник {division}
 
 Используй меню, чтобы выбрать действие""", reply_markup=user_kb(
-            role=int(state_data.get("role")) if state_data.get("role") else user.Role,
             is_role_changed=True if state_data.get("role") else False))
         return
 
@@ -59,15 +58,9 @@ async def change_role(callback: CallbackQuery, callback_data: ChangeRole, state:
 
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        user: Users = await repo.users.get_user(user_id=callback.from_user.id)
+        user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
     match callback_data.role:
-        case "mip":
-            await state.update_data(role=6)  # Мониторинг и прогнозирование (МИП)
-            logging.info(f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 6")
-        case "gok":
-            await state.update_data(role=5)  # Группа оценки качества
-            logging.info(f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 5")
         case "duty":
             await state.update_data(role=3)  # Старший (не руководитель группы)
             logging.info(f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 3")
@@ -88,7 +81,7 @@ async def reset_role(callback: CallbackQuery, state: FSMContext, stp_db):
 
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        user: Users = await repo.users.get_user(user_id=callback.from_user.id)
+        user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
     logging.info(
         f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} кнопкой")
@@ -110,7 +103,7 @@ async def reset_role(message: Message, state: FSMContext, stp_db) -> None:
 
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        user: Users = await repo.users.get_user(user_id=message.from_user.id)
+        user: User = await repo.users.get_user(user_id=message.from_user.id)
 
     logging.info(
         f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой")
@@ -120,3 +113,5 @@ async def reset_role(message: Message, state: FSMContext, stp_db) -> None:
 <b>🎭 Твоя роль:</b> {role_names[user.Role]}
 
 <i>Используй меню для управления ботом</i>""", reply_markup=admin_kb())
+
+
