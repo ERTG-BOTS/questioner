@@ -275,7 +275,7 @@ internal class BotAsync
               await botClient.SendMessage(
                 chatId: Config.ForumId,
                 messageThreadId: message.MessageThreadId,
-                text: "Оцени диалог",
+                text: "Мог ли специалист решить вопрос самостоятельно?",
                 replyParameters: new ReplyParameters() { MessageId = message.MessageId },
                 replyMarkup: DialogQualityRg(dialog.Token)
               );

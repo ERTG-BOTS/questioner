@@ -98,7 +98,7 @@ class Keyboards
   {
     return new(new[]
     {
-      new[]{ InlineKeyboardButton.WithCallbackData("Хорошо", $"rg#good#{token}"), InlineKeyboardButton.WithCallbackData("Плохо", $"rg#bad#{token}") },
+      new[]{ InlineKeyboardButton.WithCallbackData("Нет", $"rg#good#{token}"), InlineKeyboardButton.WithCallbackData("Да", $"rg#bad#{token}") },
     });
   }
 
