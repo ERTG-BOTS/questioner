@@ -12,9 +12,9 @@ namespace QuestionBot;
 
 public class Program
 {
-  public static ITelegramBotClient botClient = new TelegramBotClient("");
   public static List<Data.Models.UserModel> UsersList = [];
-  public static ConfigInfo Config = new();
+  public static readonly ConfigInfo Config = new();
+  public static ITelegramBotClient botClient = new TelegramBotClient(Config.BotToken);
   public static QueueChatManager QueueManager = new();
   public static readonly CultureInfo russianCulture = new("ru-RU");
   private static bool TryConnectAllTable()
@@ -26,7 +26,6 @@ public class Program
   {
     ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-    botClient = new TelegramBotClient(Config.BotToken);
     var botInfo = await botClient.GetMe();
     Substitution.WriteLog("Start", $"Загрузка бота {botInfo.FirstName}...");
     var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
