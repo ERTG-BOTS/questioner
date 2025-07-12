@@ -136,30 +136,34 @@ public class UserModel
     if (correctUser == null)
     {
       if (isTopic)
-        await botClient.BanChatMemberAsync(
-              new BanChatMemberRequest()
-              {
-                ChatId = Config.ForumId,
-                UserId = chatId,
-              });
+        // await botClient.BanChatMemberAsync(
+        //       new BanChatMemberRequest()
+        //       {
+        //         ChatId = Config.ForumId,
+        //         userId = chatId,
+        //       });
+        
+        await botClient.BanChatMember(Config.ForumId, chatId);
       else
-        await botClient.SendMessageAsync(
-              new SendMessageRequest()
-              {
-                ChatId = chatId,
-                Text = $"Этот бот работает только для {Config.Division}"
-              });
+        // await botClient.SendMessageAsync(
+        //       new SendMessageRequest()
+        //       {
+        //         ChatId = chatId,
+        //         Text = $"Этот бот работает только для {Config.Division}"
+        //       });
+        await botClient.SendMessage(chatId, $"Этот бот работает только для {Config.Division}");
       return null;
     }
 
     if (isTopic && correctUser.DefaultMode switch { 20 or 30 or 100 => false, _ => true })
     {
-      await botClient.BanChatMemberAsync(
-            new BanChatMemberRequest()
-            {
-              ChatId = Config.ForumId,
-              UserId = chatId
-            });
+      // await botClient.BanChatMemberAsync(
+      //       new BanChatMemberRequest()
+      //       {
+      //         ChatId = Config.ForumId,
+      //         UserId = chatId
+      //       });
+      await botClient.BanChatMember(Config.ForumId, chatId);
       return null;
     }
 

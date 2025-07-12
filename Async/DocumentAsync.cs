@@ -90,12 +90,10 @@ public class DocumentAsync
         using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
         {
           InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-          await botClient.SendDocumentAsync(
-                new SendDocumentRequest()
-                {
-                  ChatId = chatId,
-                  Document = inputFileFromStream
-                });
+          await botClient.SendDocument(
+                  chatId: chatId,
+                  document: inputFileFromStream
+                );
         }
       }
     }
@@ -185,12 +183,10 @@ public class DocumentAsync
         using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
         {
           InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-          await botClient.SendDocumentAsync(
-                new SendDocumentRequest()
-                {
-                  ChatId = chatId,
-                  Document = inputFileFromStream
-                });
+          await botClient.SendDocument(
+                  chatId: chatId,
+                  document: inputFileFromStream
+                );
         }
         Substitution.WriteLog("debug", $"file sent: {sw.ElapsedMilliseconds} ms");
         sw.Stop();
@@ -249,12 +245,10 @@ public class DocumentAsync
         using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
         {
           InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-          await botClient.SendDocumentAsync(
-                new SendDocumentRequest()
-                {
-                  ChatId = chatId,
-                  Document = inputFileFromStream
-                });
+          await botClient.SendDocument(
+                  chatId: chatId,
+                  document: inputFileFromStream
+                );
         }
       }
     }
@@ -276,16 +270,14 @@ public class DocumentAsync
         }
       }
     }
-    await botClient.SendMessageAsync(
-      new SendMessageRequest()
-      {
-        ChatId = chatId,
-        Text = string.Format("Найден диалог {0} с {1} в {2} - {3}",
+    await botClient.SendMessage(
+        chatId: chatId,
+        text: string.Format("Найден диалог {0} с {1} в {2} - {3}",
             currentDialog.FIOSupervisor,
             currentDialog.FIOEmployee,
             currentDialog.TimeDialogStart.AddHours(3).ToString("dd.MM.yyyy HH:mm:ss", russianCulture),
             currentDialog.TimeDialogEnd.AddHours(3).ToString("HH:mm:ss", russianCulture))
-      });
+      );
 
     string fileName = $"Диалог_{currentDialog.TokenDialog}.pdf";
 
@@ -358,20 +350,16 @@ public class DocumentAsync
         if (message == "") break;
         string[] messageSplit = message.Split('#');
         long currentChatId = long.Parse(messageSplit[0]);
-        MessageId thisMessageId = await botClient.CopyMessageAsync(
-                                        new CopyMessageRequest()
-                                        {
-                                          ChatId = 5405986946,
-                                          FromChatId = currentChatId,
-                                          MessageId = int.Parse(messageSplit[1])
-                                        });
-        Message thisMessage = await botClient.EditMessageReplyMarkupAsync(
-                                        new EditMessageReplyMarkupRequest()
-                                        {
-                                          ChatId = 5405986946,
-                                          MessageId = thisMessageId.Id,
-                                          ReplyMarkup = new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1"))
-                                        });
+        MessageId thisMessageId = await botClient.CopyMessage(
+                                          chatId: 5405986946,
+                                          fromChatId: currentChatId,
+                                          messageId: int.Parse(messageSplit[1])
+                                        );
+        Message thisMessage = await botClient.EditMessageReplyMarkup(
+                                          chatId: 5405986946,
+                                          messageId: thisMessageId.Id,
+                                          replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("1"))
+                                        );
 
         string sender = currentChatId == usersInDialog[0]
                         ? currentDialog.FIOEmployee
@@ -388,11 +376,11 @@ public class DocumentAsync
 
         if (thisMessage.Photo != null)
         {
-          var messagePhoto = await botClient.GetFileAsync(
-            new GetFileRequest()
-            { FileId = thisMessage.Photo.Last().FileId });
+          var messagePhoto = await botClient.GetFile(
+            fileId: thisMessage.Photo.Last().FileId
+            );
           FileStream downloadPhoto = new FileStream(messagePhotoPath, FileMode.Create);
-          await botClient.DownloadFileAsync(messagePhoto!.FilePath!, downloadPhoto);
+          await botClient.DownloadFile(messagePhoto!.FilePath!, downloadPhoto);
           downloadPhoto.Dispose();
           ImageData imagedata = ImageDataFactory.Create(messagePhotoPath);
           Image image = new(imagedata);
@@ -406,42 +394,37 @@ public class DocumentAsync
         {
           AddTextToDocument($"Документ {documentNumber}");
 
-          Telegram.Bot.Types.File file = await botClient.GetFileAsync(
-            new GetFileRequest()
-            { FileId = thisMessage.Document.FileId });
+          Telegram.Bot.Types.InputFile file = await botClient.GetFile(
+            fileId: thisMessage.Document.FileId
+            );
           using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Create))
           {
-            await botClient.DownloadFileAsync(file.FilePath!, fileStream);
+            await botClient.DownloadFile(file.FilePath!, fileStream);
           }
 
           using (FileStream fileStream = new FileStream(dialogDocument, FileMode.Open, FileAccess.Read))
           {
             InputFile inputFileFromStream = InputFile.FromStream(fileStream, $"Документ_{documentNumber++}_{thisMessage.Document.FileName}");
-            await botClient.SendDocumentAsync(
-              new SendDocumentRequest()
-              {
-                ChatId = chatId,
-                Document = inputFileFromStream
-              });
+            await botClient.SendDocument(
+                chatId: chatId,
+                document: inputFileFromStream
+              );
           }
 
-          await botClient.EditMessageCaptionAsync(new EditMessageCaptionRequest()
-          {
-            ChatId = 5405986946,
-            MessageId = thisMessageId.Id,
-            Caption = "0"
-          });
+          await botClient.EditMessageCaption(
+            chatId: 5405986946,
+            messageId: thisMessageId.Id,
+            caption: "0"
+          );
         }
 
         if (thisMessage.Sticker != null)
           AddTextToDocument("Телеграмм стикер");
 
-        await botClient.DeleteMessageAsync(
-          new DeleteMessageRequest()
-          {
-            ChatId = 5405986946,
-            MessageId = thisMessageId.Id
-          });
+        await botClient.DeleteMessage(
+            chatId: 5405986946,
+            messageId: thisMessageId.Id
+          );
         await Task.Delay(500);
       }
 
@@ -451,23 +434,19 @@ public class DocumentAsync
       using (FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read))
       {
         InputFile inputFileFromStream = InputFile.FromStream(fileStream, fileName);
-        await botClient.SendDocumentAsync(
-          new SendDocumentRequest()
-          {
-            ChatId = chatId,
-            Document = inputFileFromStream
-          });
+        await botClient.SendDocument(
+            chatId: chatId,
+            document: inputFileFromStream
+          );
       }
     }
     catch (Exception ex)
     {
       Substitution.WriteLog("Error", $"Ошибка при создании PDF: {ex.Message}\n{ex.StackTrace}");
-      await botClient.SendMessageAsync(
-        new SendMessageRequest()
-        {
-          ChatId = chatId,
-          Text = "Ошибка при формировании файла диалога"
-        });
+      await botClient.SendMessage(
+          chatId: chatId,
+          text: "Ошибка при формировании файла диалога"
+        );
       return;
     }
   }

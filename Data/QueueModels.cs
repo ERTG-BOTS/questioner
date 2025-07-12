@@ -91,12 +91,10 @@ public class QueueChatManager
 
     foreach (var item in questionQueueItems)
     {
-      await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = item.ChatId,
-              Text = "Твой вопрос был отменен",
-            });
+      await botClient.SendMessage(
+              chatId: item.ChatId,
+              text: "Твой вопрос был отменен",
+            );
     }
     QuestionQueue.Clear();
   }
@@ -122,39 +120,31 @@ public class QueueChatManager
         LastMessageReceived = DateTime.UtcNow,
       });
 
-      await botClient.ReopenForumTopicAsync(
-                      new ReopenForumTopicRequest()
-                      {
-                        ChatId = Config.ForumId,
-                        MessageThreadId = dialog.MessageThreadId
-                      });
+      await botClient.ReopenForumTopic(
+                        chatId: Config.ForumId,
+                        messageThreadId: dialog.MessageThreadId
+                      );
 
-      await botClient.EditForumTopicAsync(
-        new EditForumTopicRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = dialog.MessageThreadId,
-          Name = dialog.FIOEmployee,
-          IconCustomEmojiId = Substitution.EmojiKeys["new"]
-        });
+      await botClient.EditForumTopic(
+          chatId: Config.ForumId,
+          messageThreadId: dialog.MessageThreadId,
+          name: dialog.FIOEmployee,
+          iconCustomEmojiId: Substitution.EmojiKeys["new"]
+        );
 
-      await botClient.SendMessageAsync(
-        new SendMessageRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = dialog.MessageThreadId,
-          Text = "Диалог возобновлен"
-        });
+      await botClient.SendMessage(
+          chatId: Config.ForumId,
+          messageThreadId: dialog.MessageThreadId,
+          text: "Диалог возобновлен"
+        );
 
       UsersList.First(x => x.ChatId == chatId).CurrentMode = Substitution.ModeCode["in dialog"];
 
-      await botClient.SendMessageAsync(
-        new SendMessageRequest
-        {
-          ChatId = chatId,
-          Text = "Диалог возобновлен",
-          ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
-        });
+      await botClient.SendMessage(
+          chatId: chatId,
+          text: "Диалог возобновлен",
+          replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+        );
     }
     finally
     {
@@ -167,47 +157,34 @@ public class QueueChatManager
     await dialogSemaphore.WaitAsync();
     try
     {
-      var newTopic = await botClient.CreateForumTopicAsync(
-                            new CreateForumTopicRequest()
-                            {
-                              ChatId = Config.ForumId,
-                              Name = question.FIO
-                            });
+      var newTopic = await botClient.CreateForumTopic(
+                              chatId: Config.ForumId,
+                              name: question.FIO
+                            );
 
-      await botClient.CloseForumTopicAsync(
-        new CloseForumTopicRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = newTopic.MessageThreadId
-        }
+      await botClient.CloseForumTopic(
+          chatId: Config.ForumId,
+          messageThreadId: newTopic.MessageThreadId
       );
 
-      await botClient.EditForumTopicAsync(
-        new EditForumTopicRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = newTopic.MessageThreadId,
-          IconCustomEmojiId = Substitution.EmojiKeys["new"]
-        });
+      await botClient.EditForumTopic(
+          chatId: Config.ForumId,
+          messageThreadId: newTopic.MessageThreadId,
+          iconCustomEmojiId: Substitution.EmojiKeys["new"]
+        );
 
-      await botClient.SendMessageAsync(
-        new SendMessageRequest()
-        {
-          ChatId = Config.ForumId,
-          Text = $"Вопрос задает <b>{question.FIO}</b>",
-          MessageThreadId = newTopic.MessageThreadId,
-          ParseMode = Telegram.Bot.Types.Enums.ParseMode.Html
-        }
+      await botClient.SendMessage(
+          chatId: Config.ForumId,
+          text: $"Вопрос задает <b>{question.FIO}</b>",
+          messageThreadId: newTopic.MessageThreadId,
+          parseMode: Telegram.Bot.Types.Enums.ParseMode.Html
       );
 
-      var firstMessageId = await botClient.CopyMessageAsync(
-        new CopyMessageRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = newTopic.MessageThreadId,
-          FromChatId = question.ChatId,
-          MessageId = question.StartMessageId
-        }
+      var firstMessageId = await botClient.CopyMessage(
+          chatId: Config.ForumId,
+          messageThreadId: newTopic.MessageThreadId,
+          fromChatId: question.ChatId,
+          messageId: question.StartMessageId
       );
 
       var dialogRecord = new DialogChatRecord()
@@ -227,12 +204,9 @@ public class QueueChatManager
 
       DialogChats.Add(dialogRecord);
       
-      await botClient.ReopenForumTopicAsync(
-        new ReopenForumTopicRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = newTopic.MessageThreadId
-        }
+      await botClient.ReopenForumTopic(
+          chatId: Config.ForumId,
+          messageThreadId: newTopic.MessageThreadId
       );
     }
     finally
@@ -243,12 +217,9 @@ public class QueueChatManager
 
   private async Task ErrorDialogAsync(long chatId)
   {
-    await botClient.SendMessageAsync(
-      new SendMessageRequest()
-      {
-        ChatId = chatId,
-        Text = "Диалог не был найден\nСоздай вопрос снова"
-      }
+    await botClient.SendMessage(
+        chatId: chatId,
+        text: "Диалог не был найден\nСоздай вопрос снова"
     );
     var user = UsersList.FirstOrDefault(x => x.ChatId == chatId);
     if (user != null)
@@ -264,13 +235,10 @@ public class QueueChatManager
       var dialogRecord = DialogChats.FirstOrDefault(x => x == dialog);
       if (dialogRecord != null)
       {
-        await botClient.CopyMessageAsync(
-          new CopyMessageRequest()
-          {
-            ChatId = dialogRecord.ChatIdEmployee,
-            FromChatId = Config.ForumId,
-            MessageId = messageId
-          }
+        await botClient.CopyMessage(
+            chatId: dialogRecord.ChatIdEmployee,
+            fromChatId: Config.ForumId,
+            messageId: messageId
         );
         dialogRecord.LastMessageReceived = DateTime.UtcNow;
       }
@@ -290,14 +258,11 @@ public class QueueChatManager
       var dialogRecord = DialogChats.FirstOrDefault(x => x.ChatIdEmployee == chatId);
       if (dialogRecord != null)
       {
-        await botClient.CopyMessageAsync(
-          new CopyMessageRequest()
-          {
-            ChatId = Config.ForumId,
-            MessageThreadId = dialogRecord.MessageThreadId,
-            FromChatId = dialogRecord.ChatIdEmployee,
-            MessageId = messageId
-          }
+        await botClient.CopyMessage(
+            chatId: Config.ForumId,
+            messageThreadId: dialogRecord.MessageThreadId,
+            fromChatId: dialogRecord.ChatIdEmployee,
+            messageId: messageId
         );
         dialogRecord.LastMessageReceived = DateTime.UtcNow;
       }
@@ -346,62 +311,50 @@ public class QueueChatManager
             }
           }
         DialogChats.Remove(dialogRecord);
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = Config.ForumId,
-            MessageThreadId = dialogRecord.MessageThreadId,
-            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
-          });
+        await botClient.SendMessage(
+            chatId: Config.ForumId,
+            messageThreadId: dialogRecord.MessageThreadId,
+            text: $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+          );
 
         UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = dialogRecord.ChatIdEmployee,
-            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
-            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
-          });
+        await botClient.SendMessage(
+            chatId: dialogRecord.ChatIdEmployee,
+            text: $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
+            replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+          );
 
         if (dialogRecord.ListStartDialog.Count != 0)
         {
-          await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = dialogRecord.ChatIdEmployee,
-              Text = $"Оцени диалог",
-              ReplyMarkup = Keyboards.DialogQuality(dialogRecord.Token)
-            });
+          await botClient.SendMessage(
+              chatId: dialogRecord.ChatIdEmployee,
+              text: $"Оцени диалог",
+              replyMarkup: Keyboards.DialogQuality(dialogRecord.Token)
+            );
           _ = Task.Run(async () =>
           {
             await Task.Delay(5000);
-            await botClient.CloseForumTopicAsync(
-              new CloseForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId
-              });
+            await botClient.CloseForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId
+              );
 
-            await botClient.EditForumTopicAsync(
-              new EditForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId,
-                Name = dialogRecord.Token,
-                IconCustomEmojiId = Substitution.EmojiKeys["end"]
-              });
+            await botClient.EditForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId,
+                name: dialogRecord.Token,
+                iconCustomEmojiId: Substitution.EmojiKeys["end"]
+              );
           });
         }
         else
           _ = Task.Run(async () =>
           {
             await Task.Delay(5000);
-            await botClient.DeleteForumTopicAsync(
-              new DeleteForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId
-              });
+            await botClient.DeleteForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId
+              );
           });
       }
     }
@@ -445,62 +398,50 @@ public class QueueChatManager
             }
           }
         DialogChats.Remove(dialogRecord);
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = Config.ForumId,
-            MessageThreadId = dialogRecord.MessageThreadId,
-            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
-          });
+        await botClient.SendMessage(
+            chatId: Config.ForumId,
+            messageThreadId: dialogRecord.MessageThreadId,
+            text: $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : "")
+          );
 
         UsersList.First(x => x.ChatId == dialogRecord.ChatIdEmployee).CurrentMode = Substitution.ModeCode["signed"];
-        await botClient.SendMessageAsync(
-          new SendMessageRequest()
-          {
-            ChatId = dialogRecord.ChatIdEmployee,
-            Text = $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
-            ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
-          });
+        await botClient.SendMessage(
+            chatId: dialogRecord.ChatIdEmployee,
+            text: $"Диалог завершен" + (dialogRecord.ListStartDialog.Count == 0 ? " и будет удален" : ""),
+            replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["signed"])
+          );
 
         if (dialogRecord.ListStartDialog.Count != 0)
         {
-          await botClient.SendMessageAsync(
-            new SendMessageRequest()
-            {
-              ChatId = dialogRecord.ChatIdEmployee,
-              Text = $"Оцени диалог",
-              ReplyMarkup = Keyboards.DialogQuality(dialogRecord.Token)
-            });
+          await botClient.SendMessage(
+              chatId: dialogRecord.ChatIdEmployee,
+              text: $"Оцени диалог",
+              replyMarkup: Keyboards.DialogQuality(dialogRecord.Token)
+            );
           _ = Task.Run(async () =>
           {
             await Task.Delay(5000);
-            await botClient.CloseForumTopicAsync(
-              new CloseForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId
-              });
+            await botClient.CloseForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId
+              );
 
-            await botClient.EditForumTopicAsync(
-              new EditForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId,
-                Name = dialogRecord.Token,
-                IconCustomEmojiId = Substitution.EmojiKeys["end"]
-              });
+            await botClient.EditForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId,
+                name: dialogRecord.Token,
+                iconCustomEmojiId: Substitution.EmojiKeys["end"]
+              );
           });
         }
         else
           _ = Task.Run(async () =>
           {
             await Task.Delay(5000);
-            await botClient.DeleteForumTopicAsync(
-              new DeleteForumTopicRequest()
-              {
-                ChatId = Config.ForumId,
-                MessageThreadId = dialogRecord.MessageThreadId
-              });
+            await botClient.DeleteForumTopic(
+                chatId: Config.ForumId,
+                messageThreadId: dialogRecord.MessageThreadId
+              );
           });
       }
       else

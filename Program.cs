@@ -27,7 +27,7 @@ public class Program
     ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
     botClient = new TelegramBotClient(Config.BotToken);
-    var botInfo = botClient.MakeRequestAsync(new GetMeRequest()).Result;
+    var botInfo = botClient.MakeRequestAsync().Result;
     Substitution.WriteLog("Start", $"Загрузка бота {botInfo.FirstName}...");
     var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
 

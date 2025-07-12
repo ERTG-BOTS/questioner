@@ -32,13 +32,11 @@ public class TasksAsync
       await QueueManager.RemoveFromQuestionQueueAsync(questionRecord.ChatId);
 
       UsersList.First(x => x.ChatId == questionRecord.ChatId).CurrentMode = Substitution.ModeCode["in dialog"];
-      await botClient.SendMessageAsync(
-         new SendMessageRequest()
-         {
-           ChatId = questionRecord.ChatId,
-           Text = $"Вопрос передан на рассмотрение",
-           ReplyMarkup = Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
-         });
+      await botClient.SendMessage(
+           chatId: questionRecord.ChatId,
+           text: $"Вопрос передан на рассмотрение",
+           replyMarkup: Keyboards.GetCurrentKeyboard(Substitution.ModeCode["in dialog"])
+         );
 
       await QueueManager.AddDialogAsync(questionRecord);
     }
@@ -51,36 +49,32 @@ public class TasksAsync
     {
       if (utcNow.Subtract((DateTime)dialog.LastMessageReceived!).TotalMinutes > 3)
       {
-        await botClient.SendMessageAsync(new SendMessageRequest()
-        {
-          ChatId = dialog.ChatIdEmployee,
-          Text = "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
-        });
+        await botClient.SendMessage(
+          chatId: dialog.ChatIdEmployee,
+          text: "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+        );
 
-        await botClient.SendMessageAsync(new SendMessageRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = dialog.MessageThreadId,
-          Text = "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
-        });
+        await botClient.SendMessage(
+          chatId: Config.ForumId,
+          messageThreadId: dialog.MessageThreadId,
+          text: "Чат был неактивен в течение 3 минут и сейчас будет закрыт"
+        );
 
         await QueueManager.EndDialogAsync(dialog);
       }
       else
       {
 
-        await botClient.SendMessageAsync(new SendMessageRequest()
-        {
-          ChatId = dialog.ChatIdEmployee,
-          Text = "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
-        });
+        await botClient.SendMessage(
+          chatId: dialog.ChatIdEmployee,
+          text: "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+        );
 
-        await botClient.SendMessageAsync(new SendMessageRequest()
-        {
-          ChatId = Config.ForumId,
-          MessageThreadId = dialog.MessageThreadId,
-          Text = "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
-        });
+        await botClient.SendMessage(
+          chatId: Config.ForumId,
+          messageThreadId: dialog.MessageThreadId,
+          text: "Чат был неактивен в течение 2 минут. Он закроется через минуту если не будет активности. Если вопрос неактуален, закройте диалог."
+        );
 
       }
     }
