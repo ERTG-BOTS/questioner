@@ -442,10 +442,36 @@ internal class BotAsync
                             }
                             default:
                             {
-                                await botClient.SendMessage(chatId: currentUser.ChatId,
-                                    text: "<b>🗃️ Регламент</b>\n\nПрикрепи ссылку на регламент из клевера, по которому у тебя вопрос",
-                                    parseMode: ParseMode.Html);
-                                currentUser.CurrentMode = ModeCode["clever"];
+                                if (await QueueManager.AddToQuestionQueueAsync(
+                                        new QuestionChatRecord
+                                        {
+                                            ChatId = chatId,
+                                            FIO = currentUser.FIO,
+                                            StartMessageId = message.MessageId,
+                                            TimeStart = DateTime.UtcNow,
+                                            CleverLink = currentUser.CurrentMode == 10 ? "Заглушка" : message.Text
+                                        }))
+                                {
+                                    currentUser.CurrentMode = ModeCode["await answer"];
+                                    // var sendMessage = sendMessageRequest("Вопрос был добавлен в очередь", currentUser.CurrentMode);
+                                    await botClient.SendMessage(
+                                        text: "Вопрос был добавлен в очередь",
+                                        chatId: currentUser.CurrentMode
+                                    );
+                                }
+                                else
+                                {
+                                    // var sendMessage = sendMessageRequest("Вопрос не был добавлен в очередь\n\nПопробуй еще раз", currentUser.CurrentMode);
+                                    await botClient.SendMessage(
+                                        text: "Вопрос не был добавлен в очередь\\n\\nПопробуй еще раз",
+                                        chatId: currentUser.CurrentMode
+                                    );
+                                }
+                                
+                                // await botClient.SendMessage(chatId: currentUser.ChatId,
+                                //     text: "<b>🗃️ Регламент</b>\n\nПрикрепи ссылку на регламент из клевера, по которому у тебя вопрос",
+                                //     parseMode: ParseMode.Html);
+                                // currentUser.CurrentMode = ModeCode["clever"];
                                 break;
                             }
                         }
@@ -466,13 +492,13 @@ internal class BotAsync
                             }
                             default:
                             {
-                                if (!message.Text.Contains("clever.ertelecom.ru/content/space/") && currentUser.Role != 10)
-                                {
-                                    await botClient.SendMessage(chatId: message.Chat.Id,
-                                        text:
-                                        "<b>Сообщение не содержит ссылку на клевер</b>\n\nОтправь ссылку на регламент из клевера, по которому у тебя вопрос", parseMode: ParseMode.Html);
-                                    return;
-                                }
+                                // if (!message.Text.Contains("clever.ertelecom.ru/content/space/") && currentUser.Role != 10)
+                                // {
+                                //     await botClient.SendMessage(chatId: message.Chat.Id,
+                                //         text:
+                                //         "<b>Сообщение не содержит ссылку на клевер</b>\n\nОтправь ссылку на регламент из клевера, по которому у тебя вопрос", parseMode: ParseMode.Html);
+                                //     return;
+                                // }
                                 
                                 if (await QueueManager.AddToQuestionQueueAsync(
                                         new QuestionChatRecord
