@@ -27,10 +27,10 @@ public static class Substitution
 
   public static readonly Dictionary<string, string> EmojiKeys = new()
   {
-    {"new", "5417915203100613993"},
-    {"start", "5368808634392257474"},
-    {"end", "5312315739842026755"},
-    {"lost", "5372819184658949787"},
+    {"new", "5312536423851630001"},
+    {"start", "5238156910363950406"},
+    {"end", "5237699328843200968"},
+    {"lost", "5309965701241379366"},
   };
 
   /// <summary>
