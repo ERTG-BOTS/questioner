@@ -146,7 +146,8 @@ public class UserModel
     public static async Task<UserModel?> GetCorrectUserAsync(bool isTopic, long chatId, string username = "")
     {
         var currentUser = UsersList.FirstOrDefault(x => x.ChatId == chatId);
-        var correctUser = GetUser(chatId, username);
+        var correctUser = GetUser(chatId);
+        Console.WriteLine(correctUser);
         if (correctUser == null)
         {
             if (isTopic)
@@ -217,7 +218,7 @@ public class UserModel
                 userByChatId = db.RegisteredUsers.SingleOrDefault(x =>
                     x.ChatId == chatId &&
                     (x.Role == 10 ||
-                     (x.Division == Config.Division &&
+                     (x.Division.Contains(Config.Division) &&
                       (x.Role == 1 || x.Role == 2 || x.Role == 3 || x.Role == 8))));
             }
             catch
