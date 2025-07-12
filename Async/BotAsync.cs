@@ -584,7 +584,7 @@ internal class BotAsync
                       );
                   return;
                 }
-              case "максмум диалогов":
+              case "максимум диалогов":
                 await botClient.SendMessage(
                     chatId: chatId,
                     text: $"Текущее максимальное количество диалогов {Config.DialogMaxCount}\nЧтобы изменить максмальное количество диалогов, отправь число\n0 - снять ограничение",
