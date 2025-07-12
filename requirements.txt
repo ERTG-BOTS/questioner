@@ -1,0 +1,15 @@
+aiogram~=3.21.0
+environs~=14.2.0
+redis~=6.2.0
+betterlogging~=1.0.0
+
+# # For enabling api:
+# backoff
+# ujson
+# yarl
+
+# # For sqlalchemy:
+sqlalchemy~=2.0.41
+aioodbc~=0.5.0
+# alembic~=1.0
+# asyncpg
