@@ -7,14 +7,23 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuestionBot", "QuestionBot.
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug НЦК|Any CPU = Debug НЦК|Any CPU
+		Debug НТП|Any CPU = Debug НТП|Any CPU
+		Release НЦК|Any CPU = Release НЦК|Any CPU
+		Release НТП|Any CPU = Release НТП|Any CPU
 		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{218C8824-473C-4E86-9511-5F2792916269}.Debug НТП|Any CPU.ActiveCfg = Debug НТП|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Debug НТП|Any CPU.Build.0 = Debug НТП|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Release НЦК|Any CPU.ActiveCfg = Release НЦК|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Release НЦК|Any CPU.Build.0 = Release НЦК|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Release НТП|Any CPU.ActiveCfg = Release НТП|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Release НТП|Any CPU.Build.0 = Release НТП|Any CPU
 		{218C8824-473C-4E86-9511-5F2792916269}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{218C8824-473C-4E86-9511-5F2792916269}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{218C8824-473C-4E86-9511-5F2792916269}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{218C8824-473C-4E86-9511-5F2792916269}.Release|Any CPU.Build.0 = Release|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Debug НЦК|Any CPU.ActiveCfg = Debug НЦК|Any CPU
+		{218C8824-473C-4E86-9511-5F2792916269}.Debug НЦК|Any CPU.Build.0 = Debug НЦК|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
