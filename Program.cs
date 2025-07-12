@@ -1,86 +1,85 @@
 ﻿using System.Globalization;
-using QuestionBot.Data;
-using QuestionBot.Data.QueueModels;
+using OfficeOpenXml;
 using QuestionBot.Async;
+using QuestionBot.Data;
+using QuestionBot.Data.Models;
+using QuestionBot.Data.QueueModels;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
-using OfficeOpenXml;
 using static QuestionBot.Async.TasksAsync;
-using Telegram.Bot.Requests;
 
 namespace QuestionBot;
 
 public class Program
 {
-  public static List<Data.Models.UserModel> UsersList = [];
-  public static readonly ConfigInfo Config = new();
-  public static ITelegramBotClient botClient = new TelegramBotClient(Config.BotToken);
-  public static QueueChatManager QueueManager = new();
-  public static readonly CultureInfo russianCulture = new("ru-RU");
-  private static bool TryConnectAllTable()
-  {
-    using var db = new AppDbContext();
-    return !db.TryConnectAllTable();
-  }
-  static async Task Main()
-  {
-    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+    public static List<UserModel> UsersList = [];
+    public static readonly ConfigInfo Config = new();
+    public static ITelegramBotClient botClient = new TelegramBotClient(Config.BotToken);
+    public static QueueChatManager QueueManager = new();
+    public static readonly CultureInfo russianCulture = new("ru-RU");
 
-    var botInfo = await botClient.GetMe();
-    Substitution.WriteLog("Start", $"Загрузка бота {botInfo.FirstName}...");
-    var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
-
-    if (!Directory.Exists(bufferDirectory))
+    private static bool TryConnectAllTable()
     {
-      Directory.CreateDirectory(bufferDirectory);
+        using var db = new AppDbContext();
+        return !db.TryConnectAllTable();
     }
 
-    CancellationTokenSource cts = new();
-    CancellationToken cancellationToken = cts.Token;
-    ReceiverOptions receiverOptions = new()
+    private static async Task Main()
     {
-      AllowedUpdates = { },
-    };
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-    Config.BotChatId = botInfo.Id;
-    Config.PrintAllSettings();
+        var botInfo = await botClient.GetMe();
+        Substitution.WriteLog("Start", $"Загрузка бота {botInfo.FirstName}...");
+        var bufferDirectory = Path.Combine($"{AppContext.BaseDirectory}", "buffer");
 
-    if (TryConnectAllTable())
-    {
-      Environment.Exit(999);
-    }
+        if (!Directory.Exists(bufferDirectory)) Directory.CreateDirectory(bufferDirectory);
+
+        CancellationTokenSource cts = new();
+        var cancellationToken = cts.Token;
+        ReceiverOptions receiverOptions = new();
+
+        Config.BotChatId = botInfo.Id;
+        Config.PrintAllSettings();
+
+        if (TryConnectAllTable()) Environment.Exit(999);
 
 
-    _ = Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
-          while (true)
-          {
-            await Task.Delay(1000);
-            try
+            while (true)
             {
-              await MergeDialogTask();
+                await Task.Delay(1000);
+                try
+                {
+                    await MergeDialogTask();
+                }
+                catch
+                {
+                }
             }
-            catch { }
-          }
         });
 
-    _ = Task.Run(EndDayTask);
+        _ = Task.Run(EndDayTask);
 
-    _ = Task.Run(async () =>
-    {
-      while (true)
-      {
-          await Task.Delay(60 * 1000);
-        try
+        _ = Task.Run(async () =>
         {
-          await ExpirationOverwatchTask();
-        } catch {}
-      }
-    });
+            while (true)
+            {
+                await Task.Delay(60 * 1000);
+                try
+                {
+                    await ExpirationOverwatchTask();
+                }
+                catch
+                {
+                }
+            }
+        });
 
-    botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions, cancellationToken);
-    Substitution.WriteLog("Start", $"Бот {botInfo.FirstName} запущен.");
+        botClient.StartReceiving(BotAsync.HandleUpdateAsync, BotAsync.HandleErrorAsync, receiverOptions,
+            cancellationToken);
+        Substitution.WriteLog("Start", $"Бот {botInfo.FirstName} запущен.");
 
-    await Task.Delay(Timeout.Infinite);
-  }
+        await Task.Delay(Timeout.Infinite);
+    }
 }

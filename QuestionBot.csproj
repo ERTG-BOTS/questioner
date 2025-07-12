@@ -1,48 +1,48 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <RootNamespase>QuestionBot</RootNamespase>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Configurations>Debug НЦК;Debug НТП;Release НЦК;Release НТП;Debug</Configurations>
-    <Platforms>AnyCPU</Platforms>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <RootNamespase>QuestionBot</RootNamespase>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Configurations>Debug НЦК;Debug НТП;Release НЦК;Release НТП;Debug</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug НТП' ">
-    <DefineConstants>DEBUG;НТП</DefineConstants>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug НТП' ">
+        <DefineConstants>DEBUG;НТП</DefineConstants>
+        <Optimize>false</Optimize>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug НЦК' ">
-    <DefineConstants>DEBUG;НЦК</DefineConstants>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug НЦК' ">
+        <DefineConstants>DEBUG;НЦК</DefineConstants>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release НТП' ">
-    <DefineConstants>НТП</DefineConstants>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release НТП' ">
+        <DefineConstants>НТП</DefineConstants>
+        <Optimize>false</Optimize>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release НЦК' ">
-    <DefineConstants>НЦК</DefineConstants>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release НЦК' ">
+        <DefineConstants>НЦК</DefineConstants>
+        <Optimize>false</Optimize>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
-    <DefineConstants>Debug</DefineConstants>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Update="Data\TimesNewRoman.ttf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <PackageReference Include="Telegram.Bot" Version="22.6.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.6" />
-    <PackageReference Include="EPPlus" Version="7.1.3" />
-    <PackageReference Include="itext7" Version="7.2.5" />
-    <PackageReference Include="Telegram.Bot.Extensions" Version="1.0.0" />
-  </ItemGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
+        <DefineConstants>Debug</DefineConstants>
+        <Optimize>false</Optimize>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Update="Data\TimesNewRoman.ttf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <PackageReference Include="Telegram.Bot" Version="22.6.0"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.6"/>
+        <PackageReference Include="EPPlus" Version="7.1.3"/>
+        <PackageReference Include="itext7" Version="7.2.5"/>
+        <PackageReference Include="Telegram.Bot.Extensions" Version="1.0.0"/>
+    </ItemGroup>
 
 </Project>

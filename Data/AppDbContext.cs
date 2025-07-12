@@ -1,31 +1,33 @@
-﻿using QuestionBot.Data.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using QuestionBot.Data.Models;
 
 namespace QuestionBot.Data;
 
 public class AppDbContext : DbContext
 {
-  public DbSet<RegisteredUsersModel> RegisteredUsers { get; set; }
-  public DbSet<OldDialogHistoryModels> OldDialogHistory { get; set; }
-  public DbSet<DialogHistories> DialogHistory { get; set; }
-  protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-  {
-    base.OnConfiguring(optionsBuilder);
-    optionsBuilder.UseSqlServer(Substitution.GetConnectionString);
-  }
-  public bool TryConnectAllTable()
-  {
-    try
+    public DbSet<RegisteredUsersModel> RegisteredUsers { get; set; }
+    public DbSet<OldDialogHistoryModels> OldDialogHistory { get; set; }
+    public DbSet<DialogHistories> DialogHistory { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-      RegisteredUsers.Any();
-      OldDialogHistory.Any();
-      try
-      {
-        DialogHistory.Any();
-      }
-      catch
-      {
-        Database.ExecuteSqlRaw(@"
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.UseSqlServer(Substitution.GetConnectionString);
+    }
+
+    public bool TryConnectAllTable()
+    {
+        try
+        {
+            RegisteredUsers.Any();
+            OldDialogHistory.Any();
+            try
+            {
+                DialogHistory.Any();
+            }
+            catch
+            {
+                Database.ExecuteSqlRaw(@"
                     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DialogHistories' AND xtype='U')
                     BEGIN
                         CREATE TABLE DialogHistories (
@@ -41,14 +43,14 @@ public class AppDbContext : DbContext
                             DialogQualityRg bit
                         );
                     END");
-      }
-      return true;
-    }
-    catch (Exception ex)
-    {
-      Substitution.WriteLog("Error", $"Ошибка подключения к базе данных. {ex.Message}");
-      return false;
-    }
-  }
-}
+            }
 
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Substitution.WriteLog("Error", $"Ошибка подключения к базе данных. {ex.Message}");
+            return false;
+        }
+    }
+}
