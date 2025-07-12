@@ -173,9 +173,22 @@ public class QueueChatManager
           iconCustomEmojiId: Substitution.EmojiKeys["new"]
         );
 
+      var user = Models.UserModel.GetUser(chatId: question.ChatId);
+
+      string text;
+      if (user != null)
+      {
+        text = $"Вопрос задает <b>{question.FIO}</b> (@{user.Username})\n\n" +
+                   $"<i>РГ: <b>{user.Boss}</b></i>";
+      }
+      else
+      {
+        text = $"Вопрос задает <b>{question.FIO}</b>";
+      }
+      
       await botClient.SendMessage(
           chatId: Config.ForumId,
-          text: $"Вопрос задает <b>{question.FIO}</b>",
+          text: text,
           messageThreadId: newTopic.MessageThreadId,
           parseMode: Telegram.Bot.Types.Enums.ParseMode.Html
       );

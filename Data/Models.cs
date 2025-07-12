@@ -102,6 +102,8 @@ public class UserModel
   public string? Username { get; set; }
   // Полное имя пользователя
   public required string FIO { get; set; }
+  // Руководитель пользователя
+  public required string Boss { get; set; }
   public string? Email { get; set; }
   // Должность пользователя
   public string? Position { get; set; }
@@ -258,6 +260,7 @@ public class UserModel
       Username = user?.Username,
       FIO = user?.FIO ?? user?.Username ?? throw new Exception("FIO is null"),
       Email = user?.Email,
+      Boss = user?.Boss,
       Position = position,
       DefaultMode = mode,
       CurrentMode = mode

@@ -304,8 +304,9 @@ internal class BotAsync
         await botClient.SendMessage(
             chatId: Config.ForumId,
             messageThreadId: message.MessageThreadId,
-            text: $"Чат в работу был взят {currentUser.FIO}",
-            replyParameters: new ReplyParameters() { MessageId = message.MessageId }
+            text: $"Чат в работу был взят <b>{currentUser.FIO}</b>",
+            replyParameters: new ReplyParameters() { MessageId = message.MessageId },
+            parseMode: ParseMode.Html
           );
         await botClient.EditForumTopic(
             chatId: Config.ForumId,
