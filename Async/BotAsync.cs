@@ -75,7 +75,7 @@ internal class BotAsync
                         await botClient.EditForumTopic(
                             Config.ForumId,
                             (int)message.MessageThreadId,
-                            iconCustomEmojiId: "5312315739842026755",
+                            iconCustomEmojiId: "5237699328843200968",
                             name: checkDialog.Token
                         );
                     }
