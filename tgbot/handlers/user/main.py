@@ -121,18 +121,32 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
 Вопрос передан на рассмотрение, в скором времени тебе ответят""", reply_markup=cancel_question_kb())
 
+
     new_topic = await message.bot.create_forum_topic(chat_id=config.tg_bot.forum_id, name=user.FIO,
                                                      icon_custom_emoji_id="5312536423851630001")  # Создание топика
     await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
                                         message_thread_id=new_topic.message_thread_id)  # Закрытие топика
+
+    await repo.dialogs.add_dialog(employee_chat_id=message.chat.id,
+                                  employee_fullname=user.FIO,
+                                  topic_id=new_topic.message_thread_id,
+                                  start_time=datetime.datetime.now(),
+                                  question=state_data.get("question"),
+                                  clever_link=clever_link)  # Добавление диалога в БД
+
+    employee_topics_today = await repo.dialogs.get_dialogs_count_today(employee_fullname=user.FIO)
+    employee_topics_month = await repo.dialogs.get_dialogs_count_last_month(employee_fullname=user.FIO)
+
     topic_info_msg = await message.bot.send_message(chat_id=config.tg_bot.forum_id,
                                                     message_thread_id=new_topic.message_thread_id,
-                                                    text=f"""Вопрос задает <b>{user.FIO}</b>
+                                                    text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if user.Username != "Не указан" else ""}
 
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 РГ:</b> {user.Boss}</blockquote>""")
+<b>👑 РГ:</b> {user.Boss}
+
+<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""", disable_web_page_preview=True)
 
     await message.bot.pin_chat_message(chat_id=config.tg_bot.forum_id,
                                        message_id=topic_info_msg.message_id, disable_notification=True)  # Пин информации о специалисте
@@ -141,16 +155,9 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
                                    from_chat_id=message.chat.id, message_id=state_data.get(
             "question_message_id"))  # Копирование сообщения специалиста в топик
 
-
-    await repo.dialog_histories.add_dialog(employee_chat_id=message.chat.id,
-                                                    employee_fullname=user.FIO,
-                                                    topic_id=new_topic.message_thread_id,
-                                                    start_time=datetime.datetime.now(),
-                                                    question=state_data.get("question"),
-                                                    clever_link=clever_link)  # Добавление диалога в БД
-
     await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
                                          message_thread_id=new_topic.message_thread_id)  # Переоткрытие топика
+
     await state.clear()
 
 

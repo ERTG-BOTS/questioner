@@ -16,7 +16,7 @@ class Dialog(Base, TableNameMixin):
     Attributes:
         Token (Mapped[str]): Уникальный идентификатор токена (первичный ключ).
         TopicId (Mapped[int]): ID топика.
-        TopicDuty (Mapped[str]): ФИО ответственного за вопрос.
+        TopicDutyFullname (Mapped[str]): ФИО ответственного за вопрос.
         EmployeeFullname (Mapped[str]): ФИО сотрудника.
         EmployeeChatId (Mapped[int]): Chat ID сотрудника.
         Question (Mapped[str]): Вопрос диалога.
@@ -39,7 +39,7 @@ class Dialog(Base, TableNameMixin):
 
     Token: Mapped[str] = mapped_column(String(255), primary_key=True)
     TopicId: Mapped[int] = mapped_column(Integer, nullable=False)
-    TopicDuty: Mapped[str] = mapped_column(Unicode)
+    TopicDutyFullname: Mapped[str] = mapped_column(Unicode)
     EmployeeFullname: Mapped[str] = mapped_column(Unicode, nullable=False)
     EmployeeChatId: Mapped[int] = mapped_column(BIGINT, nullable=False)
     Question: Mapped[str] = mapped_column(Unicode, nullable=False)
@@ -48,6 +48,7 @@ class Dialog(Base, TableNameMixin):
     CleverLink: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
     DialogQualityEmployee: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     DialogQualityDuty: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    Status: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
 
     def __repr__(self):
-        return f"<Dialog {self.Token} {self.TopicId} {self.TopicDuty} {self.EmployeeFullname} {self.EmployeeChatId} {self.Question} {self.StartTime} {self.EndTime} {self.CleverLink} {self.DialogQualityEmployee} {self.DialogQualityDuty}>"
+        return f"<Dialog {self.Token} {self.TopicId} {self.TopicDutyFullname} {self.EmployeeFullname} {self.EmployeeChatId} {self.Question} {self.StartTime} {self.EndTime} {self.CleverLink} {self.DialogQualityEmployee} {self.DialogQualityDuty} {self.Status}>"
