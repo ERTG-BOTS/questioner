@@ -89,10 +89,10 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
     else:
         buttons = [
             [
-                InlineKeyboardButton(text="👍 Да",
-                                     callback_data=DialogQualityDuty(answer=True, token=token).pack()),
-                InlineKeyboardButton(text="👎 Нет",
+                InlineKeyboardButton(text="👎 Да",
                                      callback_data=DialogQualityDuty(answer=False, token=token).pack()),
+                InlineKeyboardButton(text="👍 Нет",
+                                     callback_data=DialogQualityDuty(answer=True, token=token).pack()),
             ]
         ]
 

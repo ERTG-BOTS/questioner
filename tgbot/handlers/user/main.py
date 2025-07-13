@@ -10,7 +10,7 @@ from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion
-from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb
+from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb, DialogQualitySpecialist
 from tgbot.misc import dicts
 from tgbot.misc.states import Question
 from tgbot.services.logger import setup_logging
@@ -162,6 +162,29 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     await state.clear()
 
+
+@user_router.callback_query(DialogQualitySpecialist.filter())
+async def dialog_quality_employee(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
+
+    await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
+    await callback.answer("Оценка успешно выставлена ❤️")
+    if callback_data.answer:
+            await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+
+Старший <b>{duty.FIO}</b> закрыл диалог
+
+Ты поставил оценку:
+👍 Старший <b>помог решить твой вопрос</b>""")
+    else:
+        await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+
+Старший <b>{duty.FIO}</b> закрыл диалог
+
+Ты поставил оценку:
+👎 Старший <b>не помог решить твой вопрос</b>""")
 
 async def disable_previous_buttons(message: Message, state: FSMContext):
     """Helper function to disable buttons from previous steps"""

@@ -3,13 +3,13 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
-from tgbot.keyboards.user.main import dialog_quality_kb
+from tgbot.keyboards.user.main import dialog_quality_kb, DialogQualitySpecialist, DialogQualityDuty
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -100,6 +100,30 @@ async def release_cmd(message: Message, stp_db):
 Не удалось найти текущий топик в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
         logger.error(f"Не удалось найти топик {message.message_thread_id}. Закрыли топик")
+
+
+@topic_router.callback_query(IsTopicMessage() and DialogQualityDuty.filter())
+async def dialog_quality_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
+        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+
+    if dialog.TopicDutyFullname == duty.FIO:
+        await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
+        await callback.answer("Оценка успешно выставлена ❤️")
+        if callback_data.answer:
+            await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+
+<b>{duty.FIO}</b> поставил оценку:
+👎 Специалист <b>мог решить вопрос самостоятельно</b>""")
+        else:
+            await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+
+<b>{duty.FIO}</b> поставил оценку:
+👍 Специалист <b>не мог решить вопрос самостоятельно</b>""")
+    else:
+        await callback.answer("Это не твой чат!", show_alert=True)
 
 
 @topic_router.message(IsTopicMessage())
