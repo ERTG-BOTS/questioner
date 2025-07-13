@@ -12,7 +12,7 @@ from tgbot.filters.admin import AdminFilter
 from tgbot.handlers.user.main import main_cb
 from tgbot.keyboards.admin.main import ChangeRole, AdminMenu, admin_kb
 from tgbot.keyboards.user.main import user_kb
-from tgbot.misc.roles import role_names
+from tgbot.misc.dicts import role_names
 from tgbot.services.logger import setup_logging
 
 admin_router = Router()

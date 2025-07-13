@@ -78,8 +78,8 @@ def finish_question_kb() -> InlineKeyboardMarkup:
 
 
 # Клавиатура оценки диалога
-def dialog_quality_kb(token: str, role: str = "spec") -> InlineKeyboardMarkup:
-    if role == "spec":
+def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup:
+    if role == "employee":
         buttons = [
             [
                 InlineKeyboardButton(text="👍 Да", callback_data=DialogQualitySpecialist(answer=True, token=token).pack()),

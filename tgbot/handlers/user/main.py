@@ -10,6 +10,7 @@ from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb
+from tgbot.misc import dicts
 from tgbot.misc.states import Question
 from tgbot.services.logger import setup_logging
 
@@ -123,7 +124,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
 
     new_topic = await message.bot.create_forum_topic(chat_id=config.tg_bot.forum_id, name=user.FIO,
-                                                     icon_custom_emoji_id="5312536423851630001")  # Создание топика
+                                                     icon_custom_emoji_id=dicts.topicEmojis["open"])  # Создание топика
     await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
                                         message_thread_id=new_topic.message_thread_id)  # Закрытие топика
 

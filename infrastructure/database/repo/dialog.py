@@ -127,7 +127,7 @@ class DialogsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_topic_duty(self, token: str, topic_duty: str) -> Optional[Dialog]:
+    async def update_topic_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Dialog]:
         """
         Обновляет описание обязанности топика.
 
