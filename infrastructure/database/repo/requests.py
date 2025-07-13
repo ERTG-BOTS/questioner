@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.repo.dialogHistories import DialogHistoriesRepo
+from infrastructure.database.repo.dialog import DialogHistoriesRepo
 from infrastructure.database.repo.users import UserRepo
 
 

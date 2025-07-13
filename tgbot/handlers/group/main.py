@@ -6,7 +6,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from infrastructure.database.models import User, DialogHistory
+from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
@@ -27,21 +27,20 @@ async def handle_topic_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: DialogHistory = await repo.dialog_histories.get_dialog_by_topic_id(message.message_thread_id)
+        topic: Dialog = await repo.dialog_histories.get_dialog_by_topic_id(message.message_thread_id)
 
     if topic is not None:
-        if len(topic.ListFIOSupervisor) <= 0:
-            await repo.dialog_histories.update_supervisor(token=topic.Token, supervisor_name=duty.FIO)
-            employee: User = await repo.users.get_user(fullname=topic.FIOEmployee)
+        if not topic.TopicDuty:
+            await repo.dialog_histories.update_topic_duty(token=topic.Token, topic_duty=duty.FIO)
+            employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
             await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>👮‍♂️ Вопрос в работе</b>
 
 Старший <b>{duty.FIO}</b> взял вопрос в работу""")
             await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id,
                                            chat_id=employee.ChatId)
         else:
-            if duty.FIO in topic.ListFIOSupervisor:
-                employee: User = await repo.users.get_user(fullname=topic.FIOEmployee)
-                await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id, chat_id=employee.ChatId)
+            if topic.TopicDuty == duty.FIO:
+                await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id, chat_id=topic.EmployeeChatId)
             else:
                 await message.reply("Это не твой чат!")
 

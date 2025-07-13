@@ -141,19 +141,14 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
                                    from_chat_id=message.chat.id, message_id=state_data.get(
             "question_message_id"))  # Копирование сообщения специалиста в топик
 
-    # Fix: Use the correct key name for the message ID
-    question_message_id = state_data.get("question_message_id")
-    if question_message_id is None:
-        # Fallback: use current message ID if question_message_id is not available
-        question_message_id = message.message_id
 
-    dialog = await repo.dialog_histories.add_dialog(chat_id=message.chat.id,
-                                           fullname=user.FIO,
-                                           start_message_id=question_message_id,  # Fixed: use question_message_id
-                                           message_thread_id=new_topic.message_thread_id,
-                                           start_time=datetime.datetime.now(),
-                                           clever_link=clever_link)  # Добавление диалога в БД
-    logger.debug(dialog)
+    await repo.dialog_histories.add_dialog(employee_chat_id=message.chat.id,
+                                                    employee_fullname=user.FIO,
+                                                    topic_id=new_topic.message_thread_id,
+                                                    start_time=datetime.datetime.now(),
+                                                    question=state_data.get("question"),
+                                                    clever_link=clever_link)  # Добавление диалога в БД
+
     await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
                                          message_thread_id=new_topic.message_thread_id)  # Переоткрытие топика
     await state.clear()
