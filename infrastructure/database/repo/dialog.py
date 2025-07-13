@@ -145,17 +145,21 @@ class DialogsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def get_dialog_by_topic_id(self, topic_id: int) -> Optional[Dialog]:
+    async def get_dialog(self, token: str = None, topic_id: int = None) -> Optional[Dialog]:
         """
-        Получает диалог по идентификатору топика.
+        Получает диалог по токену или идентификатору топика.
 
         Args:
+            token (str): Токен топика
             topic_id (int): ID топика
 
         Returns:
             Dialog: Диалог или None если не найден
         """
-        stmt = select(Dialog).where(Dialog.TopicId == topic_id)
+        if token:
+            stmt = select(Dialog).where(Dialog.Token == token)
+        else:
+            stmt = select(Dialog).where(Dialog.TopicId == topic_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

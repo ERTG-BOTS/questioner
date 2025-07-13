@@ -26,19 +26,20 @@ async def end_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog_by_topic_id(message.message_thread_id)
+        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.Status != "closed" and topic.TopicDutyFullname == duty.FIO:
             await repo.dialogs.update_dialog_status(token=topic.Token, status="closed")
             await repo.dialogs.update_dialog_end(token=topic.Token, end_time=datetime.datetime.now())
 
-            await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
-                                               icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.reply(f"""<b>🔒 Диалог закрыт</b>
 
 Оцени, мог ли специалист решить вопрос самостоятельно""",
                                 reply_markup=dialog_quality_kb(token=topic.Token, role="duty"))
+
+            await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
+                                               icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
 
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
@@ -67,7 +68,7 @@ async def release_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog_by_topic_id(message.message_thread_id)
+        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.TopicDutyFullname is not None and topic.TopicDutyFullname == duty.FIO:
@@ -106,7 +107,7 @@ async def handle_topic_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog_by_topic_id(message.message_thread_id)
+        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if not topic.TopicDutyFullname:

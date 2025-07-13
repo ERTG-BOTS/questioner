@@ -6,9 +6,10 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from infrastructure.database.models import User
+from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
+from tgbot.filters.active_question import ActiveQuestion
 from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb
 from tgbot.misc import dicts
 from tgbot.misc.states import Question
@@ -180,3 +181,12 @@ async def disable_previous_buttons(message: Message, state: FSMContext):
 
     # Clear the list after disabling buttons
     await state.update_data(messages_with_buttons=[])
+
+
+@user_router.message(ActiveQuestion())
+async def active_question(message: Message, stp_db, active_dialog_token: str = None):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        dialog: Dialog = await repo.dialogs.get_dialog(token=active_dialog_token)
+
+    await message.bot.copy_message(from_chat_id=message.chat.id, message_id=message.message_id, chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
