@@ -129,6 +129,7 @@ def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup
     if role == "employee":
         buttons = [
             [
+                InlineKeyboardButton(text="🤔 Новый вопрос", callback_data=MainMenu(menu="ask").pack()),
                 InlineKeyboardButton(text="🔄 Вернуть вопрос",
                                      callback_data=QuestionQualitySpecialist(return_dialog=True, token=token).pack())
             ],
