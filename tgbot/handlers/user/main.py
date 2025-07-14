@@ -28,6 +28,9 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
 
+        employee_topics_today = await repo.dialogs.get_questions_count_today(employee_fullname=user.FIO)
+        employee_topics_month = await repo.dialogs.get_questions_count_last_month(employee_fullname=user.FIO)
+
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
     state_data = await state.get_data()
 
@@ -35,6 +38,10 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
         await message.answer(f"""👋 Привет, <b>{user.FIO}</b>!
 
 Я - бот-вопросник {division}
+
+<b>❓ Ты задал вопросов:</b>
+- За день {employee_topics_today}
+- За месяц {employee_topics_month}
 
 <i>Используй меню для управление ботом</i>""",
                              reply_markup=user_kb(is_role_changed=True if state_data.get("role") else False))
@@ -55,12 +62,19 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
+        employee_topics_today = await repo.dialogs.get_questions_count_today(employee_fullname=user.FIO)
+        employee_topics_month = await repo.dialogs.get_questions_count_last_month(employee_fullname=user.FIO)
+
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
     state_data = await state.get_data()
 
     await callback.message.edit_text(f"""Привет, <b>{user.FIO}</b>!
 
 Я - бот-вопросник {division}
+
+<b>❓ Ты задал вопросов:</b>
+- За день {employee_topics_today}
+- За месяц {employee_topics_month}
 
 Используй меню, чтобы выбрать действие""",
                                      reply_markup=user_kb(is_role_changed=True if state_data.get("role") else False))
