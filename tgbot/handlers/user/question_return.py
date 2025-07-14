@@ -7,7 +7,7 @@ from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.user.main import user_kb, MainMenu, ReturnQuestion, questions_list_kb, \
-    question_confirm_kb
+    question_confirm_kb, back_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -34,7 +34,7 @@ async def return_question_list(callback: CallbackQuery, stp_db):
             """<b>🔄 Возврат вопроса</b>
 
 📝 У тебя нет закрытых вопросов за последние 24 часа""",
-            reply_markup=user_kb()
+            reply_markup=back_kb()
         )
         return
 
