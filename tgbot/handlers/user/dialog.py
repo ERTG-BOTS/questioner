@@ -1,15 +1,14 @@
 import datetime
 import logging
 
-from aiogram import Router
-from aiogram.filters import Command
+from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 
 from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
-from tgbot.keyboards.user.main import DialogQualitySpecialist, dialog_quality_kb
+from tgbot.keyboards.user.main import DialogQualitySpecialist, dialog_quality_kb, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -28,18 +27,19 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
         employee: User = await repo.users.get_user(message.from_user.id)
         dialog: Dialog = await repo.dialogs.get_dialog(token=active_dialog_token)
 
-    logger.info(active_dialog_token)
     if dialog is not None:
         if dialog.Status != "closed":
             await repo.dialogs.update_dialog_status(token=dialog.Token, status="closed")
             await repo.dialogs.update_dialog_end(token=dialog.Token, end_time=datetime.datetime.now())
 
-            await message.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,  text=f"""<b>🔒 Диалог закрыт</b>
+            await message.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔒 Диалог закрыт</b>
 
 Специалист <b>{employee.FIO}</b> закрыл диалог
-Оцени, мог ли специалист решить вопрос самостоятельно""", reply_markup=dialog_quality_kb(token=dialog.Token, role="duty"))
+Оцени, мог ли специалист решить вопрос самостоятельно""",
+                                           reply_markup=dialog_quality_kb(token=dialog.Token, role="duty"))
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
+                                               name=dialog.Token,
                                                icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
@@ -68,11 +68,37 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
 
+@user_dialog_router.callback_query(DialogQualitySpecialist.filter(F.return_dialog == True))
+async def return_dialog_by_employee(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        employee: User = await repo.users.get_user(user_id=callback.from_user.id)
+        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+
+    active_dialogs = await repo.dialogs.get_active_dialogs()
+
+    if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs]:
+        await repo.dialogs.update_dialog_status(token=dialog.Token, status="open")
+        await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
+                                            name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
+        await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
+
+        await callback.message.edit_text(f"""<b>🔓 Диалог переоткрыт</b>
+
+Можешь писать сообщения, они будут переданы старшему""")
+        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Диалог переоткрыт</b>
+
+Специалист <b>{employee.FIO}</b> переоткрыл вопрос""")
+    elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
+        await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
+    elif dialog.Status != "closed":
+        await callback.answer("Этот вопрос не закрыт", show_alert=True)
+
+
 @user_dialog_router.callback_query(DialogQualitySpecialist.filter())
 async def dialog_quality_employee(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
 
     await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
     await callback.answer("Оценка успешно выставлена ❤️")
@@ -80,9 +106,9 @@ async def dialog_quality_employee(callback: CallbackQuery, callback_data: Dialog
         await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
 
 Ты поставил оценку:
-👍 Старший <b>помог решить твой вопрос</b>""")
+👍 Старший <b>помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))
     else:
         await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
 
 Ты поставил оценку:
-👎 Старший <b>не помог решить твой вопрос</b>""")
+👎 Старший <b>не помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))

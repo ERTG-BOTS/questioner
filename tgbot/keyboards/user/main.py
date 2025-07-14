@@ -9,12 +9,14 @@ class MainMenu(CallbackData, prefix='menu'):
 
 
 class DialogQualitySpecialist(CallbackData, prefix='d_quality_spec'):
-    answer: bool
-    token: str
+    answer: bool = False
+    token: str = None
+    return_dialog: bool = False
 
 class DialogQualityDuty(CallbackData, prefix='d_quality_duty'):
-    answer: bool
-    token: str
+    answer: bool = False
+    token: str = None
+    return_dialog: bool = False
 
 
 # Основная клавиатура для команды /start
@@ -84,6 +86,12 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
             [
                 InlineKeyboardButton(text="👍 Да", callback_data=DialogQualitySpecialist(answer=True, token=token).pack()),
                 InlineKeyboardButton(text="👎 Нет", callback_data=DialogQualitySpecialist(answer=False, token=token).pack()),
+            ],
+            [
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualitySpecialist(return_dialog=True, token=token).pack())
+            ],
+            [
+                InlineKeyboardButton(text="🏠 Главное меню", callback_data=MainMenu(menu="main").pack())
             ]
         ]
     else:
@@ -93,6 +101,32 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
                                      callback_data=DialogQualityDuty(answer=False, token=token).pack()),
                 InlineKeyboardButton(text="👍 Нет",
                                      callback_data=DialogQualityDuty(answer=True, token=token).pack()),
+            ],
+            [
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualityDuty(return_dialog=True, token=token).pack())
+            ]
+        ]
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=buttons,
+    )
+    return keyboard
+
+
+def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup:
+    if role == "employee":
+        buttons = [
+            [
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualitySpecialist(return_dialog=True, token=token).pack())
+            ],
+            [
+                InlineKeyboardButton(text="🏠 Главное меню", callback_data=MainMenu(menu="main").pack())
+            ]
+        ]
+    else:
+        buttons = [
+            [
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualityDuty(return_dialog=True, token=token).pack())
             ]
         ]
 

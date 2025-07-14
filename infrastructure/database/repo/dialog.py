@@ -1,9 +1,8 @@
-from calendar import monthrange
+import uuid
 from datetime import datetime, date, timedelta
 from typing import Optional, Sequence
-import uuid
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 
 from infrastructure.database.models import Dialog
 from infrastructure.database.repo.base import BaseRepo
@@ -163,7 +162,8 @@ class DialogsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_dialogs_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[Dialog]:
+    async def get_dialogs_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
+        Dialog]:
         """
         Получает все диалоги сотрудника или старшего по ФИО.
 
@@ -197,12 +197,12 @@ class DialogsRepo(BaseRepo):
 
         if employee_fullname:
             stmt = select(func.count(Dialog.Token)).where(
-            and_(
-                Dialog.EmployeeFullname == employee_fullname,
-                Dialog.StartTime >= today,
-                Dialog.StartTime < tomorrow
+                and_(
+                    Dialog.EmployeeFullname == employee_fullname,
+                    Dialog.StartTime >= today,
+                    Dialog.StartTime < tomorrow
+                )
             )
-        )
         else:
             stmt = select(func.count(Dialog.Token)).where(
                 and_(
@@ -249,11 +249,11 @@ class DialogsRepo(BaseRepo):
             )
         else:
             stmt = select(func.count(Dialog.Token)).where(
-            and_(
-                Dialog.TopicDutyFullname == duty_fullname,
-                Dialog.StartTime >= first_day_current_month,
-                Dialog.StartTime < first_day_next_month
-            )
+                and_(
+                    Dialog.TopicDutyFullname == duty_fullname,
+                    Dialog.StartTime >= first_day_current_month,
+                    Dialog.StartTime < first_day_next_month
+                )
             )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
@@ -271,7 +271,6 @@ class DialogsRepo(BaseRepo):
         stmt = select(Dialog).where(Dialog.EmployeeChatId == employee_chat_id)
         result = await self.session.execute(stmt)
         return result.scalars().all()
-
 
     async def get_dialogs_with_quality_rating(self, is_duty: bool = False) -> Sequence[Dialog]:
         """
@@ -311,12 +310,14 @@ class DialogsRepo(BaseRepo):
 
     async def get_active_dialogs(self) -> Sequence[Dialog]:
         """
-        Получает все активные диалоги (без даты окончания).
+        Получает все активные диалоги (со статусов open или in_progress).
 
         Returns:
             Sequence[Dialog]: Список активных диалогов
         """
-        stmt = select(Dialog).where(Dialog.EndTime.is_(None))
+        stmt = select(Dialog).where(
+            or_(Dialog.Status == "open", Dialog.Status == "in_progress")
+        )
         result = await self.session.execute(stmt)
         return result.scalars().all()
 

@@ -108,6 +108,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     clever_link = message.text
     state_data = await state.get_data()
 
+    # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
     if not "clever.ertelecom.ru/content/space/" in message.text and user.Role != 10:
         await message.answer(f"""<b>🗃️ Регламент</b>
 
@@ -116,7 +117,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 Отправь ссылку на регламент из клевера, по которому у тебя вопрос""", reply_markup=back_kb())
         return
 
-    # Disable all previous buttons
+    # Выключаем все предыдущие кнопки
     await disable_previous_buttons(message, state)
 
     await message.answer(f"""<b>✅ Успешно</b>
