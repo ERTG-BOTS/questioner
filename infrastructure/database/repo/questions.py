@@ -48,7 +48,7 @@ class QuestionsRepo(BaseRepo):
 
         return dialog
 
-    async def update_dialog_end(self, token: str, end_time: date) -> Optional[Question]:
+    async def update_question_end(self, token: str, end_time: date) -> Optional[Question]:
         """
         Обновляет дату окончания диалога.
 
@@ -66,7 +66,7 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_dialog_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
+    async def update_question_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
         """
         Обновляет качество диалога.
 
@@ -88,7 +88,7 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_dialog_status(self, token: str, status: str) -> Optional[Question]:
+    async def update_question_status(self, token: str, status: str) -> Optional[Question]:
         """
         Обновляет качество диалога.
 
@@ -106,7 +106,7 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_topic_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
+    async def update_question_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
         """
         Обновляет описание обязанности топика.
 
@@ -124,7 +124,7 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(dialog)
         return dialog
 
-    async def get_dialog(self, token: str = None, topic_id: int = None) -> Optional[Question]:
+    async def get_question(self, token: str = None, topic_id: int = None) -> Optional[Question]:
         """
         Получает диалог по токену или идентификатору топика.
 
@@ -142,7 +142,7 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_dialogs_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
+    async def get_questions_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
         Question]:
         """
         Получает все диалоги сотрудника или старшего по ФИО.
@@ -161,7 +161,7 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_dialogs_count_today(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
+    async def get_questions_count_today(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
         """
         Получает количество диалогов специалиста или старшего за сегодня.
 
@@ -194,7 +194,7 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_dialogs_count_last_month(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
+    async def get_questions_count_last_month(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
         """
         Получает количество диалогов специалиста или старшего за текущий месяц.
 
@@ -238,7 +238,7 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_dialogs_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Question]:
+    async def get_questions_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Question]:
         """
         Получает все диалоги сотрудника по Chat ID.
 
@@ -252,7 +252,7 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_active_dialogs(self) -> Sequence[Question]:
+    async def get_active_questions(self) -> Sequence[Question]:
         """
         Получает все активные диалоги (со статусов open или in_progress).
 
@@ -264,3 +264,6 @@ class QuestionsRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def get_old_questions(self) -> Sequence[Question]:
+        pass

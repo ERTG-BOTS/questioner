@@ -25,12 +25,12 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(message.from_user.id)
-        dialog: Question = await repo.dialogs.get_dialog(token=active_dialog_token)
+        dialog: Question = await repo.dialogs.get_question(token=active_dialog_token)
 
     if dialog is not None:
         if dialog.Status != "closed":
-            await repo.dialogs.update_dialog_status(token=dialog.Token, status="closed")
-            await repo.dialogs.update_dialog_end(token=dialog.Token, end_time=datetime.datetime.now())
+            await repo.dialogs.update_question_status(token=dialog.Token, status="closed")
+            await repo.dialogs.update_question_end(token=dialog.Token, end_time=datetime.datetime.now())
 
             await message.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔒 Вопрос закрыт</b>
 
@@ -62,7 +62,7 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
 async def active_question(message: Message, stp_db, active_dialog_token: str = None):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        dialog: Question = await repo.dialogs.get_dialog(token=active_dialog_token)
+        dialog: Question = await repo.dialogs.get_question(token=active_dialog_token)
 
     await message.bot.copy_message(from_chat_id=message.chat.id, message_id=message.message_id,
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
@@ -74,12 +74,12 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_question(token=callback_data.token)
 
-    active_dialogs = await repo.dialogs.get_active_dialogs()
+    active_dialogs = await repo.dialogs.get_active_questions()
 
     if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs]:
-        await repo.dialogs.update_dialog_status(token=dialog.Token, status="open")
+        await repo.dialogs.update_question_status(token=dialog.Token, status="open")
         await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
@@ -101,7 +101,7 @@ async def dialog_quality_employee(callback: CallbackQuery, callback_data: Questi
     async with stp_db() as session:
         repo = RequestsRepo(session)
 
-    await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
+    await repo.dialogs.update_question_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
     await callback.answer("Оценка успешно выставлена ❤️")
     if callback_data.answer:
         await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>

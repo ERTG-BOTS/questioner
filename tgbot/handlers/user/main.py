@@ -136,8 +136,8 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
                                     question_text=state_data.get("question"),
                                     clever_link=clever_link)  # Добавление диалога в БД
 
-    employee_topics_today = await repo.dialogs.get_dialogs_count_today(employee_fullname=user.FIO)
-    employee_topics_month = await repo.dialogs.get_dialogs_count_last_month(employee_fullname=user.FIO)
+    employee_topics_today = await repo.dialogs.get_questions_count_today(employee_fullname=user.FIO)
+    employee_topics_month = await repo.dialogs.get_questions_count_last_month(employee_fullname=user.FIO)
 
     topic_info_msg = await message.bot.send_message(chat_id=config.tg_bot.forum_id,
                                                     message_thread_id=new_topic.message_thread_id,

@@ -37,5 +37,5 @@ async def run_delete_timer(bot: Bot, chat_id: int, message_ids: list[int], secon
         print(f"Ошибка при планировании удаления сообщений: {e}")
 
 
-async def wait_for_activity(bot: Bot, interval_minutes: int = 5):
+async def remove_old_topics(bot: Bot):
     pass

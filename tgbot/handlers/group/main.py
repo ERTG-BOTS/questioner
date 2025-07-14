@@ -25,12 +25,12 @@ async def end_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_question(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.Status != "closed" and topic.TopicDutyFullname == duty.FIO:
-            await repo.dialogs.update_dialog_status(token=topic.Token, status="closed")
-            await repo.dialogs.update_dialog_end(token=topic.Token, end_time=datetime.datetime.now())
+            await repo.dialogs.update_question_status(token=topic.Token, status="closed")
+            await repo.dialogs.update_question_end(token=topic.Token, end_time=datetime.datetime.now())
 
             await message.reply(f"""<b>🔒 Вопрос закрыт</b>
 
@@ -67,12 +67,12 @@ async def release_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_question(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.TopicDutyFullname is not None and topic.TopicDutyFullname == duty.FIO:
-            await repo.dialogs.update_topic_duty(token=topic.Token, topic_duty=None)
-            await repo.dialogs.update_dialog_status(token=topic.Token, status="open")
+            await repo.dialogs.update_question_duty(token=topic.Token, topic_duty=None)
+            await repo.dialogs.update_question_status(token=topic.Token, status="open")
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
                                                icon_custom_emoji_id=dicts.topicEmojis["open"])
@@ -106,15 +106,15 @@ async def handle_topic_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_question(topic_id=message.message_thread_id)
 
     if topic is not None:
         if not topic.TopicDutyFullname:
-            await repo.dialogs.update_topic_duty(token=topic.Token, topic_duty=duty.FIO)
-            await repo.dialogs.update_dialog_status(token=topic.Token, status="in_progress")
+            await repo.dialogs.update_question_duty(token=topic.Token, topic_duty=duty.FIO)
+            await repo.dialogs.update_question_status(token=topic.Token, status="in_progress")
 
-            duty_topics_today = await repo.dialogs.get_dialogs_count_today(duty_fullname=duty.FIO)
-            duty_topics_month = await repo.dialogs.get_dialogs_count_last_month(duty_fullname=duty.FIO)
+            duty_topics_today = await repo.dialogs.get_questions_count_today(duty_fullname=duty.FIO)
+            duty_topics_month = await repo.dialogs.get_questions_count_last_month(duty_fullname=duty.FIO)
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
                                                icon_custom_emoji_id=dicts.topicEmojis["in_progress"])
@@ -154,13 +154,13 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_question(token=callback_data.token)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
 
-    active_dialogs = await repo.dialogs.get_active_dialogs()
+    active_dialogs = await repo.dialogs.get_active_questions()
 
     if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs] and dialog.TopicDutyFullname == duty.FIO:
-        await repo.dialogs.update_dialog_status(token=dialog.Token, status="open")
+        await repo.dialogs.update_question_status(token=dialog.Token, status="open")
         await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
@@ -185,10 +185,10 @@ async def dialog_quality_duty(callback: CallbackQuery, callback_data: QuestionQu
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_question(token=callback_data.token)
 
     if dialog.TopicDutyFullname == duty.FIO:
-        await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
+        await repo.dialogs.update_question_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
         await callback.answer("Оценка успешно выставлена ❤️")
         if callback_data.answer:
             await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>

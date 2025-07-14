@@ -17,7 +17,7 @@ class ActiveQuestion(BaseFilter):
     async def __call__(self, obj: Message, stp_db, **kwargs) -> dict[str, str] | bool:
         async with stp_db() as session:
             repo = RequestsRepo(session)
-            current_dialogs: Sequence[Question] = await repo.dialogs.get_active_dialogs()
+            current_dialogs: Sequence[Question] = await repo.dialogs.get_active_questions()
 
             for dialog in current_dialogs:
                 if dialog.EmployeeChatId == obj.from_user.id:
@@ -38,7 +38,7 @@ class ActiveQuestionWithCommand(BaseFilter):
 
         async with stp_db() as session:
             repo = RequestsRepo(session)
-            current_dialogs: Sequence[Question] = await repo.dialogs.get_active_dialogs()
+            current_dialogs: Sequence[Question] = await repo.dialogs.get_active_questions()
 
             for dialog in current_dialogs:
                 if dialog.EmployeeChatId == obj.from_user.id:
