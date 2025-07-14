@@ -72,7 +72,7 @@ async def main():
     bot = Bot(token=config.tg_bot.token, default=DefaultBotProperties(parse_mode='HTML'))
     await bot.set_my_commands(commands=[BotCommand(command="start", description="Главное меню"),
                                         BotCommand(command="release", description="Освободить вопрос (для старших)"),
-                                        BotCommand(command="end", description="Закрыть вопрос (для старших)")])
+                                        BotCommand(command="end", description="Закрыть вопрос")])
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
