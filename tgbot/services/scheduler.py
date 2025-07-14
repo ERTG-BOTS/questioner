@@ -1,16 +1,16 @@
-import asyncio
 import datetime
 import logging
 
 import pytz
 from aiogram import Bot
-from aiogram.utils.i18n import I18n
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import Sequence
 
 from infrastructure.database.models import Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
+from tgbot.keyboards.user.main import closed_dialog_kb
+from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 scheduler = AsyncIOScheduler(timezone=pytz.utc)
@@ -48,6 +48,126 @@ async def remove_old_topics(bot: Bot, stp_db):
             await bot.delete_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId)
 
         result = await repo.dialogs.delete_question(dialogs=old_questions)
-        logger.info(f"[Старые топики] Успешно удалено {result['deleted_count']} из {result['total_count']} старых вопросов")
+        logger.info(
+            f"[Старые топики] Успешно удалено {result['deleted_count']} из {result['total_count']} старых вопросов")
         if result['errors']:
             logger.info(f"[Старые топики] Произошла ошибка при удалении части вопросов: {result['errors']}")
+
+
+async def send_inactivity_warning(bot: Bot, question_token: str, stp_db):
+    """Отправляет предупреждение о неактивности через 5 минут."""
+    try:
+        async with stp_db() as session:
+            repo = RequestsRepo(session)
+            question: Question = await repo.dialogs.get_question(token=question_token)
+
+            if question and question.Status in ["open", "in_progress"]:
+                # Отправляем предупреждение в топик
+                await bot.send_message(
+                    chat_id=config.tg_bot.forum_id,
+                    message_thread_id=question.TopicId,
+                    text="⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через 5 минут при отсутствии активности"
+                )
+
+                # Отправляем предупреждение пользователю
+                await bot.send_message(
+                    chat_id=question.EmployeeChatId,
+                    text="⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через 5 минут при отсутствии активности"
+                )
+
+    except Exception as e:
+        logger.error(f"[Таймер неактивности] Ошибка при отправке предупреждения для вопроса {question_token}: {e}")
+
+
+async def auto_close_question(bot: Bot, question_token: str, stp_db):
+    """Автоматически закрывает вопрос через 10 минут неактивности."""
+    try:
+        async with stp_db() as session:
+            repo = RequestsRepo(session)
+            question: Question = await repo.dialogs.get_question(token=question_token)
+
+            if question and question.Status in ["open", "in_progress"]:
+                # Закрываем вопрос
+                await repo.dialogs.update_question_status(token=question_token, status="closed")
+                await repo.dialogs.update_question_end(token=question_token, end_time=datetime.datetime.now())
+
+                # Обновляем топик
+                await bot.edit_forum_topic(
+                    chat_id=config.tg_bot.forum_id,
+                    message_thread_id=question.TopicId,
+                    name=question.Token,
+                    icon_custom_emoji_id=dicts.topicEmojis["closed"]
+                )
+                await bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId)
+
+                # Уведомляем о закрытии
+                await bot.send_message(
+                    chat_id=config.tg_bot.forum_id,
+                    message_thread_id=question.TopicId,
+                    text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                    reply_markup=closed_dialog_kb(token=question_token, role="duty")
+                )
+
+                await bot.send_message(
+                    chat_id=question.EmployeeChatId,
+                    text="🔒 <b>Вопрос автоматически закрыт</b>\n\nТвой вопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                    reply_markup=closed_dialog_kb(token=question_token, role="employee")
+                )
+
+    except Exception as e:
+        logger.error(f"[Таймер неактивности] Ошибка при автоматическом закрытии вопроса {question_token}: {e}")
+
+
+def start_inactivity_timer(question_token: str, bot: Bot, stp_db):
+    """Запускает таймер неактивности для вопроса."""
+    try:
+        # Удаляем существующие задачи для этого вопроса
+        stop_inactivity_timer(question_token)
+
+        # Запускаем таймер предупреждения (5 минут)
+        warning_job_id = f"warning_{question_token}"
+        scheduler.add_job(
+            send_inactivity_warning,
+            "date",
+            run_date=datetime.datetime.now(tz=pytz.utc) + datetime.timedelta(
+                minutes=config.tg_bot.activity_warn_minutes),
+            args=[bot, question_token, stp_db],
+            id=warning_job_id
+        )
+
+        # Запускаем таймер автозакрытия (10 минут)
+        close_job_id = f"close_{question_token}"
+        scheduler.add_job(
+            auto_close_question,
+            "date",
+            run_date=datetime.datetime.now(tz=pytz.utc) + datetime.timedelta(
+                minutes=config.tg_bot.activity_close_minutes),
+            args=[bot, question_token, stp_db],
+            id=close_job_id
+        )
+
+    except Exception as e:
+        logger.error(f"[Таймер неактивности] Ошибка при запуске таймера для вопроса {question_token}: {e}")
+
+
+def stop_inactivity_timer(question_token: str):
+    """Останавливает таймер неактивности для вопроса."""
+    try:
+        warning_job_id = f"warning_{question_token}"
+        close_job_id = f"close_{question_token}"
+
+        # Удаляем задачи если они существуют
+        if scheduler.get_job(warning_job_id):
+            scheduler.remove_job(warning_job_id)
+
+        if scheduler.get_job(close_job_id):
+            scheduler.remove_job(close_job_id)
+
+    except Exception as e:
+        logger.error(f"[Таймер неактивности] Ошибка при остановке таймера для вопроса {question_token}: {e}")
+
+
+def restart_inactivity_timer(question_token: str, bot: Bot, stp_db):
+    """Перезапускает таймер неактивности для вопроса."""
+    stop_inactivity_timer(question_token)
+    start_inactivity_timer(question_token, bot, stp_db)

@@ -11,6 +11,7 @@ from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithComm
 from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
+from tgbot.services.scheduler import stop_inactivity_timer, restart_inactivity_timer
 
 user_dialog_router = Router()
 
@@ -29,6 +30,9 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
 
     if dialog is not None:
         if dialog.Status != "closed":
+            # Останавливаем таймер неактивности
+            stop_inactivity_timer(dialog.Token)
+            
             await repo.dialogs.update_question_status(token=dialog.Token, status="closed")
             await repo.dialogs.update_question_end(token=dialog.Token, end_time=datetime.datetime.now())
 
@@ -63,6 +67,9 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
     async with stp_db() as session:
         repo = RequestsRepo(session)
         dialog: Question = await repo.dialogs.get_question(token=active_dialog_token)
+
+    # Перезапускаем таймер неактивности при сообщении от пользователя
+    restart_inactivity_timer(dialog.Token, message.bot, stp_db)
 
     await message.bot.copy_message(from_chat_id=message.chat.id, message_id=message.message_id,
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)

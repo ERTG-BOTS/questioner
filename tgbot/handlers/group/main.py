@@ -11,6 +11,7 @@ from tgbot.filters.topic import IsTopicMessage, IsTopicMessageWithCommand
 from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
+from tgbot.services.scheduler import stop_inactivity_timer, start_inactivity_timer, restart_inactivity_timer
 
 topic_router = Router()
 
@@ -29,6 +30,9 @@ async def end_cmd(message: Message, stp_db):
 
     if topic is not None:
         if topic.Status != "closed" and topic.TopicDutyFullname == duty.FIO:
+            # Останавливаем таймер неактивности
+            stop_inactivity_timer(topic.Token)
+            
             await repo.dialogs.update_question_status(token=topic.Token, status="closed")
             await repo.dialogs.update_question_end(token=topic.Token, end_time=datetime.datetime.now())
 
@@ -117,6 +121,9 @@ async def handle_topic_message(message: Message, stp_db):
             await repo.dialogs.update_question_duty(token=topic.Token, topic_duty=duty.FIO)
             await repo.dialogs.update_question_status(token=topic.Token, status="in_progress")
 
+            # Запускаем таймер неактивности для нового вопроса
+            start_inactivity_timer(topic.Token, message.bot, stp_db)
+
             duty_topics_today = await repo.dialogs.get_questions_count_today(duty_fullname=duty.FIO)
             duty_topics_month = await repo.dialogs.get_questions_count_last_month(duty_fullname=duty.FIO)
 
@@ -137,6 +144,9 @@ async def handle_topic_message(message: Message, stp_db):
                                            chat_id=employee.ChatId)
         else:
             if topic.TopicDutyFullname == duty.FIO:
+                # Перезапускаем таймер неактивности при сообщении от дежурного
+                restart_inactivity_timer(topic.Token, message.bot, stp_db)
+                
                 await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id,
                                                chat_id=topic.EmployeeChatId)
             else:

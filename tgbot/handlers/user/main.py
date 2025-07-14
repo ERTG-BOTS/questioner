@@ -13,6 +13,7 @@ from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_questio
 from tgbot.misc import dicts
 from tgbot.misc.states import Question
 from tgbot.services.logger import setup_logging
+from tgbot.services.scheduler import start_inactivity_timer
 
 user_router = Router()
 
@@ -143,12 +144,16 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
                                         message_thread_id=new_topic.message_thread_id)  # Закрытие темы
 
-    await repo.dialogs.add_question(employee_chat_id=message.chat.id,
+    new_question = await repo.dialogs.add_question(employee_chat_id=message.chat.id,
                                     employee_fullname=user.FIO,
                                     topic_id=new_topic.message_thread_id,
                                     start_time=datetime.datetime.now(),
                                     question_text=state_data.get("question"),
                                     clever_link=clever_link)  # Добавление диалога в БД
+    
+    # Запускаем таймер неактивности для нового вопроса (только если статус "open")
+    if new_question.Status == "new":
+        start_inactivity_timer(new_question.Token, message.bot, stp_db)
 
     employee_topics_today = await repo.dialogs.get_questions_count_today(employee_fullname=user.FIO)
     employee_topics_month = await repo.dialogs.get_questions_count_last_month(employee_fullname=user.FIO)
