@@ -100,12 +100,11 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
 
     active_dialogs = await repo.dialogs.get_active_questions()
 
-    # Validation checks (same as existing restoration logic)
     if question.Status == "closed" and user.FIO not in [d.EmployeeFullname for d in active_dialogs]:
-        # 1. Update question status to "open"
+        # 1. Обновляем статус вопроса на "open"
         await repo.dialogs.update_question_status(token=question.Token, status="open")
 
-        # 2. Update forum topic name and icon
+        # 2. Обновляем название и иконку темы
         await callback.bot.edit_forum_topic(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.TopicId,
@@ -113,13 +112,13 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"]
         )
 
-        # 3. Reopen the forum topic
+        # 3. Переоткрываем тему
         await callback.bot.reopen_forum_topic(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.TopicId
         )
 
-        # 4. Send confirmation messages
+        # 4. Отправляем подтверждающее сообщение
         await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""")
