@@ -169,12 +169,12 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
                                        message_id=topic_info_msg.message_id,
                                        disable_notification=True)  # Пин информации о специалисте
 
+    await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
+                                         message_thread_id=new_topic.message_thread_id)  # Переоткрытие темы
+
     await message.bot.copy_message(chat_id=config.tg_bot.forum_id, message_thread_id=new_topic.message_thread_id,
                                    from_chat_id=message.chat.id, message_id=state_data.get(
             "question_message_id"))  # Копирование сообщения специалиста в тему
-
-    await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
-                                         message_thread_id=new_topic.message_thread_id)  # Переоткрытие темы
 
     await state.clear()
 
