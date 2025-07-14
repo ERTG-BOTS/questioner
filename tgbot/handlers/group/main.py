@@ -155,10 +155,11 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
         dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
+        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
 
     active_dialogs = await repo.dialogs.get_active_dialogs()
 
-    if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs]:
+    if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs] and dialog.TopicDutyFullname == duty.FIO:
         await repo.dialogs.update_dialog_status(token=dialog.Token, status="open")
         await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
@@ -171,6 +172,8 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
 
 Старший <b>{employee.FIO}</b> переоткрыл вопрос:
 <blockquote expandable><i>{dialog.QuestionText}</i></blockquote>""")
+    elif dialog.TopicDutyFullname != duty.FIO:
+        await callback.answer("Это не твой чат!", show_alert=True)
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У специалиста есть другой открытый вопрос", show_alert=True)
     elif dialog.Status != "closed":
