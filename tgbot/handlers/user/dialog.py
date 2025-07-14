@@ -89,7 +89,7 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
 Можешь писать сообщения, они будут переданы старшему""")
         await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{employee.FIO}</b> переоткрыл вопрос""")
+Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия""")
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
     elif dialog.Status != "closed":

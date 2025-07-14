@@ -282,6 +282,31 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
+    async def get_last_questions_by_chat_id(self, employee_chat_id: int, limit: int = 5) -> Sequence[Question]:
+        """
+        Получает последние N закрытых вопросов пользователя за последние 24 часа по Chat ID, отсортированные по дате окончания.
+
+        Args:
+            employee_chat_id (int): Chat ID сотрудника
+            limit (int): Количество вопросов для получения (по умолчанию 5)
+
+        Returns:
+            Sequence[Question]: Список последних закрытых вопросов пользователя за 24 часа
+        """
+        # Вычисляем время 24 часа назад
+        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+        
+        stmt = select(Question).where(
+            and_(
+                Question.EmployeeChatId == employee_chat_id,
+                Question.Status == "closed",
+                Question.EndTime.is_not(None),
+                Question.EndTime >= twenty_four_hours_ago
+            )
+        ).order_by(Question.EndTime.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
     async def delete_question(self, token: str = None, dialogs: Sequence[Question] = None) -> dict:
         """
         Удаляет вопрос(ы) из базы данных по токену или последовательности вопросов.
