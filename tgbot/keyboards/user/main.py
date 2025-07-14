@@ -89,6 +89,8 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
             ],
             [
                 InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualitySpecialist(return_dialog=True, token=token).pack())
+            ],[
+                InlineKeyboardButton(text="🤔 Новый вопрос", callback_data=MainMenu(menu="ask").pack())
             ],
             [
                 InlineKeyboardButton(text="🏠 Главное меню", callback_data=MainMenu(menu="main").pack())
