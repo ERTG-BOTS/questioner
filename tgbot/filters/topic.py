@@ -17,20 +17,20 @@ class IsTopicMessage(BaseFilter):
     """Passes only for user messages that belong to a forum‑topic thread."""
 
     async def __call__(self, message: Message, **_) -> bool:
-        # Check if it's actually in a forum/supergroup
+        # Проверка на группу или супергруппу
         if message.chat.type not in ['supergroup', 'group']:
             return False
 
-        # Check if it's in a topic thread
-        in_topic = bool(message.is_topic_message and message.message_thread_id)
+        # Проверка на тему
+        in_topic = bool(message.is_topic_message and message.message_thread_id and message.message_thread_id != 1)
         if not in_topic:
             return False
 
-        # Ignore service messages or posts sent on behalf of a channel
+        # Игнорирование сервисных сообщений
         if message.from_user is None:
             return False
 
-        # Ignore the bot's own messages
+        # Игнорирование сообщений самого бота
         if message.from_user.id == message.bot.id:
             return False
 
@@ -46,20 +46,20 @@ class IsTopicMessageWithCommand(BaseFilter):
             if not message.text or not message.text.startswith(f"/{self.command}"):
                 return False
 
-        # Check if it's actually in a forum/supergroup
+        # Проверка на группу или супергруппу
         if message.chat.type not in ['supergroup', 'group']:
             return False
 
-        # Check if it's in a topic thread
+        # Проверка на тему
         in_topic = bool(message.is_topic_message and message.message_thread_id)
         if not in_topic:
             return False
 
-        # Ignore service messages or posts sent on behalf of a channel
+        # Игнорирование сервисных сообщений
         if message.from_user is None:
             return False
 
-        # Ignore the bot's own messages
+        # Игнорирование сообщений самого бота
         if message.from_user.id == message.bot.id:
             return False
 
