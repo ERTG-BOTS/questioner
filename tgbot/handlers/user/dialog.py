@@ -70,6 +70,7 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
 
 @user_dialog_router.callback_query(QuestionQualitySpecialist.filter(F.return_dialog == True))
 async def return_dialog_by_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db):
+    await callback.answer()
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)

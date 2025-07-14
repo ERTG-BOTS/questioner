@@ -150,6 +150,7 @@ async def handle_topic_message(message: Message, stp_db):
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_dialog == True))
 async def return_dialog_by_duty(callback: CallbackQuery, callback_data: QuestionQualityDuty, stp_db):
+    await callback.answer()
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
