@@ -2,14 +2,13 @@ import datetime
 import logging
 
 from aiogram import Router, F
-from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
 from infrastructure.database.models import User, Dialog
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage, IsTopicMessageWithCommand
-from tgbot.keyboards.user.main import dialog_quality_kb, DialogQualitySpecialist, DialogQualityDuty, closed_dialog_kb
+from tgbot.keyboards.user.main import dialog_quality_kb, DialogQualityDuty, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -38,7 +37,8 @@ async def end_cmd(message: Message, stp_db):
 Оцени, мог ли специалист решить его самостоятельно""",
                                 reply_markup=dialog_quality_kb(token=topic.Token, role="duty"))
 
-            await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId, name=topic.Token,
+            await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
+                                               name=topic.Token,
                                                icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
 
@@ -101,30 +101,6 @@ async def release_cmd(message: Message, stp_db):
         logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
 
 
-@topic_router.callback_query(IsTopicMessage() and DialogQualityDuty.filter())
-async def dialog_quality_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
-
-    if dialog.TopicDutyFullname == duty.FIO:
-        await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
-        await callback.answer("Оценка успешно выставлена ❤️")
-        if callback_data.answer:
-            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
-
-<b>{duty.FIO}</b> поставил оценку:
-👎 Специалист <b>мог решить вопрос самостоятельно</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
-        else:
-            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
-
-<b>{duty.FIO}</b> поставил оценку:
-👍 Специалист <b>не мог решить вопрос самостоятельно</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
-    else:
-        await callback.answer("Это не твой чат!", show_alert=True)
-
-
 @topic_router.message(IsTopicMessage())
 async def handle_topic_message(message: Message, stp_db):
     async with stp_db() as session:
@@ -173,7 +149,7 @@ async def handle_topic_message(message: Message, stp_db):
 
 
 @topic_router.callback_query(DialogQualityDuty.filter(F.return_dialog == True))
-async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
+async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
@@ -187,7 +163,7 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQu
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-        await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы специалисту""")
         await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Вопрос переоткрыт</b>
@@ -198,3 +174,29 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQu
         await callback.answer("У специалиста есть другой открытый вопрос", show_alert=True)
     elif dialog.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
+
+
+@topic_router.callback_query(IsTopicMessage() and DialogQualityDuty.filter())
+async def dialog_quality_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        duty: User = await repo.users.get_user(user_id=callback.from_user.id)
+        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+
+    if dialog.TopicDutyFullname == duty.FIO:
+        await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
+        await callback.answer("Оценка успешно выставлена ❤️")
+        if callback_data.answer:
+            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
+
+<b>{duty.FIO}</b> поставил оценку:
+👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
+                                             reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
+        else:
+            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
+
+<b>{duty.FIO}</b> поставил оценку:
+👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
+                                             reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
+    else:
+        await callback.answer("Это не твой чат!", show_alert=True)
