@@ -6,7 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.types import BotCommand
-from tgbot.services.scheduler import scheduler
+from tgbot.services.scheduler import scheduler, remove_old_topics
 
 from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import load_config, Config
@@ -87,6 +87,7 @@ async def main():
 
     register_global_middlewares(dp, config)
 
+    scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])
     scheduler.start()
 
     # await on_startup(bot, config.tg_bot.admin_ids)

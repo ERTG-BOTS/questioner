@@ -266,4 +266,104 @@ class QuestionsRepo(BaseRepo):
         return result.scalars().all()
 
     async def get_old_questions(self) -> Sequence[Question]:
-        pass
+        """
+        Получает диалоги старше 2 месяцев.
+
+        Returns:
+            Sequence[Dialog]: Список диалогов старше 2 месяцев
+        """
+        from datetime import datetime, timedelta
+
+        # Считаем дату два месяца назад
+        today = datetime.now()
+        two_months_ago = today - timedelta(days=1)  # Примерно 2 месяца
+
+        stmt = select(Question).where(Question.StartTime < two_months_ago)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def delete_question(self, token: str = None, dialogs: Sequence[Question] = None) -> dict:
+        """
+        Удаляет вопрос(ы) из базы данных по токену или последовательности вопросов.
+
+        Args:
+            token (str, optional): Токен вопроса для удаления
+            dialogs (Sequence[Dialog], optional): Последовательность вопросов для удаления
+
+        Returns:
+            dict: Результат операции с ключами:
+                - success (bool): True если операция выполнена успешно
+                - deleted_count (int): Количество удаленных вопросов
+                - total_count (int): Общее количество вопросов для удаления
+                - errors (list): Список ошибок, если они возникли
+        """
+        if token is None and dialogs is None:
+            return {
+                "success": False,
+                "deleted_count": 0,
+                "total_count": 0,
+                "errors": ["Either token or dialogs must be provided"]
+            }
+
+        if token is not None and dialogs is not None:
+            return {
+                "success": False,
+                "deleted_count": 0,
+                "total_count": 0,
+                "errors": ["Cannot specify both token and dialogs"]
+            }
+
+        deleted_count = 0
+        errors = []
+
+        try:
+            if token:
+                # Single dialog deletion by token
+                dialog = await self.session.get(Question, token)
+
+                if dialog is None:
+                    return {
+                        "success": False,
+                        "deleted_count": 0,
+                        "total_count": 1,
+                        "errors": [f"Dialog with token {token} not found"]
+                    }
+
+                await self.session.delete(dialog)
+                deleted_count = 1
+                total_count = 1
+
+            else:
+                # Multiple dialogs deletion
+                total_count = len(dialogs)
+
+                for dialog in dialogs:
+                    try:
+                        # Refresh the dialog object to ensure it's attached to the current session
+                        await self.session.refresh(dialog)
+                        await self.session.delete(dialog)
+                        deleted_count += 1
+                    except Exception as e:
+                        errors.append(f"Error deleting dialog {dialog.Token}: {str(e)}")
+
+            # Commit all deletions
+            await self.session.commit()
+
+            return {
+                "success": deleted_count > 0,
+                "deleted_count": deleted_count,
+                "total_count": total_count,
+                "errors": errors
+            }
+
+        except Exception as e:
+            # Rollback in case of error
+            await self.session.rollback()
+            errors.append(f"Database error: {str(e)}")
+
+            return {
+                "success": False,
+                "deleted_count": deleted_count,
+                "total_count": total_count if 'total_count' in locals() else 0,
+                "errors": errors
+            }
