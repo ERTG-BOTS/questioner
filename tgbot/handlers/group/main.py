@@ -190,7 +190,7 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQu
         await callback.message.edit_text(f"""<b>🔓 Диалог переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы специалисту""")
-        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Диалог переоткрыт</b>
+        await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Диалог переоткрыт</b>
 
 Старший <b>{employee.FIO}</b> переоткрыл вопрос:
 <blockquote expandable><i>{dialog.Question}</i></blockquote>""")
