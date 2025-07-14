@@ -62,7 +62,7 @@ async def end_cmd(message: Message, stp_db):
         logger.error(f"Не удалось найти тему {message.message_thread_id}")
 
 
-@topic_router.message(IsTopicMessage() and Command("release"))
+@topic_router.message(IsTopicMessageWithCommand("release"))
 async def release_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
@@ -83,7 +83,7 @@ async def release_cmd(message: Message, stp_db):
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
             await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>🕊️ Старший покинул чат</b>
 
-Старший <b>{duty.FIO}</b> закрыл вопрос. Ожидай повторного подключения старшего""")
+Старший <b>{duty.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""")
         elif topic.TopicDutyFullname is not None and topic.TopicDutyFullname != duty.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 

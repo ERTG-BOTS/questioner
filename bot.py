@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
+from aiogram.types import BotCommand
 
 from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import load_config, Config
@@ -68,6 +69,9 @@ async def main():
     storage = get_storage(config)
 
     bot = Bot(token=config.tg_bot.token, default=DefaultBotProperties(parse_mode='HTML'))
+    await bot.set_my_commands(commands=[BotCommand(command="start", description="Главное меню"),
+                                        BotCommand(command="release", description="Освободить вопрос (для старших)"),
+                                        BotCommand(command="end", description="Закрыть вопрос (для старших)")])
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
