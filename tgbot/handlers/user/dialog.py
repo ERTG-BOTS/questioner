@@ -4,11 +4,11 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 
-from infrastructure.database.models import User, Dialog
+from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
-from tgbot.keyboards.user.main import DialogQualitySpecialist, dialog_quality_kb, closed_dialog_kb
+from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -25,7 +25,7 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(message.from_user.id)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=active_dialog_token)
+        dialog: Question = await repo.dialogs.get_dialog(token=active_dialog_token)
 
     if dialog is not None:
         if dialog.Status != "closed":
@@ -62,18 +62,18 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
 async def active_question(message: Message, stp_db, active_dialog_token: str = None):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=active_dialog_token)
+        dialog: Question = await repo.dialogs.get_dialog(token=active_dialog_token)
 
     await message.bot.copy_message(from_chat_id=message.chat.id, message_id=message.message_id,
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
 
-@user_dialog_router.callback_query(DialogQualitySpecialist.filter(F.return_dialog == True))
-async def return_dialog_by_employee(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
+@user_dialog_router.callback_query(QuestionQualitySpecialist.filter(F.return_dialog == True))
+async def return_dialog_by_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
 
     active_dialogs = await repo.dialogs.get_active_dialogs()
 
@@ -95,8 +95,8 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Dial
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
 
 
-@user_dialog_router.callback_query(DialogQualitySpecialist.filter())
-async def dialog_quality_employee(callback: CallbackQuery, callback_data: DialogQualitySpecialist, stp_db):
+@user_dialog_router.callback_query(QuestionQualitySpecialist.filter())
+async def dialog_quality_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
 

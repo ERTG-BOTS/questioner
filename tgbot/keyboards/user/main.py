@@ -8,12 +8,12 @@ class MainMenu(CallbackData, prefix='menu'):
     menu: str
 
 
-class DialogQualitySpecialist(CallbackData, prefix='d_quality_spec'):
+class QuestionQualitySpecialist(CallbackData, prefix='d_quality_spec'):
     answer: bool = False
     token: str = None
     return_dialog: bool = False
 
-class DialogQualityDuty(CallbackData, prefix='d_quality_duty'):
+class QuestionQualityDuty(CallbackData, prefix='d_quality_duty'):
     answer: bool = False
     token: str = None
     return_dialog: bool = False
@@ -84,11 +84,11 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
     if role == "employee":
         buttons = [
             [
-                InlineKeyboardButton(text="👍 Да", callback_data=DialogQualitySpecialist(answer=True, token=token).pack()),
-                InlineKeyboardButton(text="👎 Нет", callback_data=DialogQualitySpecialist(answer=False, token=token).pack()),
+                InlineKeyboardButton(text="👍 Да", callback_data=QuestionQualitySpecialist(answer=True, token=token).pack()),
+                InlineKeyboardButton(text="👎 Нет", callback_data=QuestionQualitySpecialist(answer=False, token=token).pack()),
             ],
             [
-                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualitySpecialist(return_dialog=True, token=token).pack())
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=QuestionQualitySpecialist(return_dialog=True, token=token).pack())
             ],[
                 InlineKeyboardButton(text="🤔 Новый вопрос", callback_data=MainMenu(menu="ask").pack())
             ],
@@ -100,12 +100,12 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
         buttons = [
             [
                 InlineKeyboardButton(text="👎 Да",
-                                     callback_data=DialogQualityDuty(answer=False, token=token).pack()),
+                                     callback_data=QuestionQualityDuty(answer=False, token=token).pack()),
                 InlineKeyboardButton(text="👍 Нет",
-                                     callback_data=DialogQualityDuty(answer=True, token=token).pack()),
+                                     callback_data=QuestionQualityDuty(answer=True, token=token).pack()),
             ],
             [
-                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualityDuty(return_dialog=True, token=token).pack())
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=QuestionQualityDuty(return_dialog=True, token=token).pack())
             ]
         ]
 
@@ -119,7 +119,7 @@ def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup
     if role == "employee":
         buttons = [
             [
-                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualitySpecialist(return_dialog=True, token=token).pack())
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=QuestionQualitySpecialist(return_dialog=True, token=token).pack())
             ],
             [
                 InlineKeyboardButton(text="🏠 Главное меню", callback_data=MainMenu(menu="main").pack())
@@ -128,7 +128,7 @@ def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup
     else:
         buttons = [
             [
-                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=DialogQualityDuty(return_dialog=True, token=token).pack())
+                InlineKeyboardButton(text="🔄 Вернуть вопрос", callback_data=QuestionQualityDuty(return_dialog=True, token=token).pack())
             ]
         ]
 

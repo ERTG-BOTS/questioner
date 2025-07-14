@@ -4,15 +4,15 @@ from typing import Optional, Sequence
 
 from sqlalchemy import select, func, and_, or_
 
-from infrastructure.database.models import Dialog
+from infrastructure.database.models.question import Question
 from infrastructure.database.repo.base import BaseRepo
 
 
-class DialogsRepo(BaseRepo):
-    async def add_dialog(
+class QuestionsRepo(BaseRepo):
+    async def add_question(
             self, employee_chat_id: int, employee_fullname: str, topic_id: int,
-            question: str, start_time: date, clever_link: str
-    ) -> Dialog:
+            question_text: str, start_time: date, clever_link: str
+    ) -> Question:
         """
         Добавляет новый диалог в базу данных.
 
@@ -20,37 +20,35 @@ class DialogsRepo(BaseRepo):
             employee_chat_id (int): Chat ID сотрудника, задающего вопрос
             employee_fullname (str): ФИО сотрудника, задающего вопрос
             topic_id (int): ID топика
-            topic_duty (str): Описание обязанности топика
-            question (str): Вопрос диалога
+            question_text (str): Вопрос диалога
             start_time (date): Дата начала диалога
             clever_link (str): Ссылка на clever
 
         Returns:
-            Dialog: Созданный объект диалога
+            Question: Созданный объект диалога
         """
         # Генерируем уникальный токен для диалога
         token = str(uuid.uuid4())
 
-        # Создаем новый объект Dialog
-        dialog = Dialog(
+        # Создаем новый объект Question
+        dialog = Question(
             Token=token,
             TopicId=topic_id,
             EmployeeFullname=employee_fullname,
             EmployeeChatId=employee_chat_id,
-            Question=question,
+            QuestionText=question_text,
             StartTime=start_time,
             CleverLink=clever_link,
             Status="new",
         )
 
-        # Добавляем в сессию и сохраняем
         self.session.add(dialog)
         await self.session.commit()
         await self.session.refresh(dialog)
 
         return dialog
 
-    async def update_dialog_end(self, token: str, end_time: date) -> Optional[Dialog]:
+    async def update_dialog_end(self, token: str, end_time: date) -> Optional[Question]:
         """
         Обновляет дату окончания диалога.
 
@@ -59,16 +57,16 @@ class DialogsRepo(BaseRepo):
             end_time (date): Дата окончания диалога
 
         Returns:
-            Dialog: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Dialog, token)
+        dialog = await self.session.get(Question, token)
         if dialog:
             dialog.EndTime = end_time
             await self.session.commit()
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_dialog_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Dialog]:
+    async def update_dialog_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
         """
         Обновляет качество диалога.
 
@@ -78,19 +76,19 @@ class DialogsRepo(BaseRepo):
             is_duty (bool): Флаг, указывающий на оценку дежурного
 
         Returns:
-            Dialog: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Dialog, token)
+        dialog = await self.session.get(Question, token)
         if dialog:
             if is_duty:
-                dialog.DialogQualityDuty = quality
+                dialog.QualityDuty = quality
             else:
-                dialog.DialogQualityEmployee = quality
+                dialog.QualityEmployee = quality
             await self.session.commit()
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_dialog_status(self, token: str, status: str) -> Optional[Dialog]:
+    async def update_dialog_status(self, token: str, status: str) -> Optional[Question]:
         """
         Обновляет качество диалога.
 
@@ -99,34 +97,16 @@ class DialogsRepo(BaseRepo):
             status (str): Статус вопроса
 
         Returns:
-            Dialog: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Dialog, token)
+        dialog = await self.session.get(Question, token)
         if dialog:
             dialog.Status = status
             await self.session.commit()
             await self.session.refresh(dialog)
         return dialog
 
-    async def update_question(self, token: str, question: str) -> Optional[Dialog]:
-        """
-        Обновляет вопрос диалога.
-
-        Args:
-            token (str): Токен диалога
-            question (str): Вопрос
-
-        Returns:
-            Dialog: Обновленный объект диалога или None если не найден
-        """
-        dialog = await self.session.get(Dialog, token)
-        if dialog:
-            dialog.Question = question
-            await self.session.commit()
-            await self.session.refresh(dialog)
-        return dialog
-
-    async def update_topic_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Dialog]:
+    async def update_topic_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
         """
         Обновляет описание обязанности топика.
 
@@ -135,16 +115,16 @@ class DialogsRepo(BaseRepo):
             topic_duty (str): Описание обязанности топика
 
         Returns:
-            Dialog: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Dialog, token)
+        dialog = await self.session.get(Question, token)
         if dialog:
             dialog.TopicDutyFullname = topic_duty
             await self.session.commit()
             await self.session.refresh(dialog)
         return dialog
 
-    async def get_dialog(self, token: str = None, topic_id: int = None) -> Optional[Dialog]:
+    async def get_dialog(self, token: str = None, topic_id: int = None) -> Optional[Question]:
         """
         Получает диалог по токену или идентификатору топика.
 
@@ -153,17 +133,17 @@ class DialogsRepo(BaseRepo):
             topic_id (int): ID топика
 
         Returns:
-            Dialog: Диалог или None если не найден
+            Question: Диалог или None если не найден
         """
         if token:
-            stmt = select(Dialog).where(Dialog.Token == token)
+            stmt = select(Question).where(Question.Token == token)
         else:
-            stmt = select(Dialog).where(Dialog.TopicId == topic_id)
+            stmt = select(Question).where(Question.TopicId == topic_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_dialogs_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
-        Dialog]:
+        Question]:
         """
         Получает все диалоги сотрудника или старшего по ФИО.
 
@@ -172,12 +152,12 @@ class DialogsRepo(BaseRepo):
             duty_fullname (str): ФИО старшего
 
         Returns:
-            Sequence[Dialog]: Список диалогов сотрудника
+            Sequence[Question]: Список диалогов сотрудника
         """
         if employee_fullname:
-            stmt = select(Dialog).where(Dialog.EmployeeFullname == employee_fullname)
+            stmt = select(Question).where(Question.EmployeeFullname == employee_fullname)
         else:
-            stmt = select(Dialog).where(Dialog.TopicDutyFullname == duty_fullname)
+            stmt = select(Question).where(Question.TopicDutyFullname == duty_fullname)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
@@ -196,19 +176,19 @@ class DialogsRepo(BaseRepo):
         tomorrow = today + timedelta(days=1)
 
         if employee_fullname:
-            stmt = select(func.count(Dialog.Token)).where(
+            stmt = select(func.count(Question.Token)).where(
                 and_(
-                    Dialog.EmployeeFullname == employee_fullname,
-                    Dialog.StartTime >= today,
-                    Dialog.StartTime < tomorrow
+                    Question.EmployeeFullname == employee_fullname,
+                    Question.StartTime >= today,
+                    Question.StartTime < tomorrow
                 )
             )
         else:
-            stmt = select(func.count(Dialog.Token)).where(
+            stmt = select(func.count(Question.Token)).where(
                 and_(
-                    Dialog.TopicDutyFullname == duty_fullname,
-                    Dialog.StartTime >= today,
-                    Dialog.StartTime < tomorrow
+                    Question.TopicDutyFullname == duty_fullname,
+                    Question.StartTime >= today,
+                    Question.StartTime < tomorrow
                 )
             )
         result = await self.session.execute(stmt)
@@ -226,10 +206,10 @@ class DialogsRepo(BaseRepo):
             int: Количество диалогов за текущий месяц
         """
         today = datetime.now()
-        # Get first day of current month
+        # Получаем первый день текущего месяца
         first_day_current_month = datetime(today.year, today.month, 1).date()
 
-        # Get first day of next month (exclusive upper bound)
+        # Получаем первый день следующего месяца
         if today.month == 12:
             next_month = 1
             next_year = today.year + 1
@@ -240,25 +220,25 @@ class DialogsRepo(BaseRepo):
         first_day_next_month = datetime(next_year, next_month, 1).date()
 
         if employee_fullname:
-            stmt = select(func.count(Dialog.Token)).where(
+            stmt = select(func.count(Question.Token)).where(
                 and_(
-                    Dialog.EmployeeFullname == employee_fullname,
-                    Dialog.StartTime >= first_day_current_month,
-                    Dialog.StartTime < first_day_next_month
+                    Question.EmployeeFullname == employee_fullname,
+                    Question.StartTime >= first_day_current_month,
+                    Question.StartTime < first_day_next_month
                 )
             )
         else:
-            stmt = select(func.count(Dialog.Token)).where(
+            stmt = select(func.count(Question.Token)).where(
                 and_(
-                    Dialog.TopicDutyFullname == duty_fullname,
-                    Dialog.StartTime >= first_day_current_month,
-                    Dialog.StartTime < first_day_next_month
+                    Question.TopicDutyFullname == duty_fullname,
+                    Question.StartTime >= first_day_current_month,
+                    Question.StartTime < first_day_next_month
                 )
             )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_dialogs_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Dialog]:
+    async def get_dialogs_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Question]:
         """
         Получает все диалоги сотрудника по Chat ID.
 
@@ -266,68 +246,21 @@ class DialogsRepo(BaseRepo):
             employee_chat_id (int): Chat ID сотрудника
 
         Returns:
-            Sequence[Dialog]: Список диалогов сотрудника
+            Sequence[Question]: Список диалогов сотрудника
         """
-        stmt = select(Dialog).where(Dialog.EmployeeChatId == employee_chat_id)
+        stmt = select(Question).where(Question.EmployeeChatId == employee_chat_id)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_dialogs_with_quality_rating(self, is_duty: bool = False) -> Sequence[Dialog]:
-        """
-        Получает все диалоги с оценкой качества.
-
-        Args:
-            is_duty (bool): Если True, возвращает диалоги с оценкой дежурного
-
-        Returns:
-            Sequence[Dialog]: Список диалогов с оценкой
-        """
-        if is_duty:
-            stmt = select(Dialog).where(Dialog.DialogQualityDuty.is_not(None))
-        else:
-            stmt = select(Dialog).where(Dialog.DialogQualityEmployee.is_not(None))
-
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
-    async def get_dialogs_by_date_range(self, start_date: date, end_date: date) -> Sequence[Dialog]:
-        """
-        Получает диалоги в указанном диапазоне дат.
-
-        Args:
-            start_date (date): Начальная дата
-            end_date (date): Конечная дата
-
-        Returns:
-            Sequence[Dialog]: Список диалогов в диапазоне дат
-        """
-        stmt = select(Dialog).where(
-            Dialog.StartTime >= start_date,
-            Dialog.StartTime <= end_date
-        )
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
-    async def get_active_dialogs(self) -> Sequence[Dialog]:
+    async def get_active_dialogs(self) -> Sequence[Question]:
         """
         Получает все активные диалоги (со статусов open или in_progress).
 
         Returns:
-            Sequence[Dialog]: Список активных диалогов
+            Sequence[Question]: Список активных диалогов
         """
-        stmt = select(Dialog).where(
-            or_(Dialog.Status == "open", Dialog.Status == "in_progress")
+        stmt = select(Question).where(
+            or_(Question.Status == "open", Question.Status == "in_progress")
         )
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
-    async def get_completed_dialogs(self) -> Sequence[Dialog]:
-        """
-        Получает все завершенные диалоги (с датой окончания).
-
-        Returns:
-            Sequence[Dialog]: Список завершенных диалогов
-        """
-        stmt = select(Dialog).where(Dialog.EndTime.is_not(None))
         result = await self.session.execute(stmt)
         return result.scalars().all()

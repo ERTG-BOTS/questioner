@@ -6,6 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.types import BotCommand
+from tgbot.services.scheduler import scheduler
 
 from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import load_config, Config
@@ -85,6 +86,8 @@ async def main():
     dp.include_routers(*routers_list)
 
     register_global_middlewares(dp, config)
+
+    scheduler.start()
 
     # await on_startup(bot, config.tg_bot.admin_ids)
     try:

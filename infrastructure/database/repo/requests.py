@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.repo.dialog import DialogsRepo
+from infrastructure.database.repo.question import QuestionsRepo
 from infrastructure.database.repo.users import UserRepo
 
 
@@ -24,8 +24,8 @@ class RequestsRepo:
         return UserRepo(self.session)
 
     @property
-    def dialogs(self) -> DialogsRepo:
+    def dialogs(self) -> QuestionsRepo:
         """
-        The DialogHistories repository sessions are required to manage dialog histories operations.
+        The QuestionsRepo repository sessions are required to manage dialog questions operations.
         """
-        return DialogsRepo(self.session)
+        return QuestionsRepo(self.session)

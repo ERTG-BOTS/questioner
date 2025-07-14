@@ -129,12 +129,12 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
                                         message_thread_id=new_topic.message_thread_id)  # Закрытие темы
 
-    await repo.dialogs.add_dialog(employee_chat_id=message.chat.id,
-                                  employee_fullname=user.FIO,
-                                  topic_id=new_topic.message_thread_id,
-                                  start_time=datetime.datetime.now(),
-                                  question=state_data.get("question"),
-                                  clever_link=clever_link)  # Добавление диалога в БД
+    await repo.dialogs.add_question(employee_chat_id=message.chat.id,
+                                    employee_fullname=user.FIO,
+                                    topic_id=new_topic.message_thread_id,
+                                    start_time=datetime.datetime.now(),
+                                    question_text=state_data.get("question"),
+                                    clever_link=clever_link)  # Добавление диалога в БД
 
     employee_topics_today = await repo.dialogs.get_dialogs_count_today(employee_fullname=user.FIO)
     employee_topics_month = await repo.dialogs.get_dialogs_count_last_month(employee_fullname=user.FIO)

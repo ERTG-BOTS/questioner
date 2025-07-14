@@ -4,11 +4,11 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 
-from infrastructure.database.models import User, Dialog
+from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage, IsTopicMessageWithCommand
-from tgbot.keyboards.user.main import dialog_quality_kb, DialogQualityDuty, closed_dialog_kb
+from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -25,7 +25,7 @@ async def end_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.Status != "closed" and topic.TopicDutyFullname == duty.FIO:
@@ -67,7 +67,7 @@ async def release_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if topic.TopicDutyFullname is not None and topic.TopicDutyFullname == duty.FIO:
@@ -106,7 +106,7 @@ async def handle_topic_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Dialog = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
+        topic: Question = await repo.dialogs.get_dialog(topic_id=message.message_thread_id)
 
     if topic is not None:
         if not topic.TopicDutyFullname:
@@ -148,12 +148,12 @@ async def handle_topic_message(message: Message, stp_db):
         logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
 
 
-@topic_router.callback_query(DialogQualityDuty.filter(F.return_dialog == True))
-async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
+@topic_router.callback_query(QuestionQualityDuty.filter(F.return_dialog == True))
+async def return_dialog_by_duty(callback: CallbackQuery, callback_data: QuestionQualityDuty, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
 
     active_dialogs = await repo.dialogs.get_active_dialogs()
 
@@ -169,19 +169,19 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQu
         await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Старший <b>{employee.FIO}</b> переоткрыл вопрос:
-<blockquote expandable><i>{dialog.Question}</i></blockquote>""")
+<blockquote expandable><i>{dialog.QuestionText}</i></blockquote>""")
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У специалиста есть другой открытый вопрос", show_alert=True)
     elif dialog.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
 
 
-@topic_router.callback_query(IsTopicMessage() and DialogQualityDuty.filter())
-async def dialog_quality_duty(callback: CallbackQuery, callback_data: DialogQualityDuty, stp_db):
+@topic_router.callback_query(IsTopicMessage() and QuestionQualityDuty.filter())
+async def dialog_quality_duty(callback: CallbackQuery, callback_data: QuestionQualityDuty, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Dialog = await repo.dialogs.get_dialog(token=callback_data.token)
+        dialog: Question = await repo.dialogs.get_dialog(token=callback_data.token)
 
     if dialog.TopicDutyFullname == duty.FIO:
         await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)

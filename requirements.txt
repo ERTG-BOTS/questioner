@@ -3,6 +3,10 @@ environs~=14.2.0
 redis~=6.2.0
 betterlogging~=1.0.0
 
+# scheduler
+apscheduler~=3.11.0
+pytz~=2025.2
+
 # # For enabling api:
 # backoff
 # ujson
