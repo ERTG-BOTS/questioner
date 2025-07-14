@@ -32,9 +32,9 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
             await repo.dialogs.update_dialog_status(token=dialog.Token, status="closed")
             await repo.dialogs.update_dialog_end(token=dialog.Token, end_time=datetime.datetime.now())
 
-            await message.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔒 Диалог закрыт</b>
+            await message.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{employee.FIO}</b> закрыл диалог
+Специалист <b>{employee.FIO}</b> закрыл вопрос
 Оцени, мог ли специалист решить вопрос самостоятельно""",
                                            reply_markup=dialog_quality_kb(token=dialog.Token, role="duty"))
 
@@ -43,19 +43,19 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
                                                icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-            await message.reply(f"""<b>🔒 Диалог закрыт</b>
+            await message.reply(f"""<b>🔒 Вопрос закрыт</b>
 
-Ты закрыл диалог
+Ты закрыл вопрос
 Оцени, помогли ли тебе решить вопрос""", reply_markup=dialog_quality_kb(token=dialog.Token, role="employee"))
         elif dialog.Status == "closed":
-            await message.reply("<b>🔒 Диалог был закрыт</b>")
+            await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
     else:
         await message.answer(f"""<b>⚠️ Ошибка</b>
 
 Не удалось найти вопрос в базе""")
-        logger.error(f"Не удалось найти топик {message.message_thread_id}")
+        logger.error(f"Не удалось найти тему {message.message_thread_id}")
 
 
 @user_dialog_router.message(ActiveQuestion())
@@ -83,10 +83,10 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Dial
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-        await callback.message.edit_text(f"""<b>🔓 Диалог переоткрыт</b>
+        await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""")
-        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Диалог переоткрыт</b>
+        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Специалист <b>{employee.FIO}</b> переоткрыл вопрос""")
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
@@ -103,12 +103,12 @@ async def dialog_quality_employee(callback: CallbackQuery, callback_data: Dialog
     await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
     await callback.answer("Оценка успешно выставлена ❤️")
     if callback_data.answer:
-        await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+        await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
 
 Ты поставил оценку:
 👍 Старший <b>помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))
     else:
-        await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+        await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
 
 Ты поставил оценку:
 👎 Старший <b>не помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))

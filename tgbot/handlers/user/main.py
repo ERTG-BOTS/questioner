@@ -125,9 +125,9 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 Вопрос передан на рассмотрение, в скором времени тебе ответят""", reply_markup=cancel_question_kb())
 
     new_topic = await message.bot.create_forum_topic(chat_id=config.tg_bot.forum_id, name=user.FIO,
-                                                     icon_custom_emoji_id=dicts.topicEmojis["open"])  # Создание топика
+                                                     icon_custom_emoji_id=dicts.topicEmojis["open"])  # Создание темы
     await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
-                                        message_thread_id=new_topic.message_thread_id)  # Закрытие топика
+                                        message_thread_id=new_topic.message_thread_id)  # Закрытие темы
 
     await repo.dialogs.add_dialog(employee_chat_id=message.chat.id,
                                   employee_fullname=user.FIO,
@@ -157,10 +157,10 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     await message.bot.copy_message(chat_id=config.tg_bot.forum_id, message_thread_id=new_topic.message_thread_id,
                                    from_chat_id=message.chat.id, message_id=state_data.get(
-            "question_message_id"))  # Копирование сообщения специалиста в топик
+            "question_message_id"))  # Копирование сообщения специалиста в тему
 
     await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
-                                         message_thread_id=new_topic.message_thread_id)  # Переоткрытие топика
+                                         message_thread_id=new_topic.message_thread_id)  # Переоткрытие темы
 
     await state.clear()
 

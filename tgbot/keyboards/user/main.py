@@ -69,7 +69,7 @@ def cancel_question_kb() -> InlineKeyboardMarkup:
 def finish_question_kb() -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="✅️ Завершить диалог", callback_data=MainMenu(menu="main").pack()),
+            InlineKeyboardButton(text="✅️ Закрыть вопрос", callback_data=MainMenu(menu="main").pack()),
         ]
     ]
 

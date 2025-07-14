@@ -14,8 +14,8 @@ class ChangeRole(CallbackData, prefix='role'):
 def admin_kb() -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="❗ Макс. диалогов", callback_data=AdminMenu(menu="dialog_count").pack()),
-            InlineKeyboardButton(text="📥 Файл диалогов", callback_data=AdminMenu(menu="dialog_download").pack()),
+            InlineKeyboardButton(text="❗ Макс. вопросов", callback_data=AdminMenu(menu="dialog_count").pack()),
+            InlineKeyboardButton(text="📥 Файл вопросов", callback_data=AdminMenu(menu="dialog_download").pack()),
         ],
         [
             InlineKeyboardButton(text="👴🏻 Стать старшим", callback_data=ChangeRole(role="duty").pack()),

@@ -33,9 +33,9 @@ async def end_cmd(message: Message, stp_db):
             await repo.dialogs.update_dialog_status(token=topic.Token, status="closed")
             await repo.dialogs.update_dialog_end(token=topic.Token, end_time=datetime.datetime.now())
 
-            await message.reply(f"""<b>🔒 Диалог закрыт</b>
+            await message.reply(f"""<b>🔒 Вопрос закрыт</b>
 
-Оцени, мог ли специалист решить вопрос самостоятельно""",
+Оцени, мог ли специалист решить его самостоятельно""",
                                 reply_markup=dialog_quality_kb(token=topic.Token, role="duty"))
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId, name=topic.Token,
@@ -43,23 +43,23 @@ async def end_cmd(message: Message, stp_db):
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
 
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
-            await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>🔒 Диалог закрыт</b>
+            await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>🔒 Вопрос закрыт</b>
 
-Старший <b>{duty.FIO}</b> закрыл диалог
-Оцени, помогли ли тебе решить вопрос""", reply_markup=dialog_quality_kb(token=topic.Token, role="employee"))
+Старший <b>{duty.FIO}</b> закрыл вопрос
+Оцени, помогли ли тебе решить его""", reply_markup=dialog_quality_kb(token=topic.Token, role="employee"))
         elif topic.Status != "closed" and topic.TopicDutyFullname != duty.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
 Это не твой чат!""")
         elif topic.Status == "closed":
-            await message.reply("<b>🔒 Диалог был закрыт</b>")
+            await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
 
     else:
         await message.answer(f"""<b>⚠️ Ошибка</b>
 
-Не удалось найти текущий топик в базе 1""")
-        logger.error(f"Не удалось найти топик {message.message_thread_id}")
+Не удалось найти текущую тему в базе""")
+        logger.error(f"Не удалось найти тему {message.message_thread_id}")
 
 
 @topic_router.message(IsTopicMessage() and Command("release"))
@@ -76,14 +76,14 @@ async def release_cmd(message: Message, stp_db):
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
                                                icon_custom_emoji_id=dicts.topicEmojis["open"])
-            await message.answer(f"""<b>🕊️ Диалог освобожден</b>
+            await message.answer(f"""<b>🕊️ Вопрос освобожден</b>
 
 Для повторного взятия вопроса в работу напиши сообщение в эту тему""")
 
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
             await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>🕊️ Старший покинул чат</b>
 
-Старший <b>{duty.FIO}</b> закрыл диалог""")
+Старший <b>{duty.FIO}</b> закрыл вопрос. Ожидай повторного подключения старшего""")
         elif topic.TopicDutyFullname is not None and topic.TopicDutyFullname != duty.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
@@ -96,9 +96,9 @@ async def release_cmd(message: Message, stp_db):
     else:
         await message.answer(f"""<b>⚠️ Ошибка</b>
 
-Не удалось найти текущий топик в базе, закрываю""")
+Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
-        logger.error(f"Не удалось найти топик {message.message_thread_id}. Закрыли топик")
+        logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
 
 
 @topic_router.callback_query(IsTopicMessage() and DialogQualityDuty.filter())
@@ -112,12 +112,12 @@ async def dialog_quality_duty(callback: CallbackQuery, callback_data: DialogQual
         await repo.dialogs.update_dialog_quality(token=callback_data.token, quality=callback_data.answer, is_duty=True)
         await callback.answer("Оценка успешно выставлена ❤️")
         if callback_data.answer:
-            await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
 
 <b>{duty.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
         else:
-            await callback.message.edit_text(f"""<b>🔒 Диалог закрыт</b>
+            await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
 
 <b>{duty.FIO}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"))
@@ -167,9 +167,9 @@ async def handle_topic_message(message: Message, stp_db):
     else:
         await message.answer(f"""<b>⚠️ Ошибка</b>
 
-Не удалось найти текущий топик в базе, закрываю""")
+Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
-        logger.error(f"Не удалось найти топик {message.message_thread_id}. Закрыли топик")
+        logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
 
 
 @topic_router.callback_query(DialogQualityDuty.filter(F.return_dialog == True))
@@ -187,10 +187,10 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: DialogQu
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-        await callback.message.edit_text(f"""<b>🔓 Диалог переоткрыт</b>
+        await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы специалисту""")
-        await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Диалог переоткрыт</b>
+        await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Старший <b>{employee.FIO}</b> переоткрыл вопрос:
 <blockquote expandable><i>{dialog.Question}</i></blockquote>""")
