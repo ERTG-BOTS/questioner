@@ -50,7 +50,9 @@ async def end_cmd(message: Message, stp_db):
         elif topic.Status != "closed" and topic.TopicDutyFullname != duty.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
-Это не твой чат!""")
+Это не твой чат!
+
+<i>Твое сообщение не отобразится специалисту</i>""")
         elif topic.Status == "closed":
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
@@ -87,7 +89,9 @@ async def release_cmd(message: Message, stp_db):
         elif topic.TopicDutyFullname is not None and topic.TopicDutyFullname != duty.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
-Это не твой чат!""")
+Это не твой чат!
+
+<i>Твое сообщение не отобразится специалисту</i>""")
         elif topic.TopicDutyFullname is None:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
@@ -138,7 +142,9 @@ async def handle_topic_message(message: Message, stp_db):
             else:
                 await message.reply("""<b>⚠️ Предупреждение</b>
                 
-Это не твой чат!""")
+Это не твой чат!
+
+<i>Твое сообщение не отобразится специалисту</i>""")
 
     else:
         await message.answer(f"""<b>⚠️ Ошибка</b>
