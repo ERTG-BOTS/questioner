@@ -2,13 +2,13 @@ import datetime
 import logging
 
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup
 
 from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage, IsTopicMessageWithCommand
-from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb
+from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb, finish_question_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import stop_inactivity_timer, start_inactivity_timer, restart_inactivity_timer
@@ -140,7 +140,7 @@ async def handle_topic_message(message: Message, stp_db):
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
             await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>👮‍♂️ Вопрос в работе</b>
 
-Старший <b>{duty.FIO}</b> взял вопрос в работу""")
+Старший <b>{duty.FIO}</b> взял вопрос в работу""", reply_markup=finish_question_kb())
             await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id,
                                            chat_id=employee.ChatId)
         else:
@@ -189,7 +189,7 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
         await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Старший <b>{employee.FIO}</b> переоткрыл вопрос:
-<blockquote expandable><i>{dialog.QuestionText}</i></blockquote>""")
+<blockquote expandable><i>{dialog.QuestionText}</i></blockquote>""", reply_markup=finish_question_kb())
     elif dialog.TopicDutyFullname != duty.FIO:
         await callback.answer("Это не твой чат!", show_alert=True)
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:

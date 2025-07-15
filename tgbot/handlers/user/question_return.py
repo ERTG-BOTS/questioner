@@ -8,7 +8,7 @@ from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.user.main import user_kb, MainMenu, ReturnQuestion, questions_list_kb, \
-    question_confirm_kb, back_kb
+    question_confirm_kb, back_kb, finish_question_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -120,9 +120,9 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
         )
 
         # 4. Отправляем подтверждающее сообщение
-        await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
 
-Можешь писать сообщения, они будут переданы старшему""")
+Можешь писать сообщения, они будут переданы старшему""", reply_markup=finish_question_kb())
 
         await callback.bot.send_message(
             chat_id=config.tg_bot.forum_id,

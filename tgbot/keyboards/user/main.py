@@ -1,5 +1,5 @@
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from sqlalchemy import Sequence
 
 from infrastructure.database.models import Question
@@ -74,15 +74,17 @@ def cancel_question_kb() -> InlineKeyboardMarkup:
 
 
 # Клавиатура с отменой вопроса и возвратом в главное меню
-def finish_question_kb() -> InlineKeyboardMarkup:
+def finish_question_kb() -> ReplyKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="✅️ Закрыть вопрос", callback_data=MainMenu(menu="main").pack()),
+            KeyboardButton(text="✅️ Закрыть вопрос"),
         ]
     ]
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=buttons,
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True
     )
     return keyboard
 
@@ -187,3 +189,4 @@ def question_confirm_kb(token: str) -> InlineKeyboardMarkup:
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+

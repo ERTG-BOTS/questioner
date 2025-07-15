@@ -8,7 +8,7 @@ from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
-from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb
+from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb, finish_question_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import stop_inactivity_timer, restart_inactivity_timer
@@ -32,7 +32,7 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
         if dialog.Status != "closed":
             # Останавливаем таймер неактивности
             stop_inactivity_timer(dialog.Token)
-            
+
             await repo.dialogs.update_question_status(token=dialog.Token, status="closed")
             await repo.dialogs.update_question_end(token=dialog.Token, end_time=datetime.datetime.now())
 
@@ -68,6 +68,10 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
         repo = RequestsRepo(session)
         dialog: Question = await repo.dialogs.get_question(token=active_dialog_token)
 
+    if message.text == "✅️ Закрыть вопрос":
+        await active_question_end(message, stp_db, active_dialog_token)
+        return
+
     # Перезапускаем таймер неактивности при сообщении от пользователя
     if config.tg_bot.activity_status:
         restart_inactivity_timer(dialog.Token, message.bot, stp_db)
@@ -92,9 +96,9 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-        await callback.message.edit_text(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
 
-Можешь писать сообщения, они будут переданы старшему""")
+Можешь писать сообщения, они будут переданы старшему""", reply_markup=finish_question_kb())
         await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия""")
@@ -120,4 +124,5 @@ async def dialog_quality_employee(callback: CallbackQuery, callback_data: Questi
         await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
 
 Ты поставил оценку:
-👎 Старший <b>не помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))
+👎 Старший <b>не помог решить твой вопрос</b>""",
+                                         reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))
