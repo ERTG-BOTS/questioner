@@ -1,6 +1,7 @@
+from typing import Sequence
+
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
-from sqlalchemy import Sequence
 
 from infrastructure.database.models import Question
 from tgbot.keyboards.admin.main import AdminMenu
@@ -25,6 +26,10 @@ class QuestionQualityDuty(CallbackData, prefix='d_quality_duty'):
 class ReturnQuestion(CallbackData, prefix='return_q'):
     action: str
     token: str = None
+
+
+class FinishedQuestion(CallbackData, prefix='finished_q'):
+    action: str
 
 
 # Основная клавиатура для команды /start
@@ -70,6 +75,22 @@ def cancel_question_kb() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,
     )
+    return keyboard
+
+
+# Клавиатура с освобождением вопроса после переоткрытия
+def reopened_question_kb(token: str) -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="🕊️ Освободить вопрос",
+                                 callback_data=FinishedQuestion(token=token, action="release").pack()),
+        ]
+    ]
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=buttons
+    )
+
     return keyboard
 
 
@@ -161,7 +182,8 @@ def questions_list_kb(questions: Sequence[Question]) -> InlineKeyboardMarkup:
 
     for question in questions:
         # Используем EndTime вместо StartTime для отображения времени закрытия
-        date_str = question.EndTime.strftime("%d.%m.%Y %H:%M") if question.EndTime else question.StartTime.strftime("%d.%m.%Y")
+        date_str = question.EndTime.strftime("%d.%m.%Y %H:%M") if question.EndTime else question.StartTime.strftime(
+            "%d.%m.%Y")
         buttons.append([
             InlineKeyboardButton(
                 text=f"📅 {date_str} | {question.QuestionText}",
@@ -189,4 +211,3 @@ def question_confirm_kb(token: str) -> InlineKeyboardMarkup:
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-

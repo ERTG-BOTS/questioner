@@ -8,7 +8,8 @@ from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage, IsTopicMessageWithCommand
-from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb, finish_question_kb
+from tgbot.keyboards.user.main import dialog_quality_kb, QuestionQualityDuty, closed_dialog_kb, finish_question_kb, \
+    FinishedQuestion
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import stop_inactivity_timer, start_inactivity_timer, restart_inactivity_timer
@@ -86,7 +87,7 @@ async def release_cmd(message: Message, stp_db):
                                                icon_custom_emoji_id=dicts.topicEmojis["open"])
             await message.answer(f"""<b>🕊️ Вопрос освобожден</b>
 
-Для повторного взятия вопроса в работу напиши сообщение в эту тему""")
+Для взятия вопроса в работу напишите сообщение в эту тему""")
 
             employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
             await message.bot.send_message(chat_id=employee.ChatId, text=f"""<b>🕊️ Старший покинул чат</b>
@@ -109,6 +110,28 @@ async def release_cmd(message: Message, stp_db):
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
         logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
+
+
+@topic_router.callback_query(FinishedQuestion.filter(F.action == "release"))
+async def release_cb(callback: CallbackQuery, stp_db):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        topic: Question = await repo.dialogs.get_question(topic_id=callback.message.message_thread_id)
+
+    if topic is not None:
+        await repo.dialogs.update_question_duty(token=topic.Token, topic_duty=None)
+        await repo.dialogs.update_question_status(token=topic.Token, status="open")
+
+        await callback.message.answer(f"""<b>🕊️ Вопрос освобожден</b>
+
+Для взятия вопроса в работу напишите сообщение в эту тему""")
+
+    else:
+        await callback.message.answer(f"""<b>⚠️ Ошибка</b>
+
+Не удалось найти текущую тему в базе, закрываю""")
+        await callback.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=callback.message.message_id)
+        logger.error(f"Не удалось найти тему {callback.message_thread_id}. Закрыли тему")
 
 
 @topic_router.message(IsTopicMessage())
@@ -138,7 +161,7 @@ async def handle_topic_message(message: Message, stp_db):
                                                icon_custom_emoji_id=dicts.topicEmojis["in_progress"])
             await message.answer(f"""<b>👮‍♂️ Вопрос в работе</b>
 
-На вопрос отвечает <b>{duty.FIO}</b> {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if duty.Username != "Не указан" else ""}
+На вопрос отвечает <b>{duty.FIO}</b> {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
                                  disable_web_page_preview=True)

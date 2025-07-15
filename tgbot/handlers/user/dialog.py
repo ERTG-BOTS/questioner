@@ -8,7 +8,8 @@ from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
-from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb, finish_question_kb
+from tgbot.keyboards.user.main import QuestionQualitySpecialist, dialog_quality_kb, closed_dialog_kb, \
+    finish_question_kb, reopened_question_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import stop_inactivity_timer, restart_inactivity_timer
@@ -87,6 +88,7 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
         question: Question = await repo.dialogs.get_question(token=callback_data.token)
+        duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
 
     active_dialogs = await repo.dialogs.get_active_questions()
 
@@ -103,8 +105,10 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
 
 Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия
 
-Изначальный вопрос:
-<blockquote expandable><i>{question.QuestionText}</i></blockquote>""")
+<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+
+❓ Изначальный вопрос:
+<blockquote expandable><i>{question.QuestionText}</i></blockquote>""", reply_markup=reopened_question_kb(token=question.Token))
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
     elif question.Status != "closed":

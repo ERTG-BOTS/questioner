@@ -159,7 +159,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     topic_info_msg = await message.bot.send_message(chat_id=config.tg_bot.forum_id,
                                                     message_thread_id=new_topic.message_thread_id,
-                                                    text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if user.Username != "Не указан" else ""}
+                                                    text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
 
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 

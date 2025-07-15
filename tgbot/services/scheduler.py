@@ -3,6 +3,7 @@ import logging
 
 import pytz
 from aiogram import Bot
+from aiogram.types import ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import Sequence
 
@@ -108,9 +109,10 @@ async def auto_close_question(bot: Bot, question_token: str, stp_db):
                     reply_markup=closed_dialog_kb(token=question_token, role="duty")
                 )
 
+                await bot.send_message(chat_id=question.EmployeeChatId, text="🔒 <b>Вопрос автоматически закрыт</b>", reply_markup=ReplyKeyboardRemove())
                 await bot.send_message(
                     chat_id=question.EmployeeChatId,
-                    text="🔒 <b>Вопрос автоматически закрыт</b>\n\nТвой вопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                    text="Твой вопрос был закрыт из-за отсутствия активности в течение 10 минут",
                     reply_markup=closed_dialog_kb(token=question_token, role="employee")
                 )
 

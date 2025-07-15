@@ -8,7 +8,7 @@ from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.user.main import user_kb, MainMenu, ReturnQuestion, questions_list_kb, \
-    question_confirm_kb, back_kb, finish_question_kb
+    question_confirm_kb, back_kb, finish_question_kb, reopened_question_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -91,6 +91,7 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
         question = await repo.dialogs.get_question(token=callback_data.token)
+        duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
 
     if not question:
         await callback.message.edit_text(
@@ -131,8 +132,10 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
 
-Изначальный вопрос:
-<blockquote expandable><i>{question.QuestionText}</i></blockquote>"""
+<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+
+❓ Изначальный вопрос:
+<blockquote expandable><i>{question.QuestionText}</i></blockquote>""", reply_markup=reopened_question_kb(token=question.Token)
         )
     elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
