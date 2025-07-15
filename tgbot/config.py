@@ -26,6 +26,7 @@ class TgBot:
 
     forum_id: str
 
+    activity_status: bool
     activity_warn_minutes: int
     activity_close_minutes: int
 
@@ -44,12 +45,13 @@ class TgBot:
 
         forum_id = env.str("FORUM_ID")
 
+        activity_status = env.bool("ACTIVITY_STATUS")
         activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
         activity_close_minutes = env.int("ACTIVITY_CLOSE_MINUTES")
 
         if division != "NTP" and division != "NCK":
             raise ValueError("[CONFIG] DIVISION must be NTP or NCK")
-        return TgBot(token=token, use_redis=use_redis, division=division, forum_id=forum_id, activity_warn_minutes=activity_warn_minutes, activity_close_minutes=activity_close_minutes)
+        return TgBot(token=token, use_redis=use_redis, division=division, forum_id=forum_id, activity_status=activity_status, activity_warn_minutes=activity_warn_minutes, activity_close_minutes=activity_close_minutes)
 
 
 @dataclass

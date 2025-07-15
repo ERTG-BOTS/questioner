@@ -122,7 +122,8 @@ async def handle_topic_message(message: Message, stp_db):
             await repo.dialogs.update_question_status(token=topic.Token, status="in_progress")
 
             # Запускаем таймер неактивности для нового вопроса
-            start_inactivity_timer(topic.Token, message.bot, stp_db)
+            if config.tg_bot.activity_status:
+                start_inactivity_timer(topic.Token, message.bot, stp_db)
 
             duty_topics_today = await repo.dialogs.get_questions_count_today(duty_fullname=duty.FIO)
             duty_topics_month = await repo.dialogs.get_questions_count_last_month(duty_fullname=duty.FIO)
@@ -145,7 +146,8 @@ async def handle_topic_message(message: Message, stp_db):
         else:
             if topic.TopicDutyFullname == duty.FIO:
                 # Перезапускаем таймер неактивности при сообщении от дежурного
-                restart_inactivity_timer(topic.Token, message.bot, stp_db)
+                if config.tg_bot.activity_status:
+                    restart_inactivity_timer(topic.Token, message.bot, stp_db)
                 
                 await message.bot.copy_message(from_chat_id=config.tg_bot.forum_id, message_id=message.message_id,
                                                chat_id=topic.EmployeeChatId)

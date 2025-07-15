@@ -152,7 +152,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
                                     clever_link=clever_link)  # Добавление диалога в БД
     
     # Запускаем таймер неактивности для нового вопроса (только если статус "open")
-    if new_question.Status == "new":
+    if new_question.Status == "new" and config.tg_bot.activity_status:
         start_inactivity_timer(new_question.Token, message.bot, stp_db)
 
     employee_topics_today = await repo.dialogs.get_questions_count_today(employee_fullname=user.FIO)

@@ -69,7 +69,8 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
         dialog: Question = await repo.dialogs.get_question(token=active_dialog_token)
 
     # Перезапускаем таймер неактивности при сообщении от пользователя
-    restart_inactivity_timer(dialog.Token, message.bot, stp_db)
+    if config.tg_bot.activity_status:
+        restart_inactivity_timer(dialog.Token, message.bot, stp_db)
 
     await message.bot.copy_message(from_chat_id=message.chat.id, message_id=message.message_id,
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
