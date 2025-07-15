@@ -1,6 +1,8 @@
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from sqlalchemy import Sequence
 
+from infrastructure.database.models import Question
 from tgbot.keyboards.admin.main import AdminMenu
 
 
@@ -151,7 +153,7 @@ def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup
     return keyboard
 
 
-def questions_list_kb(questions) -> InlineKeyboardMarkup:
+def questions_list_kb(questions: Sequence[Question]) -> InlineKeyboardMarkup:
     """Клавиатура со списком последних вопросов"""
     buttons = []
 
@@ -160,7 +162,7 @@ def questions_list_kb(questions) -> InlineKeyboardMarkup:
         date_str = question.EndTime.strftime("%d.%m.%Y %H:%M") if question.EndTime else question.StartTime.strftime("%d.%m.%Y")
         buttons.append([
             InlineKeyboardButton(
-                text=f"📅 {date_str}",
+                text=f"📅 {date_str} | {question.QuestionText}",
                 callback_data=ReturnQuestion(action="show", token=question.Token).pack()
             )
         ])

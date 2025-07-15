@@ -302,7 +302,7 @@ class QuestionsRepo(BaseRepo):
                 Question.QuestionText != None,
                 Question.Status == "closed",
                 Question.EndTime.is_not(None),
-                Question.EndTime < twenty_four_hours_ago
+                Question.EndTime >= twenty_four_hours_ago
             )
         ).order_by(Question.EndTime.desc()).limit(limit)
         result = await self.session.execute(stmt)

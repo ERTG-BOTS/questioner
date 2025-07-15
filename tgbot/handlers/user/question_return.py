@@ -1,9 +1,10 @@
 import logging
+from typing import Sequence
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
-from infrastructure.database.models import User
+from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.user.main import user_kb, MainMenu, ReturnQuestion, questions_list_kb, \
@@ -24,7 +25,7 @@ async def return_question_list(callback: CallbackQuery, stp_db):
     """Показать список последних 5 вопросов пользователя за 24 часа"""
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        questions = await repo.dialogs.get_last_questions_by_chat_id(
+        questions: Sequence[Question] = await repo.dialogs.get_last_questions_by_chat_id(
             employee_chat_id=callback.from_user.id,
             limit=5
         )
@@ -41,7 +42,7 @@ async def return_question_list(callback: CallbackQuery, stp_db):
     await callback.message.edit_text(
         """<b>🔄 Возврат вопроса</b>
 
-📋 Выбери вопрос по времени закрытия
+📋 Выбери вопрос из списка доступных
 
 <i>Отображаются вопросы, закрытые за последние 24 часа</i>""",
         reply_markup=questions_list_kb(questions)
