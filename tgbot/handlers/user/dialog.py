@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 
 from infrastructure.database.models import User, Question
 from infrastructure.database.repo.requests import RequestsRepo
@@ -47,9 +47,9 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
                                                icon_custom_emoji_id=dicts.topicEmojis["closed"])
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-            await message.reply(f"""<b>🔒 Вопрос закрыт</b>
-
-Ты закрыл вопрос
+            await message.reply(text="<b>🔒 Вопрос закрыт</b>",
+                                           reply_markup=ReplyKeyboardRemove())
+            await message.answer(f"""Ты закрыл вопрос
 Оцени, помогли ли тебе решить вопрос""", reply_markup=dialog_quality_kb(token=dialog.Token, role="employee"))
         elif dialog.Status == "closed":
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
