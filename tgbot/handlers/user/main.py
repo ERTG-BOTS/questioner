@@ -9,7 +9,7 @@ from aiogram.types import Message, CallbackQuery
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
-from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb, ReturnQuestion, questions_list_kb, question_confirm_kb
+from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb, finish_question_kb
 from tgbot.misc import dicts
 from tgbot.misc.states import Question
 from tgbot.services.logger import setup_logging
@@ -170,16 +170,19 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
                                                     disable_web_page_preview=True)
 
-    await message.bot.pin_chat_message(chat_id=config.tg_bot.forum_id,
-                                       message_id=topic_info_msg.message_id,
-                                       disable_notification=True)  # Пин информации о специалисте
+    await message.bot.copy_message(chat_id=config.tg_bot.forum_id, message_thread_id=new_topic.message_thread_id,
+                                   from_chat_id=message.chat.id, message_id=state_data.get(
+            "question_message_id"))  # Копирование сообщения специалиста в тему
 
     await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
                                          message_thread_id=new_topic.message_thread_id)  # Переоткрытие темы
 
-    await message.bot.copy_message(chat_id=config.tg_bot.forum_id, message_thread_id=new_topic.message_thread_id,
-                                   from_chat_id=message.chat.id, message_id=state_data.get(
-            "question_message_id"))  # Копирование сообщения специалиста в тему
+    await message.bot.pin_chat_message(chat_id=config.tg_bot.forum_id,
+                                       message_id=topic_info_msg.message_id,
+                                       disable_notification=True)  # Пин информации о специалисте
+
+
+
 
     await state.clear()
 
