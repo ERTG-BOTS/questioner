@@ -129,7 +129,10 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
             message_thread_id=question.TopicId,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов"""
+Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
+
+Изначальный вопрос:
+<blockquote expandable><i>{question.QuestionText}</i></blockquote>"""
         )
     elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)

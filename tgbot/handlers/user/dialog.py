@@ -86,25 +86,28 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        dialog: Question = await repo.dialogs.get_question(token=callback_data.token)
+        question: Question = await repo.dialogs.get_question(token=callback_data.token)
 
     active_dialogs = await repo.dialogs.get_active_questions()
 
-    if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs]:
-        await repo.dialogs.update_question_status(token=dialog.Token, status="open")
-        await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
+    if question.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in active_dialogs]:
+        await repo.dialogs.update_question_status(token=question.Token, status="open")
+        await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId,
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
-        await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
+        await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId)
 
         await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""", reply_markup=finish_question_kb())
-        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия""")
+Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия
+
+Изначальный вопрос:
+<blockquote expandable><i>{question.QuestionText}</i></blockquote>""")
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
-    elif dialog.Status != "closed":
+    elif question.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
 
 
