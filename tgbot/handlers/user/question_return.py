@@ -74,7 +74,7 @@ async def return_question_show(callback: CallbackQuery, callback_data: ReturnQue
 
 🗃️ <b>Регламент:</b> <a href='{question.CleverLink}'>тык</a>
 
-<b>Дата создания:</b> {start_date_str}
+🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 
 Хочешь вернуть этот вопрос?""",
