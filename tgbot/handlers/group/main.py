@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import Sequence
 
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
@@ -203,12 +204,12 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
         dialog: Question = await repo.dialogs.get_question(token=callback_data.token)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
+        available_to_return_questions: Sequence[Question] = await repo.dialogs.get_available_to_return_questions()
 
-    logger.info(duty)
     active_dialogs = await repo.dialogs.get_active_questions()
 
     if dialog.Status == "closed" and employee.FIO not in [d.EmployeeFullname for d in
-                                                          active_dialogs] and dialog.TopicDutyFullname == duty.FIO:
+                                                          active_dialogs] and dialog.Token in [d.Token for d in available_to_return_questions] and dialog.TopicDutyFullname == duty.FIO:
         await repo.dialogs.update_question_status(token=dialog.Token, status="open")
         await callback.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId,
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
@@ -225,6 +226,8 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
         await callback.answer("Это не твой чат!", show_alert=True)
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У специалиста есть другой открытый вопрос", show_alert=True)
+    elif dialog.Token not in [d.Token for d in available_to_return_questions]:
+        await callback.answer("Вопрос не переоткрыть. Прошло более 24 часов", show_alert=True)
     elif dialog.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
 
