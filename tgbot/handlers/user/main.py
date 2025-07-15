@@ -9,8 +9,10 @@ from aiogram.types import Message, CallbackQuery
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
+from tgbot.filters.active_question import ActiveQuestion
 from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb, finish_question_kb
 from tgbot.misc import dicts
+from tgbot.misc.helpers import disable_previous_buttons
 from tgbot.misc.states import Question
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import start_inactivity_timer
@@ -23,7 +25,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@user_router.message(CommandStart())
+@user_router.message(CommandStart() and ~ActiveQuestion())
 async def main_cmd(message: Message, state: FSMContext, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
@@ -82,12 +84,11 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
-async def ask_question(callback: CallbackQuery, state: FSMContext, stp_db):
+async def ask_question(callback: CallbackQuery, state: FSMContext):
     msg = await callback.message.edit_text(f"""<b>🤔 Суть вопроса</b>
 
 Отправь вопрос и вложения одним сообщением""", reply_markup=back_kb())
 
-    # Initialize list to store message IDs with buttons
     await state.update_data(messages_with_buttons=[msg.message_id])
     await state.set_state(Question.question)
 
@@ -97,15 +98,13 @@ async def question_text(message: Message, state: FSMContext):
     await state.update_data(question=message.text)
     await state.update_data(question_message_id=message.message_id)
 
-    # Disable buttons from previous step
+    # Отключаем кнопки на предыдущих шагах
     await disable_previous_buttons(message, state)
 
-    # Store the message ID of the current step to disable buttons later
     response_msg = await message.answer(f"""<b>🗃️ Регламент</b>
 
 Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос""", reply_markup=back_kb())
 
-    # Add current message to the list
     state_data = await state.get_data()
     messages_with_buttons = state_data.get("messages_with_buttons", [])
     messages_with_buttons.append(response_msg.message_id)
@@ -185,26 +184,6 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
 
     await state.clear()
-
-
-async def disable_previous_buttons(message: Message, state: FSMContext):
-    """Helper function to disable buttons from previous steps"""
-    state_data = await state.get_data()
-    messages_with_buttons = state_data.get("messages_with_buttons", [])
-
-    for msg_id in messages_with_buttons:
-        try:
-            await message.bot.edit_message_reply_markup(
-                chat_id=message.chat.id,
-                message_id=msg_id,
-                reply_markup=None
-            )
-        except Exception as e:
-            # Handle case where message might be deleted or not editable
-            print(f"Could not disable buttons for message {msg_id}: {e}")
-
-    # Clear the list after disabling buttons
-    await state.update_data(messages_with_buttons=[])
 
 
 

@@ -8,6 +8,7 @@ from aiogram.types import Message, CallbackQuery
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
+from tgbot.filters.active_question import ActiveQuestion
 from tgbot.filters.admin import AdminFilter
 from tgbot.handlers.user.main import main_cb
 from tgbot.keyboards.admin.main import ChangeRole, AdminMenu, admin_kb
@@ -24,7 +25,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@admin_router.message(CommandStart())
+@admin_router.message(CommandStart() and ~ActiveQuestion())
 async def admin_start(message: Message, stp_db, state: FSMContext):
     async with stp_db() as session:
         repo = RequestsRepo(session)
