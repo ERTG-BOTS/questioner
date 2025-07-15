@@ -1,13 +1,13 @@
 services:
   bot:
-    image: "bot"
+    image: "questioner-bot"
     stop_signal: SIGINT
     build:
       context: .
-    working_dir: "/usr/src/app/bot"
+    working_dir: "/usr/src/app/questioner-bot"
     volumes:
-      - .:/usr/src/app/bot
-    command: python3 -m bot
+      - .:/usr/src/app/questioner-bot
+    command: python3 -m questioner-bot
     restart: always
     env_file:
       - ".env"
