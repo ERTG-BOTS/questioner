@@ -1,8 +1,7 @@
 import datetime
 import logging
 
-from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
+from aiogram import Router
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from infrastructure.database.models import Question, User
@@ -13,8 +12,6 @@ from tgbot.keyboards.user.main import (
     QuestionQualitySpecialist,
     closed_dialog_kb,
     dialog_quality_kb,
-    finish_question_kb,
-    reopened_question_kb,
 )
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
@@ -35,17 +32,17 @@ async def active_question_end(
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(message.from_user.id)
-        question: Question = await repo.dialogs.get_question(token=active_dialog_token)
+        question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if question is not None:
         if question.Status != "closed":
             # Останавливаем таймер неактивности
             stop_inactivity_timer(question.Token)
 
-            await repo.dialogs.update_question_status(
+            await repo.questions.update_question_status(
                 token=question.Token, status="closed"
             )
-            await repo.dialogs.update_question_end(
+            await repo.questions.update_question_end(
                 token=question.Token, end_time=datetime.datetime.now()
             )
 
@@ -77,24 +74,33 @@ async def active_question_end(
 Оцени, помогли ли тебе решить вопрос""",
                 reply_markup=dialog_quality_kb(token=question.Token, role="employee"),
             )
+
+            logger.info(
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.Token} со старшим {question.TopicDutyFullname}"
+            )
         elif question.Status == "closed":
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(
                 chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            )
+            logger.info(
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.Token} со старшим {question.TopicDutyFullname}. Вопрос уже закрыт"
             )
 
     else:
         await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти вопрос в базе""")
-        logger.error(f"Не удалось найти тему {message.message_thread_id}")
+        logger.error(
+            f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Попытка закрытия вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {message.message_id}"
+        )
 
 
 @user_q_router.message(ActiveQuestion())
 async def active_question(message: Message, stp_db, active_dialog_token: str = None):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        question: Question = await repo.dialogs.get_question(token=active_dialog_token)
+        question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if message.text == "✅️ Закрыть вопрос":
         await active_question_end(message, stp_db, active_dialog_token)
@@ -111,6 +117,10 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
         message_thread_id=question.TopicId,
     )
 
+    logger.info(
+        f"[Вопрос] - [Общение] Токен: {question.Token} | Специалист: {question.EmployeeFullname} | Сообщение: {message.text}"
+    )
+
 
 @user_q_router.callback_query(QuestionQualitySpecialist.filter())
 async def dialog_quality_employee(
@@ -118,8 +128,9 @@ async def dialog_quality_employee(
 ):
     async with stp_db() as session:
         repo = RequestsRepo(session)
+        question: Question = await repo.questions.get_question(token=callback_data.token)
 
-    await repo.dialogs.update_question_quality(
+    await repo.questions.update_question_quality(
         token=callback_data.token, quality=callback_data.answer, is_duty=False
     )
     await callback.answer("Оценка успешно выставлена ❤️")
@@ -139,3 +150,7 @@ async def dialog_quality_employee(
 👎 Старший <b>не помог решить твой вопрос</b>""",
             reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"),
         )
+    logger.info(
+        f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Выставлена оценка {callback_data.answer} вопросу {question.Token} от специалиста"
+    )
+

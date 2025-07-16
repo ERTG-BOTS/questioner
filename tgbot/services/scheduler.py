@@ -49,14 +49,14 @@ async def run_delete_timer(
 async def remove_old_topics(bot: Bot, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        old_questions: Sequence[Question] = await repo.dialogs.get_old_questions()
+        old_questions: Sequence[Question] = await repo.questions.get_old_questions()
 
         for question in old_questions:
             await bot.delete_forum_topic(
                 chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
             )
 
-        result = await repo.dialogs.delete_question(dialogs=old_questions)
+        result = await repo.questions.delete_question(dialogs=old_questions)
         logger.info(
             f"[Старые топики] Успешно удалено {result['deleted_count']} из {result['total_count']} старых вопросов"
         )
@@ -71,7 +71,7 @@ async def send_inactivity_warning(bot: Bot, question_token: str, stp_db):
     try:
         async with stp_db() as session:
             repo = RequestsRepo(session)
-            question: Question = await repo.dialogs.get_question(token=question_token)
+            question: Question = await repo.questions.get_question(token=question_token)
 
             if question and question.Status in ["open", "in_progress"]:
                 # Отправляем предупреждение в топик
@@ -98,14 +98,14 @@ async def auto_close_question(bot: Bot, question_token: str, stp_db):
     try:
         async with stp_db() as session:
             repo = RequestsRepo(session)
-            question: Question = await repo.dialogs.get_question(token=question_token)
+            question: Question = await repo.questions.get_question(token=question_token)
 
             if question and question.Status in ["open", "in_progress"]:
                 # Закрываем вопрос
-                await repo.dialogs.update_question_status(
+                await repo.questions.update_question_status(
                     token=question_token, status="closed"
                 )
-                await repo.dialogs.update_question_end(
+                await repo.questions.update_question_end(
                     token=question_token, end_time=datetime.datetime.now()
                 )
 

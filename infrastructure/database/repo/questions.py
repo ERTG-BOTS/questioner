@@ -14,24 +14,24 @@ class QuestionsRepo(BaseRepo):
             question_text: str, start_time: date, clever_link: str
     ) -> Question:
         """
-        Добавляет новый диалог в базу данных.
+        Добавляет новый вопрос в базу данных.
 
         Args:
             employee_chat_id (int): Chat ID сотрудника, задающего вопрос
             employee_fullname (str): ФИО сотрудника, задающего вопрос
             topic_id (int): ID топика
-            question_text (str): Вопрос диалога
-            start_time (date): Дата начала диалога
+            question_text (str): Текст вопроса
+            start_time (date): Дата начала вопроса
             clever_link (str): Ссылка на clever
 
         Returns:
-            Question: Созданный объект диалога
+            Question: Созданный объект вопроса
         """
-        # Генерируем уникальный токен для диалога
+        # Генерируем уникальный токен для вопроса
         token = str(uuid.uuid4())
 
         # Создаем новый объект Question
-        dialog = Question(
+        question = Question(
             Token=token,
             TopicId=topic_id,
             EmployeeFullname=employee_fullname,
@@ -42,22 +42,22 @@ class QuestionsRepo(BaseRepo):
             Status="new",
         )
 
-        self.session.add(dialog)
+        self.session.add(question)
         await self.session.commit()
-        await self.session.refresh(dialog)
+        await self.session.refresh(question)
 
-        return dialog
+        return question
 
     async def update_question_end(self, token: str, end_time: date) -> Optional[Question]:
         """
-        Обновляет дату окончания диалога.
+        Обновляет дату окончания вопроса.
 
         Args:
-            token (str): Токен диалога
-            end_time (date): Дата окончания диалога
+            token (str): Токен вопроса
+            end_time (date): Дата окончания вопроса
 
         Returns:
-            Question: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект вопроса или None если не найден
         """
         question = await self.session.get(Question, token)
         if question:
@@ -68,15 +68,15 @@ class QuestionsRepo(BaseRepo):
 
     async def update_question_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
         """
-        Обновляет качество диалога.
+        Обновляет качество вопроса.
 
         Args:
-            token (str): Токен диалога
+            token (str): Токен вопроса
             quality (bool): Оценка качества
             is_duty (bool): Флаг, указывающий на оценку дежурного
 
         Returns:
-            Question: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект вопроса или None если не найден
         """
         question = await self.session.get(Question, token)
         if question:
@@ -90,14 +90,14 @@ class QuestionsRepo(BaseRepo):
 
     async def update_question_status(self, token: str, status: str) -> Optional[Question]:
         """
-        Обновляет качество диалога.
+        Обновляет качество вопроса.
 
         Args:
-            token (str): Токен диалога
+            token (str): Токен вопроса
             status (str): Статус вопроса
 
         Returns:
-            Question: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект вопроса или None если не найден
         """
         question = await self.session.get(Question, token)
         if question:
@@ -108,14 +108,14 @@ class QuestionsRepo(BaseRepo):
 
     async def update_question_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
         """
-        Обновляет описание обязанности топика.
+        Обновляет ответственного по вопросу.
 
         Args:
-            token (str): Токен диалога
-            topic_duty (str): Описание обязанности топика
+            token (str): Токен вопроса
+            topic_duty (str): Ответственный за вопрос
 
         Returns:
-            Question: Обновленный объект диалога или None если не найден
+            Question: Обновленный объект вопроса или None если не найден
         """
         question = await self.session.get(Question, token)
         if question:
@@ -126,14 +126,14 @@ class QuestionsRepo(BaseRepo):
 
     async def get_question(self, token: str = None, topic_id: int = None) -> Optional[Question]:
         """
-        Получает диалог по токену или идентификатору топика.
+        Получает вопрос по токену или идентификатору топика.
 
         Args:
-            token (str): Токен топика
+            token (str): Токен вопроса
             topic_id (int): ID топика
 
         Returns:
-            Question: Диалог или None если не найден
+            Question: Вопрос или None если не найден
         """
         if token:
             stmt = select(Question).where(Question.Token == token)
@@ -145,14 +145,14 @@ class QuestionsRepo(BaseRepo):
     async def get_questions_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
         Question]:
         """
-        Получает все диалоги сотрудника или старшего по ФИО.
+        Получает все вопросы сотрудника или старшего по ФИО.
 
         Args:
             employee_fullname (str): ФИО сотрудника
             duty_fullname (str): ФИО старшего
 
         Returns:
-            Sequence[Question]: Список диалогов сотрудника
+            Sequence[Question]: Список вопросов сотрудника
         """
         if employee_fullname:
             stmt = select(Question).where(Question.EmployeeFullname == employee_fullname)
@@ -163,14 +163,14 @@ class QuestionsRepo(BaseRepo):
 
     async def get_questions_count_today(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
         """
-        Получает количество диалогов специалиста или старшего за сегодня.
+        Получает количество вопросов специалиста или старшего за сегодня.
 
         Args:
             employee_fullname (str): ФИО специалиста
             duty_fullname (str): ФИО старшего
 
         Returns:
-            int: Количество диалогов за сегодня
+            int: Количество вопросов за сегодня
         """
         today = datetime.now().date()
         tomorrow = today + timedelta(days=1)
@@ -196,14 +196,14 @@ class QuestionsRepo(BaseRepo):
 
     async def get_questions_count_last_month(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
         """
-        Получает количество диалогов специалиста или старшего за текущий месяц.
+        Получает количество вопросов специалиста или старшего за текущий месяц.
 
         Args:
             employee_fullname (str): ФИО специалиста
             duty_fullname (str): ФИО старшего
 
         Returns:
-            int: Количество диалогов за текущий месяц
+            int: Количество вопросов за текущий месяц
         """
         today = datetime.now()
         # Получаем первый день текущего месяца
@@ -240,13 +240,13 @@ class QuestionsRepo(BaseRepo):
 
     async def get_questions_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Question]:
         """
-        Получает все диалоги сотрудника по Chat ID.
+        Получает все вопросы сотрудника по Chat ID.
 
         Args:
             employee_chat_id (int): Chat ID сотрудника
 
         Returns:
-            Sequence[Question]: Список диалогов сотрудника
+            Sequence[Question]: Список вопросов сотрудника
         """
         stmt = select(Question).where(Question.EmployeeChatId == employee_chat_id)
         result = await self.session.execute(stmt)
@@ -254,10 +254,10 @@ class QuestionsRepo(BaseRepo):
 
     async def get_active_questions(self) -> Sequence[Question]:
         """
-        Получает все активные диалоги (со статусов open или in_progress).
+        Получает все активные вопросы (со статусов open или in_progress).
 
         Returns:
-            Sequence[Question]: Список активных диалогов
+            Sequence[Question]: Список активных вопросов
         """
         stmt = select(Question).where(
             or_(Question.Status == "open", Question.Status == "in_progress")
@@ -267,10 +267,10 @@ class QuestionsRepo(BaseRepo):
 
     async def get_old_questions(self) -> Sequence[Question]:
         """
-        Получает диалоги старше 2 месяцев.
+        Получает вопросы старше 2 месяцев.
 
         Returns:
-            Sequence[Dialog]: Список диалогов старше 2 месяцев
+            Sequence[Dialog]: Список вопросов старше 2 месяцев
         """
         from datetime import datetime, timedelta
 
@@ -366,17 +366,17 @@ class QuestionsRepo(BaseRepo):
         try:
             if token:
                 # Single dialog deletion by token
-                dialog = await self.session.get(Question, token)
+                question = await self.session.get(Question, token)
 
-                if dialog is None:
+                if question is None:
                     return {
                         "success": False,
                         "deleted_count": 0,
                         "total_count": 1,
-                        "errors": [f"Dialog with token {token} not found"]
+                        "errors": [f"Question with token {token} not found"]
                     }
 
-                await self.session.delete(dialog)
+                await self.session.delete(question)
                 deleted_count = 1
                 total_count = 1
 
@@ -384,14 +384,14 @@ class QuestionsRepo(BaseRepo):
                 # Multiple dialogs deletion
                 total_count = len(dialogs)
 
-                for dialog in dialogs:
+                for question in dialogs:
                     try:
                         # Refresh the dialog object to ensure it's attached to the current session
-                        await self.session.refresh(dialog)
-                        await self.session.delete(dialog)
+                        await self.session.refresh(question)
+                        await self.session.delete(question)
                         deleted_count += 1
                     except Exception as e:
-                        errors.append(f"Error deleting dialog {dialog.Token}: {str(e)}")
+                        errors.append(f"Error deleting question {question.Token}: {str(e)}")
 
             # Commit all deletions
             await self.session.commit()

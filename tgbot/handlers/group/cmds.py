@@ -31,7 +31,7 @@ async def end_q_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        question: Question = await repo.dialogs.get_question(
+        question: Question = await repo.questions.get_question(
             topic_id=message.message_thread_id
         )
 
@@ -40,10 +40,10 @@ async def end_q_cmd(message: Message, stp_db):
             # Останавливаем таймер неактивности
             stop_inactivity_timer(question.Token)
 
-            await repo.dialogs.update_question_status(
+            await repo.questions.update_question_status(
                 token=question.Token, status="closed"
             )
-            await repo.dialogs.update_question_end(
+            await repo.questions.update_question_end(
                 token=question.Token, end_time=datetime.datetime.now()
             )
 
@@ -112,14 +112,14 @@ async def release_q_cmd(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        question: Question = await repo.dialogs.get_question(
+        question: Question = await repo.questions.get_question(
             topic_id=message.message_thread_id
         )
 
     if question is not None:
         if question.TopicDutyFullname is not None and question.TopicDutyFullname == duty.FIO:
-            await repo.dialogs.update_question_duty(token=question.Token, topic_duty=None)
-            await repo.dialogs.update_question_status(token=question.Token, status="open")
+            await repo.questions.update_question_duty(token=question.Token, topic_duty=None)
+            await repo.questions.update_question_status(token=question.Token, status="open")
 
             await message.bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
@@ -174,13 +174,13 @@ async def release_q_cmd(message: Message, stp_db):
 async def release_q_cb(callback: CallbackQuery, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
-        question: Question = await repo.dialogs.get_question(
+        question: Question = await repo.questions.get_question(
             topic_id=callback.message.message_thread_id
         )
 
     if question is not None:
-        await repo.dialogs.update_question_duty(token=question.Token, topic_duty=None)
-        await repo.dialogs.update_question_status(token=question.Token, status="open")
+        await repo.questions.update_question_duty(token=question.Token, topic_duty=None)
+        await repo.questions.update_question_status(token=question.Token, status="open")
 
         await callback.message.answer("""<b>🕊️ Вопрос освобожден</b>
 

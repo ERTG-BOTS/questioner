@@ -30,10 +30,10 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
 
-        employee_topics_today = await repo.dialogs.get_questions_count_today(
+        employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
         )
-        employee_topics_month = await repo.dialogs.get_questions_count_last_month(
+        employee_topics_month = await repo.questions.get_questions_count_last_month(
             employee_fullname=user.FIO
         )
 
@@ -57,6 +57,9 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
                 else False
             ),
         )
+        logging.info(
+            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто юзер-меню"
+        )
     else:
         await message.answer(f"""Привет, <b>@{message.from_user.username}</b>!
         
@@ -74,10 +77,10 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
-        employee_topics_today = await repo.dialogs.get_questions_count_today(
+        employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
         )
-        employee_topics_month = await repo.dialogs.get_questions_count_last_month(
+        employee_topics_month = await repo.questions.get_questions_count_last_month(
             employee_fullname=user.FIO
         )
 
@@ -98,10 +101,19 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
             is_role_changed=True if state_data.get("role") or user.Role == 10 else False
         ),
     )
+    logging.info(
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто юзер-меню"
+    )
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
-async def ask_question(callback: CallbackQuery, state: FSMContext):
+async def ask_question(callback: CallbackQuery, stp_db, state: FSMContext):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        employee: User = await repo.users.get_user(user_id=callback.from_user.id)
+
+    state_data = await state.get_data()
+
     msg = await callback.message.edit_text(
         """<b>🤔 Суть вопроса</b>
 
@@ -111,10 +123,17 @@ async def ask_question(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(messages_with_buttons=[msg.message_id])
     await state.set_state(Question.question)
+    logging.info(
+        f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
+    )
 
 
 @user_router.message(Question.question)
-async def question_text(message: Message, state: FSMContext):
+async def question_text(message: Message, stp_db, state: FSMContext):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        employee: User = await repo.users.get_user(user_id=message.from_user.id)
+
     await state.update_data(question=message.text)
     await state.update_data(question_message_id=message.message_id)
 
@@ -134,6 +153,9 @@ async def question_text(message: Message, state: FSMContext):
     await state.update_data(messages_with_buttons=messages_with_buttons)
 
     await state.set_state(Question.clever_link)
+    logging.info(
+        f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
+    )
 
 
 @user_router.message(Question.clever_link)
@@ -141,10 +163,10 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
-        employee_topics_today = await repo.dialogs.get_questions_count_today(
+        employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
         )
-        employee_topics_month = await repo.dialogs.get_questions_count_last_month(
+        employee_topics_month = await repo.questions.get_questions_count_last_month(
             employee_fullname=user.FIO
         )
 
@@ -183,14 +205,14 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     # await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
     #                                     message_thread_id=new_topic.message_thread_id)  # Закрытие темы
 
-    new_question = await repo.dialogs.add_question(
+    new_question = await repo.questions.add_question(
         employee_chat_id=message.chat.id,
         employee_fullname=user.FIO,
         topic_id=new_topic.message_thread_id,
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link=clever_link,
-    )  # Добавление диалога в БД
+    )  # Добавление вопроса в БД
 
     # Запускаем таймер неактивности для нового вопроса (только если статус "open")
     if new_question.Status == "new" and config.tg_bot.activity_status:
@@ -225,8 +247,11 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
         message_id=topic_info_msg.message_id,
         disable_notification=True,
     )  # Пин информации о специалисте
-    
+
     await state.clear()
+    logging.info(
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.Token}"
+    )
 
 
 

@@ -34,7 +34,7 @@ async def handle_q_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        question: Question = await repo.dialogs.get_question(
+        question: Question = await repo.questions.get_question(
             topic_id=message.message_thread_id
         )
 
@@ -44,10 +44,10 @@ async def handle_q_message(message: Message, stp_db):
 
     if question is not None and question.Status != "closed":
         if not question.TopicDutyFullname:
-            await repo.dialogs.update_question_duty(
+            await repo.questions.update_question_duty(
                 token=question.Token, topic_duty=duty.FIO
             )
-            await repo.dialogs.update_question_status(
+            await repo.questions.update_question_status(
                 token=question.Token, status="in_progress"
             )
 
@@ -55,10 +55,10 @@ async def handle_q_message(message: Message, stp_db):
             if config.tg_bot.activity_status:
                 start_inactivity_timer(question.Token, message.bot, stp_db)
 
-            duty_topics_today = await repo.dialogs.get_questions_count_today(
+            duty_topics_today = await repo.questions.get_questions_count_today(
                 duty_fullname=duty.FIO
             )
-            duty_topics_month = await repo.dialogs.get_questions_count_last_month(
+            duty_topics_month = await repo.questions.get_questions_count_last_month(
                 duty_fullname=duty.FIO
             )
 
@@ -145,13 +145,13 @@ async def return_q_duty(
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        question: Question = await repo.dialogs.get_question(token=callback_data.token)
+        question: Question = await repo.questions.get_question(token=callback_data.token)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
         available_to_return_questions: Sequence[
             Question
-        ] = await repo.dialogs.get_available_to_return_questions()
+        ] = await repo.questions.get_available_to_return_questions()
 
-    active_dialogs = await repo.dialogs.get_active_questions()
+    active_dialogs = await repo.questions.get_active_questions()
 
     if (
         question.Status == "closed"
@@ -159,7 +159,7 @@ async def return_q_duty(
         and question.Token in [d.Token for d in available_to_return_questions]
         and question.TopicDutyFullname == duty.FIO
     ):
-        await repo.dialogs.update_question_status(token=question.Token, status="open")
+        await repo.questions.update_question_status(token=question.Token, status="open")
         await callback.bot.edit_forum_topic(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.TopicId,
@@ -181,18 +181,33 @@ async def return_q_duty(
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",
             reply_markup=finish_question_kb(),
         )
+        logger.info(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} переоткрыт старшим"
+        )
     elif question.TopicDutyFullname != duty.FIO:
         await callback.answer("Это не твой чат!", show_alert=True)
+        logger.warning(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.Token} принадлежит другому старшему"
+        )
     elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer(
             "У специалиста есть другой открытый вопрос", show_alert=True
+        )
+        logger.error(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.EmployeeFullname} есть другой открытый вопрос"
         )
     elif question.Token not in [d.Token for d in available_to_return_questions]:
         await callback.answer(
             "Вопрос не переоткрыть. Прошло более 24 часов", show_alert=True
         )
+        logger.error(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад"
+        )
     elif question.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
+        logger.error(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} не закрыт"
+        )
 
 
 @topic_router.callback_query(IsTopicMessage() and QuestionQualityDuty.filter())
@@ -202,10 +217,10 @@ async def quality_q_duty(
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(user_id=callback.from_user.id)
-        question: Question = await repo.dialogs.get_question(token=callback_data.token)
+        question: Question = await repo.questions.get_question(token=callback_data.token)
 
     if question.TopicDutyFullname == duty.FIO:
-        await repo.dialogs.update_question_quality(
+        await repo.questions.update_question_quality(
             token=callback_data.token, quality=callback_data.answer, is_duty=True
         )
         await callback.answer("Оценка успешно выставлена ❤️")
@@ -225,5 +240,8 @@ async def quality_q_duty(
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"),
             )
+
+        logger.info(f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Выставлена оценка {callback_data.answer} вопросу {question.Token} от старшего")
     else:
         await callback.answer("Это не твой чат!", show_alert=True)
+        logger.warning(f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.Token}. Вопрос принадлежит другому старшему")

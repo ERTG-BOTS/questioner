@@ -125,7 +125,7 @@ def finish_question_kb() -> ReplyKeyboardMarkup:
     return keyboard
 
 
-# Клавиатура оценки диалога
+# Клавиатура оценки вопроса
 def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup:
     if role == "employee":
         buttons = [

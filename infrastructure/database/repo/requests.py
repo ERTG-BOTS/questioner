@@ -24,7 +24,7 @@ class RequestsRepo:
         return UserRepo(self.session)
 
     @property
-    def dialogs(self) -> QuestionsRepo:
+    def questions(self) -> QuestionsRepo:
         """
         The QuestionsRepo repository sessions are required to manage dialog questions operations.
         """

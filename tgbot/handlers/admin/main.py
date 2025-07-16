@@ -30,10 +30,10 @@ async def admin_start(message: Message, stp_db, state: FSMContext) -> None:
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
-        employee_topics_today = await repo.dialogs.get_questions_count_today(
+        employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
         )
-        employee_topics_month = await repo.dialogs.get_questions_count_last_month(
+        employee_topics_month = await repo.questions.get_questions_count_last_month(
             employee_fullname=user.FIO
         )
 
@@ -61,9 +61,6 @@ async def admin_start(message: Message, stp_db, state: FSMContext) -> None:
         )
         return
 
-    logging.info(
-        f"[Админ] {message.from_user.username} ({message.from_user.id}): Открыто админ-меню"
-    )
     await message.answer(
         f"""👋 Привет, <b>{user.FIO}</b>!
 
@@ -71,6 +68,10 @@ async def admin_start(message: Message, stp_db, state: FSMContext) -> None:
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
+    )
+
+    logging.info(
+        f"[Админ] {message.from_user.username} ({message.from_user.id}): Открыто админ-меню"
     )
 
 
@@ -106,10 +107,6 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, stp_db) -> N
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
-    logging.info(
-        f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} кнопкой"
-    )
-
     await callback.message.edit_text(
         f"""Привет, <b>{user.FIO}</b>!
 
@@ -117,6 +114,10 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, stp_db) -> N
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
+    )
+
+    logging.info(
+        f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} кнопкой"
     )
 
 
@@ -132,10 +133,6 @@ async def reset_role_cmd(message: Message, state: FSMContext, stp_db) -> None:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
 
-    logging.info(
-        f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой"
-    )
-
     await message.answer(
         f"""👋 Привет, <b>{user.FIO}</b>!
 
@@ -143,6 +140,10 @@ async def reset_role_cmd(message: Message, state: FSMContext, stp_db) -> None:
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
+    )
+
+    logging.info(
+        f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой"
     )
 
 

@@ -18,7 +18,7 @@ class ActiveQuestion(BaseFilter):
             repo = RequestsRepo(session)
             current_dialogs: Sequence[
                 Question
-            ] = await repo.dialogs.get_active_questions()
+            ] = await repo.questions.get_active_questions()
 
             for dialog in current_dialogs:
                 if dialog.EmployeeChatId == obj.from_user.id:
@@ -41,7 +41,7 @@ class ActiveQuestionWithCommand(BaseFilter):
             repo = RequestsRepo(session)
             current_dialogs: Sequence[
                 Question
-            ] = await repo.dialogs.get_active_questions()
+            ] = await repo.questions.get_active_questions()
 
             for dialog in current_dialogs:
                 if dialog.EmployeeChatId == obj.from_user.id:
@@ -63,7 +63,7 @@ class ActiveQuestionWithReplyCommand(BaseFilter):
             repo = RequestsRepo(session)
             current_dialogs: Sequence[
                 Question
-            ] = await repo.dialogs.get_active_questions()
+            ] = await repo.questions.get_active_questions()
 
             for dialog in current_dialogs:
                 if dialog.EmployeeChatId == obj.from_user.id:

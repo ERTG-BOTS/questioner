@@ -11,7 +11,7 @@ from .base import Base, TableNameMixin
 
 class Question(Base, TableNameMixin):
     """
-    Класс, представляющий сущность диалогов.
+    Класс, представляющий сущность вопросов.
 
     Attributes:
         Token (Mapped[str]): Уникальный идентификатор токена (первичный ключ).
@@ -19,12 +19,12 @@ class Question(Base, TableNameMixin):
         TopicDutyFullname (Mapped[str]): ФИО ответственного за вопрос.
         EmployeeFullname (Mapped[str]): ФИО сотрудника.
         EmployeeChatId (Mapped[int]): Chat ID сотрудника.
-        QuestionText (Mapped[str]): Вопрос диалога.
-        StartTime (Mapped[Optional[date]]): Время начала диалога.
-        EndTime (Mapped[Optional[date]]): Время окончания диалога.
+        QuestionText (Mapped[str]): Текст вопроса.
+        StartTime (Mapped[Optional[date]]): Время начала вопроса.
+        EndTime (Mapped[Optional[date]]): Время окончания вопроса.
         CleverLink (Mapped[Optional[str]]): Ссылка на clever (может быть None).
-        QualityEmployee (Mapped[Optional[bool]]): Качество диалога от сотрудника (может быть None).
-        QualityDuty (Mapped[Optional[bool]]): Качество диалога от дежурного (может быть None).
+        QualityEmployee (Mapped[Optional[bool]]): Качество вопроса от сотрудника (может быть None).
+        QualityDuty (Mapped[Optional[bool]]): Качество вопроса от дежурного (может быть None).
 
     Methods:
         __repr__(): Returns a string representation of the Question object.
