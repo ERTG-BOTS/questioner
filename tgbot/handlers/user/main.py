@@ -25,7 +25,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@user_router.message(CommandStart() and ~ActiveQuestion())
+@user_router.message(CommandStart())
 async def main_cmd(message: Message, state: FSMContext, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)

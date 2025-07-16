@@ -10,8 +10,8 @@ from .user.return_question import employee_return_q
 
 routers_list = [
     admin_router,
-    topic_router,
     topic_cmds_router,
+    topic_router,
     user_router,
     user_q_router,
     employee_return_q,
