@@ -134,8 +134,8 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
 
 <b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 
-❓ Изначальный вопрос:
-<blockquote expandable><i>{question.QuestionText}</i></blockquote>""", reply_markup=reopened_question_kb(token=question.Token)
+<b>❓ Изначальный вопрос:</b>
+<blockquote expandable><i>{question.QuestionText}</i></blockquote>""", reply_markup=reopened_question_kb(token=question.Token), disable_web_page_preview=True
         )
     elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
