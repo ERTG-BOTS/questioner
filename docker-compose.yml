@@ -7,7 +7,7 @@ services:
     working_dir: "/usr/src/app/questioner-bot"
     volumes:
       - .:/usr/src/app/questioner-bot
-    command: python3 -m questioner-bot
+    command: uv run bot.py
     restart: always
     env_file:
       - ".env"
@@ -17,7 +17,6 @@ services:
       options:
         max-size: "200k"
         max-file: "10"
-
 
   ##   To enable postgres uncomment the following lines
   #  http://pgconfigurator.cybertec.at/ For Postgres Configuration

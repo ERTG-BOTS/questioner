@@ -17,11 +17,12 @@ RUN apt-get update && \
     # Update package lists and install ODBC driver
     apt-get update && \
     ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
-    # Install Python dependencies with uv
-    uv sync --frozen && \
     # Clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies with uv (this will create .venv)
+RUN uv sync --frozen
 
 # Copy application code
 COPY . /usr/src/app/questioner-bot
