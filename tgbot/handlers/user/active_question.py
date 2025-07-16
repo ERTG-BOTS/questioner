@@ -14,8 +14,13 @@ from tgbot.keyboards.user.main import (
     dialog_quality_kb,
 )
 from tgbot.misc import dicts
+from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
-from tgbot.services.scheduler import restart_inactivity_timer, stop_inactivity_timer
+from tgbot.services.scheduler import (
+    restart_inactivity_timer,
+    stop_inactivity_timer,
+    run_delete_timer,
+)
 
 user_q_router = Router()
 
@@ -124,6 +129,24 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
         chat_id=config.tg_bot.forum_id,
         message_thread_id=question.TopicId,
     )
+
+    # Уведомление о премиум эмодзи
+    have_premium_emoji, emoji_ids = await check_premium_emoji(message)
+    if have_premium_emoji and emoji_ids:
+        emoji_sticker_list = await message.bot.get_custom_emoji_stickers(emoji_ids)
+
+        sticker_info = []
+        for emoji_sticker in emoji_sticker_list:
+            sticker_info.append(f"{emoji_sticker.emoji}")
+
+        stickers_text = "".join(sticker_info)
+
+        emoji_message = await message.reply(f"""<b>💎 Премиум эмодзи</b>
+
+Сообщение содержит премиум эмодзи, собеседник увидит бесплатные аналоги: {stickers_text}
+
+<i>Предупреждение удалится через 30 секунд</i>""")
+        await run_delete_timer(bot=message.bot, chat_id=message.chat.id, message_ids=[emoji_message.message_id], seconds=30)
 
     logger.info(
         f"[Вопрос] - [Общение] Токен: {question.Token} | Специалист: {question.EmployeeFullname} | Сообщение: {message.text}"

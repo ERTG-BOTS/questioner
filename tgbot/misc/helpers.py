@@ -18,3 +18,12 @@ async def disable_previous_buttons(message: Message, state: FSMContext):
 
     # Clear the list after disabling buttons
     await state.update_data(messages_with_buttons=[])
+
+
+async def check_premium_emoji(message: Message) -> tuple[bool, list[str]]:
+    emoji_ids = []
+    if message.entities:
+        for entity in message.entities:
+            if entity.type == "custom_emoji":
+                emoji_ids.append(entity.custom_emoji_id)
+    return len(emoji_ids) > 0, emoji_ids
