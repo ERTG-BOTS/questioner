@@ -53,7 +53,7 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
 
 <i>Используй меню для управление ботом</i>""",
             reply_markup=user_kb(
-                is_role_changed=True if state_data.get("role") else False
+                is_role_changed=True if state_data.get("role") or user.Role == 10 else False
             ),
         )
     else:
@@ -93,7 +93,7 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
 - За месяц {employee_topics_month}
 
 Используй меню, чтобы выбрать действие""",
-        reply_markup=user_kb(is_role_changed=True if state_data.get("role") else False),
+        reply_markup=user_kb(is_role_changed=True if state_data.get("role") or user.Role == 10 else False),
     )
 
 
