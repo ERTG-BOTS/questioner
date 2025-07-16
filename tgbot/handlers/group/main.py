@@ -34,7 +34,7 @@ async def handle_q_message(message: Message, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         duty: User = await repo.users.get_user(message.from_user.id)
-        topic: Question = await repo.dialogs.get_question(
+        question: Question = await repo.dialogs.get_question(
             topic_id=message.message_thread_id
         )
 
@@ -42,18 +42,18 @@ async def handle_q_message(message: Message, stp_db):
         await end_q_cmd(message, stp_db)
         return
 
-    if topic is not None and topic.Status != "closed":
-        if not topic.TopicDutyFullname:
+    if question is not None and question.Status != "closed":
+        if not question.TopicDutyFullname:
             await repo.dialogs.update_question_duty(
-                token=topic.Token, topic_duty=duty.FIO
+                token=question.Token, topic_duty=duty.FIO
             )
             await repo.dialogs.update_question_status(
-                token=topic.Token, status="in_progress"
+                token=question.Token, status="in_progress"
             )
 
             # Запускаем таймер неактивности для нового вопроса
             if config.tg_bot.activity_status:
-                start_inactivity_timer(topic.Token, message.bot, stp_db)
+                start_inactivity_timer(question.Token, message.bot, stp_db)
 
             duty_topics_today = await repo.dialogs.get_questions_count_today(
                 duty_fullname=duty.FIO
@@ -64,7 +64,7 @@ async def handle_q_message(message: Message, stp_db):
 
             await message.bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
-                message_thread_id=topic.TopicId,
+                message_thread_id=question.TopicId,
                 icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
             )
             await message.answer(
@@ -76,7 +76,7 @@ async def handle_q_message(message: Message, stp_db):
                 disable_web_page_preview=True,
             )
 
-            employee: User = await repo.users.get_user(fullname=topic.EmployeeFullname)
+            employee: User = await repo.users.get_user(fullname=question.EmployeeFullname)
             await message.bot.send_message(
                 chat_id=employee.ChatId,
                 text=f"""<b>👮‍♂️ Вопрос в работе</b>
@@ -89,16 +89,23 @@ async def handle_q_message(message: Message, stp_db):
                 message_id=message.message_id,
                 chat_id=employee.ChatId,
             )
+
+            logger.info(
+                f"[Вопрос] - [В работе] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.Token} взят в работу"
+            )
         else:
-            if topic.TopicDutyFullname == duty.FIO:
+            if question.TopicDutyFullname == duty.FIO:
                 # Перезапускаем таймер неактивности при сообщении от дежурного
                 if config.tg_bot.activity_status:
-                    restart_inactivity_timer(topic.Token, message.bot, stp_db)
+                    restart_inactivity_timer(question.Token, message.bot, stp_db)
 
                 await message.bot.copy_message(
                     from_chat_id=config.tg_bot.forum_id,
                     message_id=message.message_id,
-                    chat_id=topic.EmployeeChatId,
+                    chat_id=question.EmployeeChatId,
+                )
+                logger.info(
+                    f"[Вопрос] - [Общение] Токен: {question.Token} | Старший: {question.TopicDutyFullname} | Сообщение: {message.text}"
                 )
             else:
                 await message.reply("""<b>⚠️ Предупреждение</b>
@@ -106,12 +113,18 @@ async def handle_q_message(message: Message, stp_db):
 Это не твой чат!
 
 <i>Твое сообщение не отобразится специалисту</i>""")
-    elif topic.Status == "closed":
+                logger.warning(
+                    f"[Вопрос] - [Общение] Токен: {question.Token} | Старший: {question.TopicDutyFullname} | Сообщение: {message.text}. Чат принадлежит другому старшему"
+                )
+    elif question.Status == "closed":
         await message.reply("""<b>⚠️ Предупреждение</b>
 
 Текущий вопрос уже закрыт!
 
 <i>Твое сообщение не отобразится специалисту</i>""")
+        logger.warning(
+            f"[Вопрос] - [Общение] Токен: {question.Token} | Старший: {question.TopicDutyFullname} | Сообщение: {message.text}. Чат уже закрыт"
+        )
     else:
         await message.answer("""<b>⚠️ Ошибка</b>
 
@@ -119,7 +132,9 @@ async def handle_q_message(message: Message, stp_db):
         await message.bot.close_forum_topic(
             chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id
         )
-        logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
+        logger.error(
+            f"[Вопрос] - [Общение] Не удалось найти вопрос в базе с TopicId = {message.message_id}. Закрыли тему"
+        )
 
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))
