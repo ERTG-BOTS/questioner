@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from infrastructure.database.models import Question, User
@@ -152,7 +152,7 @@ async def active_question(
     )
 
 
-@user_q_router.callback_query(QuestionQualitySpecialist.filter())
+@user_q_router.callback_query(QuestionQualitySpecialist.filter(F.return_question == False))
 async def dialog_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
