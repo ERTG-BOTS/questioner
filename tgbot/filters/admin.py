@@ -3,13 +3,12 @@ from aiogram.types import Message
 
 from infrastructure.database.models.user import User
 from infrastructure.database.repo.requests import RequestsRepo
+from tgbot.misc.dicts import executed_codes
 
 ADMIN_ROLE = 10
 
 
 class AdminFilter(BaseFilter):
-    is_admin: bool = True
-
     async def __call__(self, obj: Message, stp_db, **kwargs) -> bool:
         async with stp_db() as session:
             repo = RequestsRepo(session)
@@ -18,4 +17,4 @@ class AdminFilter(BaseFilter):
             if user is None:
                 return False
 
-            return user.Role == ADMIN_ROLE
+            return user.Role == executed_codes["root"]

@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, Sequence
 
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import and_, func, or_, select
 
 from infrastructure.database.models.question import Question
 from infrastructure.database.repo.base import BaseRepo
@@ -59,12 +59,12 @@ class QuestionsRepo(BaseRepo):
         Returns:
             Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Question, token)
-        if dialog:
-            dialog.EndTime = end_time
+        question = await self.session.get(Question, token)
+        if question:
+            question.EndTime = end_time
             await self.session.commit()
-            await self.session.refresh(dialog)
-        return dialog
+            await self.session.refresh(question)
+        return question
 
     async def update_question_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
         """
@@ -78,15 +78,15 @@ class QuestionsRepo(BaseRepo):
         Returns:
             Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Question, token)
-        if dialog:
+        question = await self.session.get(Question, token)
+        if question:
             if is_duty:
-                dialog.QualityDuty = quality
+                question.QualityDuty = quality
             else:
-                dialog.QualityEmployee = quality
+                question.QualityEmployee = quality
             await self.session.commit()
-            await self.session.refresh(dialog)
-        return dialog
+            await self.session.refresh(question)
+        return question
 
     async def update_question_status(self, token: str, status: str) -> Optional[Question]:
         """
@@ -99,12 +99,12 @@ class QuestionsRepo(BaseRepo):
         Returns:
             Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Question, token)
-        if dialog:
-            dialog.Status = status
+        question = await self.session.get(Question, token)
+        if question:
+            question.Status = status
             await self.session.commit()
-            await self.session.refresh(dialog)
-        return dialog
+            await self.session.refresh(question)
+        return question
 
     async def update_question_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
         """
@@ -117,12 +117,12 @@ class QuestionsRepo(BaseRepo):
         Returns:
             Question: Обновленный объект диалога или None если не найден
         """
-        dialog = await self.session.get(Question, token)
-        if dialog:
-            dialog.TopicDutyFullname = topic_duty
+        question = await self.session.get(Question, token)
+        if question:
+            question.TopicDutyFullname = topic_duty
             await self.session.commit()
-            await self.session.refresh(dialog)
-        return dialog
+            await self.session.refresh(question)
+        return question
 
     async def get_question(self, token: str = None, topic_id: int = None) -> Optional[Question]:
         """

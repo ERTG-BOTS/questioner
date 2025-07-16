@@ -4,16 +4,16 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
+from aiogram.fsm.storage.redis import DefaultKeyBuilder, RedisStorage
 from aiogram.types import BotCommand
-from tgbot.services.scheduler import scheduler, remove_old_topics
 
 from infrastructure.database.setup import create_engine, create_session_pool
-from tgbot.config import load_config, Config
+from tgbot.config import Config, load_config
 from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.services import broadcaster
 from tgbot.services.logger import setup_logging
+from tgbot.services.scheduler import remove_old_topics, scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,18 @@ async def main():
     config = load_config(".env")
     storage = get_storage(config)
 
-    bot = Bot(token=config.tg_bot.token, default=DefaultBotProperties(parse_mode='HTML'))
-    await bot.set_my_commands(commands=[BotCommand(command="start", description="Главное меню"),
-                                        BotCommand(command="release", description="Освободить вопрос (для старших)"),
-                                        BotCommand(command="end", description="Закрыть вопрос")])
+    bot = Bot(
+        token=config.tg_bot.token, default=DefaultBotProperties(parse_mode="HTML")
+    )
+    await bot.set_my_commands(
+        commands=[
+            BotCommand(command="start", description="Главное меню"),
+            BotCommand(
+                command="release", description="Освободить вопрос (для старших)"
+            ),
+            BotCommand(command="end", description="Закрыть вопрос"),
+        ]
+    )
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases

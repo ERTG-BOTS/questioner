@@ -1,12 +1,12 @@
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-class AdminMenu(CallbackData, prefix='admin_menu'):
+class AdminMenu(CallbackData, prefix="admin_menu"):
     menu: str
 
 
-class ChangeRole(CallbackData, prefix='role'):
+class ChangeRole(CallbackData, prefix="role"):
     role: str
 
 
@@ -14,16 +14,30 @@ class ChangeRole(CallbackData, prefix='role'):
 def admin_kb() -> InlineKeyboardMarkup:
     buttons = [
         [
-            InlineKeyboardButton(text="❗ Макс. вопросов", callback_data=AdminMenu(menu="dialog_count").pack()),
-            InlineKeyboardButton(text="📥 Файл вопросов", callback_data=AdminMenu(menu="dialog_download").pack()),
+            InlineKeyboardButton(
+                text="❗ Макс. вопросов",
+                callback_data=AdminMenu(menu="dialog_count").pack(),
+            ),
+            InlineKeyboardButton(
+                text="📥 Файл вопросов",
+                callback_data=AdminMenu(menu="dialog_download").pack(),
+            ),
         ],
         [
-            InlineKeyboardButton(text="👴🏻 Стать старшим", callback_data=ChangeRole(role="duty").pack()),
-            InlineKeyboardButton(text="👶🏻 Стать спецом", callback_data=ChangeRole(role="spec").pack()),
+            InlineKeyboardButton(
+                text="👴🏻 Стать старшим", callback_data=ChangeRole(role="duty").pack()
+            ),
+            InlineKeyboardButton(
+                text="👶🏻 Стать спецом", callback_data=ChangeRole(role="spec").pack()
+            ),
         ],
         [
-            InlineKeyboardButton(text="🔎 Поиск сотрудника", callback_data=AdminMenu(menu="search").pack()),
-        ]]
+            InlineKeyboardButton(
+                text="🔎 Поиск сотрудника",
+                callback_data=AdminMenu(menu="search").pack(),
+            ),
+        ],
+    ]
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,

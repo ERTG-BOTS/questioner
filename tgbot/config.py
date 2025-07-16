@@ -51,7 +51,15 @@ class TgBot:
 
         if division != "NTP" and division != "NCK":
             raise ValueError("[CONFIG] DIVISION must be NTP or NCK")
-        return TgBot(token=token, use_redis=use_redis, division=division, forum_id=forum_id, activity_status=activity_status, activity_warn_minutes=activity_warn_minutes, activity_close_minutes=activity_close_minutes)
+        return TgBot(
+            token=token,
+            use_redis=use_redis,
+            division=division,
+            forum_id=forum_id,
+            activity_status=activity_status,
+            activity_warn_minutes=activity_warn_minutes,
+            activity_close_minutes=activity_close_minutes,
+        )
 
 
 @dataclass
@@ -82,7 +90,11 @@ class DbConfig:
 
     main_db: str
 
-    def construct_sqlalchemy_url(self, db_name=None, driver="aioodbc", ) -> URL:
+    def construct_sqlalchemy_url(
+        self,
+        db_name=None,
+        driver="aioodbc",
+    ) -> URL:
         """
         Constructs and returns a SQLAlchemy URL for SQL Server database configuration.
         """
@@ -94,7 +106,9 @@ class DbConfig:
             f"PWD={self.password};"
             f"TrustServerCertificate=yes;"
         )
-        connection_url = URL.create(f"mssql+{driver}", query={"odbc_connect": connection_string})
+        connection_url = URL.create(
+            f"mssql+{driver}", query={"odbc_connect": connection_string}
+        )
 
         return connection_url
 

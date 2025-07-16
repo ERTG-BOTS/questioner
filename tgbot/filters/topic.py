@@ -3,10 +3,6 @@ import logging
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
-
-from aiogram.filters import BaseFilter
-from aiogram.types import Message
-
 from tgbot.services.logger import setup_logging
 
 setup_logging()

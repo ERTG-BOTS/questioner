@@ -10,9 +10,7 @@ async def disable_previous_buttons(message: Message, state: FSMContext):
     for msg_id in messages_with_buttons:
         try:
             await message.bot.edit_message_reply_markup(
-                chat_id=message.chat.id,
-                message_id=msg_id,
-                reply_markup=None
+                chat_id=message.chat.id, message_id=msg_id, reply_markup=None
             )
         except Exception as e:
             # Handle case where message might be deleted or not editable
