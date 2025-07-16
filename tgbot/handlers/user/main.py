@@ -6,15 +6,21 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import User
+from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
-from tgbot.keyboards.user.main import MainMenu, back_kb, cancel_question_kb, user_kb
+from tgbot.keyboards.user.main import (
+    CancelQuestion,
+    MainMenu,
+    back_kb,
+    cancel_question_kb,
+    user_kb,
+)
 from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons
-from tgbot.misc.states import Question
+from tgbot.misc.states import AskQuestion
 from tgbot.services.logger import setup_logging
-from tgbot.services.scheduler import start_inactivity_timer
+from tgbot.services.scheduler import start_inactivity_timer, remove_question_timer
 
 user_router = Router()
 
@@ -122,13 +128,13 @@ async def ask_question(callback: CallbackQuery, stp_db, state: FSMContext):
     )
 
     await state.update_data(messages_with_buttons=[msg.message_id])
-    await state.set_state(Question.question)
+    await state.set_state(AskQuestion.question)
     logging.info(
         f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
     )
 
 
-@user_router.message(Question.question)
+@user_router.message(AskQuestion.question)
 async def question_text(message: Message, stp_db, state: FSMContext):
     async with stp_db() as session:
         repo = RequestsRepo(session)
@@ -152,13 +158,13 @@ async def question_text(message: Message, stp_db, state: FSMContext):
     messages_with_buttons.append(response_msg.message_id)
     await state.update_data(messages_with_buttons=messages_with_buttons)
 
-    await state.set_state(Question.clever_link)
+    await state.set_state(AskQuestion.clever_link)
     logging.info(
         f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
     )
 
 
-@user_router.message(Question.clever_link)
+@user_router.message(AskQuestion.clever_link)
 async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
@@ -188,13 +194,6 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     # Выключаем все предыдущие кнопки
     await disable_previous_buttons(message, state)
 
-    await message.answer(
-        """<b>✅ Успешно</b>
-
-Вопрос передан на рассмотрение, в скором времени тебе ответят""",
-        reply_markup=cancel_question_kb(),
-    )
-
     new_topic = await message.bot.create_forum_topic(
         chat_id=config.tg_bot.forum_id,
         name=user.FIO
@@ -214,8 +213,15 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
         clever_link=clever_link,
     )  # Добавление вопроса в БД
 
+    await message.answer(
+        """<b>✅ Успешно</b>
+
+Вопрос передан на рассмотрение, в скором времени тебе ответят""",
+        reply_markup=cancel_question_kb(token=new_question.Token),
+    )
+
     # Запускаем таймер неактивности для нового вопроса (только если статус "open")
-    if new_question.Status == "new" and config.tg_bot.activity_status:
+    if new_question.Status == "open" and config.tg_bot.activity_status:
         start_inactivity_timer(new_question.Token, message.bot, stp_db)
 
     topic_info_msg = await message.bot.send_message(
@@ -254,4 +260,40 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     )
 
 
+@user_router.callback_query(CancelQuestion.filter(F.action == "cancel"))
+async def cancel_question(
+    callback: CallbackQuery, callback_data: CancelQuestion, stp_db, state: FSMContext
+):
+    async with stp_db() as session:
+        repo = RequestsRepo(session)
+        question: Question = await repo.questions.get_question(
+            token=callback_data.token
+        )
 
+    if (
+        question
+        and question.Status == "open"
+        and not question.TopicDutyFullname
+        and not question.EndTime
+    ):
+        await callback.bot.edit_forum_topic(
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=question.TopicId,
+            icon_custom_emoji_id=dicts.topicEmojis["fired"],
+        )
+        await callback.bot.close_forum_topic(
+            chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+        )
+        await remove_question_timer(bot=callback.bot, question=question, stp_db=stp_db)
+        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId, text="""<b>🔥 Отмена вопроса</b>
+        
+Специалист отменил вопрос
+
+<i>Вопрос будет удален через 30 секунд</i>""")
+        await callback.answer("Вопрос успешно удален")
+        await main_cb(callback=callback, state=state, stp_db=stp_db)
+    elif not question:
+        await callback.answer("Не удалось найти отменяемый вопрос")
+        await main_cb(callback=callback, state=state, stp_db=stp_db)
+    else:
+        await callback.answer("Вопрос не может быть отменен. Он уже в работе")

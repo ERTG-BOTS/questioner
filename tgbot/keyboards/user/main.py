@@ -37,6 +37,11 @@ class FinishedQuestion(CallbackData, prefix="finished_q"):
     action: str
 
 
+class CancelQuestion(CallbackData, prefix="cancel_q"):
+    action: str
+    token: str
+
+
 # Основная клавиатура для команды /start
 def user_kb(is_role_changed: bool = False) -> InlineKeyboardMarkup:
     buttons = [
@@ -80,11 +85,11 @@ def back_kb() -> InlineKeyboardMarkup:
 
 
 # Клавиатура с отменой вопроса и возвратом в главное меню
-def cancel_question_kb() -> InlineKeyboardMarkup:
+def cancel_question_kb(token: str) -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(
-                text="🙅‍♂️ Отменить вопрос", callback_data=MainMenu(menu="main").pack()
+                text="🙅‍♂️ Отменить вопрос", callback_data=CancelQuestion(action="cancel", token=token).pack()
             ),
         ]
     ]

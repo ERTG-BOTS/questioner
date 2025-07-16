@@ -5,7 +5,7 @@ class AdminChangeRole(StatesGroup):
     role = State()
 
 
-class Question(StatesGroup):
+class AskQuestion(StatesGroup):
     message_id = State()
     question = State()
     clever_link = State()

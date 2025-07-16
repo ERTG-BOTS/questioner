@@ -39,7 +39,7 @@ class QuestionsRepo(BaseRepo):
             QuestionText=question_text,
             StartTime=start_time,
             CleverLink=clever_link,
-            Status="new",
+            Status="open",
         )
 
         self.session.add(question)
