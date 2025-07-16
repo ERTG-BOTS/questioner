@@ -47,6 +47,7 @@ async def return_finished_q(
     active_dialogs = await repo.questions.get_active_questions()
     question: Question = await repo.questions.get_question(token=callback_data.token)
     duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
+    logger.info(duty, question.TopicDutyFullname)
 
     if question.Status == "closed" and user.FIO not in [
         d.EmployeeFullname for d in active_dialogs
@@ -59,7 +60,7 @@ async def return_finished_q(
             name=user.FIO
             if config.tg_bot.division == "НЦК"
             else f"{user.Division} | {user.FIO}",
-            icon_custom_emoji_id=dicts.topicEmojis["open"],
+            icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
         await callback.bot.reopen_forum_topic(
             chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
