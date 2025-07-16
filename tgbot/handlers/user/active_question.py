@@ -20,7 +20,7 @@ from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import restart_inactivity_timer, stop_inactivity_timer
 
-user_dialog_router = Router()
+user_q_router = Router()
 
 config = load_config(".env")
 
@@ -28,7 +28,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@user_dialog_router.message(ActiveQuestionWithCommand("end"))
+@user_q_router.message(ActiveQuestionWithCommand("end"))
 async def active_question_end(
     message: Message, stp_db, active_dialog_token: str = None
 ):
@@ -90,7 +90,7 @@ async def active_question_end(
         logger.error(f"Не удалось найти тему {message.message_thread_id}")
 
 
-@user_dialog_router.message(ActiveQuestion())
+@user_q_router.message(ActiveQuestion())
 async def active_question(message: Message, stp_db, active_dialog_token: str = None):
     async with stp_db() as session:
         repo = RequestsRepo(session)
@@ -112,7 +112,7 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
     )
 
 
-@user_dialog_router.callback_query(QuestionQualitySpecialist.filter())
+@user_q_router.callback_query(QuestionQualitySpecialist.filter())
 async def dialog_quality_employee(
     callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db
 ):
