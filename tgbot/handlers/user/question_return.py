@@ -121,7 +121,7 @@ async def return_question_confirm(callback: CallbackQuery, callback_data: Return
         )
 
         # 4. Отправляем подтверждающее сообщение
-        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer("""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""", reply_markup=finish_question_kb())
 

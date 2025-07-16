@@ -50,14 +50,14 @@ async def active_question_end(message: Message, stp_db, active_dialog_token: str
 
             await message.reply(text="<b>🔒 Вопрос закрыт</b>",
                                            reply_markup=ReplyKeyboardRemove())
-            await message.answer(f"""Ты закрыл вопрос
+            await message.answer("""Ты закрыл вопрос
 Оцени, помогли ли тебе решить вопрос""", reply_markup=dialog_quality_kb(token=dialog.Token, role="employee"))
         elif dialog.Status == "closed":
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
     else:
-        await message.answer(f"""<b>⚠️ Ошибка</b>
+        await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти вопрос в базе""")
         logger.error(f"Не удалось найти тему {message.message_thread_id}")
@@ -81,7 +81,7 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
                                    chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
 
-@user_dialog_router.callback_query(QuestionQualitySpecialist.filter(F.return_dialog == True))
+@user_dialog_router.callback_query(QuestionQualitySpecialist.filter(F.return_dialog))
 async def return_dialog_by_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db):
     await callback.answer()
     async with stp_db() as session:
@@ -98,7 +98,7 @@ async def return_dialog_by_employee(callback: CallbackQuery, callback_data: Ques
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId)
 
-        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer("""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""", reply_markup=finish_question_kb())
         await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId, text=f"""<b>🔓 Вопрос переоткрыт</b>
@@ -123,12 +123,12 @@ async def dialog_quality_employee(callback: CallbackQuery, callback_data: Questi
     await repo.dialogs.update_question_quality(token=callback_data.token, quality=callback_data.answer, is_duty=False)
     await callback.answer("Оценка успешно выставлена ❤️")
     if callback_data.answer:
-        await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
+        await callback.message.edit_text("""<b>🔒 Вопрос закрыт</b>
 
 Ты поставил оценку:
 👍 Старший <b>помог решить твой вопрос</b>""", reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"))
     else:
-        await callback.message.edit_text(f"""<b>🔒 Вопрос закрыт</b>
+        await callback.message.edit_text("""<b>🔒 Вопрос закрыт</b>
 
 Ты поставил оценку:
 👎 Старший <b>не помог решить твой вопрос</b>""",

@@ -10,7 +10,7 @@ from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion
-from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb, finish_question_kb
+from tgbot.keyboards.user.main import user_kb, MainMenu, back_kb, cancel_question_kb
 from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons
 from tgbot.misc.states import Question
@@ -85,7 +85,7 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
 async def ask_question(callback: CallbackQuery, state: FSMContext):
-    msg = await callback.message.edit_text(f"""<b>🤔 Суть вопроса</b>
+    msg = await callback.message.edit_text("""<b>🤔 Суть вопроса</b>
 
 Отправь вопрос и вложения одним сообщением""", reply_markup=back_kb())
 
@@ -101,7 +101,7 @@ async def question_text(message: Message, state: FSMContext):
     # Отключаем кнопки на предыдущих шагах
     await disable_previous_buttons(message, state)
 
-    response_msg = await message.answer(f"""<b>🗃️ Регламент</b>
+    response_msg = await message.answer("""<b>🗃️ Регламент</b>
 
 Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос""", reply_markup=back_kb())
 
@@ -123,8 +123,8 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     state_data = await state.get_data()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-    if not "clever.ertelecom.ru/content/space/" in message.text and user.Role != 10:
-        await message.answer(f"""<b>🗃️ Регламент</b>
+    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
+        await message.answer("""<b>🗃️ Регламент</b>
 
 Сообщение <b>не содержит ссылку на клевер</b> 🥺
 
@@ -134,7 +134,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     # Выключаем все предыдущие кнопки
     await disable_previous_buttons(message, state)
 
-    await message.answer(f"""<b>✅ Успешно</b>
+    await message.answer("""<b>✅ Успешно</b>
 
 Вопрос передан на рассмотрение, в скором времени тебе ответят""", reply_markup=cancel_question_kb())
 

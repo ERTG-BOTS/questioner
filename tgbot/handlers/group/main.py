@@ -38,7 +38,7 @@ async def end_cmd(message: Message, stp_db):
             await repo.dialogs.update_question_status(token=topic.Token, status="closed")
             await repo.dialogs.update_question_end(token=topic.Token, end_time=datetime.datetime.now())
 
-            await message.reply(f"""<b>🔒 Вопрос закрыт</b>
+            await message.reply("""<b>🔒 Вопрос закрыт</b>
 
 Оцени, мог ли специалист решить его самостоятельно""",
                                 reply_markup=dialog_quality_kb(token=topic.Token, role="duty"))
@@ -66,7 +66,7 @@ async def end_cmd(message: Message, stp_db):
             await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId)
 
     else:
-        await message.answer(f"""<b>⚠️ Ошибка</b>
+        await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти текущую тему в базе""")
         logger.error(f"Не удалось найти тему {message.message_thread_id}")
@@ -86,7 +86,7 @@ async def release_cmd(message: Message, stp_db):
 
             await message.bot.edit_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=topic.TopicId,
                                                icon_custom_emoji_id=dicts.topicEmojis["open"])
-            await message.answer(f"""<b>🕊️ Вопрос освобожден</b>
+            await message.answer("""<b>🕊️ Вопрос освобожден</b>
 
 Для взятия вопроса в работу напишите сообщение в эту тему""")
 
@@ -106,7 +106,7 @@ async def release_cmd(message: Message, stp_db):
 Это чат сейчас никем не занят!""")
 
     else:
-        await message.answer(f"""<b>⚠️ Ошибка</b>
+        await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
@@ -123,12 +123,12 @@ async def release_cb(callback: CallbackQuery, stp_db):
         await repo.dialogs.update_question_duty(token=topic.Token, topic_duty=None)
         await repo.dialogs.update_question_status(token=topic.Token, status="open")
 
-        await callback.message.answer(f"""<b>🕊️ Вопрос освобожден</b>
+        await callback.message.answer("""<b>🕊️ Вопрос освобожден</b>
 
 Для взятия вопроса в работу напишите сообщение в эту тему""")
 
     else:
-        await callback.message.answer(f"""<b>⚠️ Ошибка</b>
+        await callback.message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти текущую тему в базе, закрываю""")
         await callback.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=callback.message.message_id)
@@ -189,14 +189,14 @@ async def handle_topic_message(message: Message, stp_db):
 <i>Твое сообщение не отобразится специалисту</i>""")
 
     else:
-        await message.answer(f"""<b>⚠️ Ошибка</b>
+        await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=message.message_id)
         logger.error(f"Не удалось найти тему {message.message_thread_id}. Закрыли тему")
 
 
-@topic_router.callback_query(QuestionQualityDuty.filter(F.return_dialog == True))
+@topic_router.callback_query(QuestionQualityDuty.filter(F.return_dialog))
 async def return_dialog_by_duty(callback: CallbackQuery, callback_data: QuestionQualityDuty, stp_db):
     await callback.answer()
     async with stp_db() as session:
@@ -215,7 +215,7 @@ async def return_dialog_by_duty(callback: CallbackQuery, callback_data: Question
                                             name=employee.FIO, icon_custom_emoji_id=dicts.topicEmojis["open"])
         await callback.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id, message_thread_id=dialog.TopicId)
 
-        await callback.message.answer(f"""<b>🔓 Вопрос переоткрыт</b>
+        await callback.message.answer("""<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы специалисту""")
         await callback.bot.send_message(chat_id=dialog.EmployeeChatId, text=f"""<b>🔓 Вопрос переоткрыт</b>

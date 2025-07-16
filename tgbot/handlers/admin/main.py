@@ -8,7 +8,6 @@ from aiogram.types import Message, CallbackQuery
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
-from tgbot.filters.active_question import ActiveQuestion
 from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @admin_router.message(CommandStart(), ~IsTopicMessage())
-async def admin_start(message: Message, stp_db, state: FSMContext):
+async def admin_start(message: Message, stp_db, state: FSMContext) -> None:
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
@@ -80,7 +79,7 @@ async def change_role(callback: CallbackQuery, callback_data: ChangeRole, state:
 
 
 @admin_router.callback_query(AdminMenu.filter(F.menu == "reset"))
-async def reset_role(callback: CallbackQuery, state: FSMContext, stp_db):
+async def reset_role_cb(callback: CallbackQuery, state: FSMContext, stp_db) -> None:
     """
     Сброс кастомной роли через клавиатуру
     """
@@ -102,7 +101,7 @@ async def reset_role(callback: CallbackQuery, state: FSMContext, stp_db):
 
 
 @admin_router.message(Command("reset"))
-async def reset_role(message: Message, state: FSMContext, stp_db) -> None:
+async def reset_role_cmd(message: Message, state: FSMContext, stp_db) -> None:
     """
     Сброс кастомной роли через команду
     """
