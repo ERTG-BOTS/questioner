@@ -11,6 +11,7 @@ from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import Config, load_config
 from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
+from tgbot.middlewares.database import DatabaseMiddleware
 from tgbot.services import broadcaster
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import remove_old_topics, scheduler
@@ -22,11 +23,12 @@ async def on_startup(bot: Bot, admin_ids: list[int]):
     await broadcaster.broadcast(bot, admin_ids, "Bot started")
 
 
-def register_global_middlewares(dp: Dispatcher, config: Config, session_pool=None):
+def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, session_pool=None):
     """
     Register global middlewares for the given dispatcher.
     Global middlewares here are the ones that are applied to all the handlers (you specify the type of update)
 
+    :param bot: Bot object.
     :param dp: The dispatcher instance.
     :type dp: Dispatcher
     :param config: The configuration object from the loaded configuration.
@@ -35,7 +37,7 @@ def register_global_middlewares(dp: Dispatcher, config: Config, session_pool=Non
     """
     middleware_types = [
         ConfigMiddleware(config),
-        # DatabaseMiddleware(session_pool),
+        DatabaseMiddleware(config=config, bot=bot, session_pool=session_pool),
     ]
 
     for middleware_type in middleware_types:
@@ -93,7 +95,7 @@ async def main():
 
     dp.include_routers(*routers_list)
 
-    register_global_middlewares(dp, config)
+    register_global_middlewares(dp, config, bot, stp_db)
 
     scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])
     scheduler.start()

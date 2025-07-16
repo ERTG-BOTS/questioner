@@ -14,11 +14,15 @@ class IsTopicMessage(BaseFilter):
 
     async def __call__(self, message: Message, **_) -> bool:
         # Проверка на группу или супергруппу
-        if message.chat.type not in ['supergroup', 'group']:
+        if message.chat.type not in ["supergroup", "group"]:
             return False
 
         # Проверка на тему
-        in_topic = bool(message.is_topic_message and message.message_thread_id and message.message_thread_id != 1)
+        in_topic = bool(
+            message.is_topic_message
+            and message.message_thread_id
+            and message.message_thread_id != 1
+        )
         if not in_topic:
             return False
 
@@ -43,7 +47,7 @@ class IsTopicMessageWithCommand(BaseFilter):
                 return False
 
         # Проверка на группу или супергруппу
-        if message.chat.type not in ['supergroup', 'group']:
+        if message.chat.type not in ["supergroup", "group"]:
             return False
 
         # Проверка на тему

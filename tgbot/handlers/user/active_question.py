@@ -18,8 +18,8 @@ from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     restart_inactivity_timer,
-    stop_inactivity_timer,
     run_delete_timer,
+    stop_inactivity_timer,
 )
 
 user_q_router = Router()
@@ -32,96 +32,90 @@ logger = logging.getLogger(__name__)
 
 @user_q_router.message(ActiveQuestionWithCommand("end"))
 async def active_question_end(
-    message: Message, stp_db, active_dialog_token: str = None
+    message: Message, repo: RequestsRepo, active_dialog_token: str = None
 ):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        employee: User = await repo.users.get_user(message.from_user.id)
-        question: Question = await repo.questions.get_question(
-            token=active_dialog_token
-        )
+    employee: User = await repo.users.get_user(message.from_user.id)
+    question: Question = await repo.questions.get_question(token=active_dialog_token)
 
-        if question is not None:
-            if question.Status != "closed":
-                # Останавливаем таймер неактивности
-                stop_inactivity_timer(question.Token)
+    if question is not None:
+        if question.Status != "closed":
+            # Останавливаем таймер неактивности
+            stop_inactivity_timer(question.Token)
 
-                await repo.questions.update_question_status(
-                    token=question.Token, status="closed"
-                )
-                await repo.questions.update_question_end(
-                    token=question.Token, end_time=datetime.datetime.now()
-                )
+            await repo.questions.update_question_status(
+                token=question.Token, status="closed"
+            )
+            await repo.questions.update_question_end(
+                token=question.Token, end_time=datetime.datetime.now()
+            )
 
-                await session.commit()
-
-                await message.bot.send_message(
-                    chat_id=config.tg_bot.forum_id,
-                    message_thread_id=question.TopicId,
-                    text=f"""<b>🔒 Вопрос закрыт</b>
+            await message.bot.send_message(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                text=f"""<b>🔒 Вопрос закрыт</b>
 
 Специалист <b>{employee.FIO}</b> закрыл вопрос
 Оцени, мог ли специалист решить вопрос самостоятельно""",
-                    reply_markup=dialog_quality_kb(token=question.Token, role="duty"),
-                )
+                reply_markup=dialog_quality_kb(token=question.Token, role="duty"),
+            )
 
-                await message.bot.edit_forum_topic(
-                    chat_id=config.tg_bot.forum_id,
-                    message_thread_id=question.TopicId,
-                    name=question.Token,
-                    icon_custom_emoji_id=dicts.topicEmojis["closed"],
-                )
-                await message.bot.close_forum_topic(
-                    chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
-                )
+            await message.bot.edit_forum_topic(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                name=question.Token,
+                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+            )
+            await message.bot.close_forum_topic(
+                chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            )
 
-                await message.reply(
-                    text="<b>🔒 Вопрос закрыт</b>", reply_markup=ReplyKeyboardRemove()
-                )
-                await message.answer(
-                    """Ты закрыл вопрос
+            await message.reply(
+                text="<b>🔒 Вопрос закрыт</b>", reply_markup=ReplyKeyboardRemove()
+            )
+            await message.answer(
+                """Ты закрыл вопрос
 Оцени, помогли ли тебе решить вопрос""",
-                    reply_markup=dialog_quality_kb(
-                        token=question.Token, role="employee"
-                    ),
-                )
+                reply_markup=dialog_quality_kb(token=question.Token, role="employee"),
+            )
 
-                logger.info(
-                    f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.Token} со старшим {question.TopicDutyFullname}"
-                )
-            elif question.Status == "closed":
-                await message.reply("<b>🔒 Вопрос был закрыт</b>")
-                await message.bot.close_forum_topic(
-                    chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
-                )
-                logger.info(
-                    f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.Token} со старшим {question.TopicDutyFullname}. Вопрос уже закрыт"
-                )
+            logger.info(
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.Token} со старшим {question.TopicDutyFullname}"
+            )
+        elif question.Status == "closed":
+            await message.reply("<b>🔒 Вопрос был закрыт</b>")
+            await message.bot.close_forum_topic(
+                chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            )
+            logger.info(
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.Token} со старшим {question.TopicDutyFullname}. Вопрос уже закрыт"
+            )
 
-        else:
-            await message.answer("""<b>⚠️ Ошибка</b>
+    else:
+        await message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти вопрос в базе""")
-            logger.error(
-                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Попытка закрытия вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {message.message_id}"
-            )
+        logger.error(
+            f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Попытка закрытия вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {message.message_id}"
+        )
 
 
 @user_q_router.message(ActiveQuestion())
-async def active_question(message: Message, stp_db, active_dialog_token: str = None):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        question: Question = await repo.questions.get_question(
-            token=active_dialog_token
-        )
+async def active_question(
+    message: Message, active_dialog_token: str, repo: RequestsRepo
+) -> None:
+    question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if message.text == "✅️ Закрыть вопрос":
-        await active_question_end(message, stp_db, active_dialog_token)
+        await active_question_end(
+            message=message, repo=repo, active_dialog_token=active_dialog_token
+        )
         return
 
     # Перезапускаем таймер неактивности при сообщении от пользователя
     if config.tg_bot.activity_status:
-        restart_inactivity_timer(question.Token, message.bot, stp_db)
+        restart_inactivity_timer(
+            question_token=question.Token, bot=message.bot, repo=repo
+        )
 
     await message.bot.copy_message(
         from_chat_id=message.chat.id,
@@ -146,7 +140,12 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
 Сообщение содержит премиум эмодзи, собеседник увидит бесплатные аналоги: {stickers_text}
 
 <i>Предупреждение удалится через 30 секунд</i>""")
-        await run_delete_timer(bot=message.bot, chat_id=message.chat.id, message_ids=[emoji_message.message_id], seconds=30)
+        await run_delete_timer(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_ids=[emoji_message.message_id],
+            seconds=30,
+        )
 
     logger.info(
         f"[Вопрос] - [Общение] Токен: {question.Token} | Специалист: {question.EmployeeFullname} | Сообщение: {message.text}"
@@ -155,16 +154,14 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
 
 @user_q_router.callback_query(QuestionQualitySpecialist.filter())
 async def dialog_quality_employee(
-    callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db
+    callback: CallbackQuery,
+    callback_data: QuestionQualitySpecialist,
+    repo: RequestsRepo,
 ):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        question: Question = await repo.questions.get_question(
-            token=callback_data.token
-        )
-        await repo.questions.update_question_quality(
-            token=callback_data.token, quality=callback_data.answer, is_duty=False
-        )
+    question: Question = await repo.questions.get_question(token=callback_data.token)
+    await repo.questions.update_question_quality(
+        token=callback_data.token, quality=callback_data.answer, is_duty=False
+    )
 
     await callback.answer("Оценка успешно выставлена ❤️")
     if callback_data.answer:

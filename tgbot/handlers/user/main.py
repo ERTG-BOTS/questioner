@@ -31,17 +31,13 @@ logger = logging.getLogger(__name__)
 
 
 @user_router.message(CommandStart())
-async def main_cmd(message: Message, state: FSMContext, stp_db):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        user: User = await repo.users.get_user(user_id=message.from_user.id)
-
-        employee_topics_today = await repo.questions.get_questions_count_today(
-            employee_fullname=user.FIO
-        )
-        employee_topics_month = await repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
-        )
+async def main_cmd(message: Message, state: FSMContext, user: User, repo: RequestsRepo):
+    employee_topics_today = await repo.questions.get_questions_count_today(
+        employee_fullname=user.FIO
+    )
+    employee_topics_month = await repo.questions.get_questions_count_last_month(
+        employee_fullname=user.FIO
+    )
 
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
     state_data = await state.get_data()
@@ -78,17 +74,15 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "main"))
-async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        user: User = await repo.users.get_user(user_id=callback.from_user.id)
-
-        employee_topics_today = await repo.questions.get_questions_count_today(
-            employee_fullname=user.FIO
-        )
-        employee_topics_month = await repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
-        )
+async def main_cb(
+    callback: CallbackQuery, state: FSMContext, user: User, repo: RequestsRepo,
+):
+    employee_topics_today = await repo.questions.get_questions_count_today(
+        employee_fullname=user.FIO
+    )
+    employee_topics_month = await repo.questions.get_questions_count_last_month(
+        employee_fullname=user.FIO
+    )
 
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
     state_data = await state.get_data()
@@ -113,11 +107,11 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
-async def ask_question(callback: CallbackQuery, stp_db, state: FSMContext):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-
+async def ask_question(
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: User,
+):
     state_data = await state.get_data()
 
     msg = await callback.message.edit_text(
@@ -130,16 +124,12 @@ async def ask_question(callback: CallbackQuery, stp_db, state: FSMContext):
     await state.update_data(messages_with_buttons=[msg.message_id])
     await state.set_state(AskQuestion.question)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
     )
 
 
 @user_router.message(AskQuestion.question)
-async def question_text(message: Message, stp_db, state: FSMContext):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        employee: User = await repo.users.get_user(user_id=message.from_user.id)
-
+async def question_text(message: Message, state: FSMContext, user: User):
     await state.update_data(question=message.text)
     await state.update_data(question_message_id=message.message_id)
 
@@ -160,59 +150,56 @@ async def question_text(message: Message, stp_db, state: FSMContext):
 
     await state.set_state(AskQuestion.clever_link)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or employee.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
     )
 
 
 @user_router.message(AskQuestion.clever_link)
-async def clever_link_handler(message: Message, state: FSMContext, stp_db):
+async def clever_link_handler(
+    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+):
     clever_link = message.text
     state_data = await state.get_data()
 
-    # Create a single session for all database operations
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        user: User = await repo.users.get_user(user_id=message.from_user.id)
-
-        # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-        if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
-            await message.answer(
-                """<b>🗃️ Регламент</b>
+    # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
+    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
+        await message.answer(
+            """<b>🗃️ Регламент</b>
 
 Сообщение <b>не содержит ссылку на клевер</b> 🥺
 
 Отправь ссылку на регламент из клевера, по которому у тебя вопрос""",
-                reply_markup=back_kb(),
-            )
-            return
-
-        employee_topics_today = await repo.questions.get_questions_count_today(
-            employee_fullname=user.FIO
+            reply_markup=back_kb(),
         )
-        employee_topics_month = await repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
-        )
+        return
 
-        # Выключаем все предыдущие кнопки
-        await disable_previous_buttons(message, state)
+    employee_topics_today = await repo.questions.get_questions_count_today(
+        employee_fullname=user.FIO
+    )
+    employee_topics_month = await repo.questions.get_questions_count_last_month(
+        employee_fullname=user.FIO
+    )
 
-        new_topic = await message.bot.create_forum_topic(
-            chat_id=config.tg_bot.forum_id,
-            name=user.FIO
-            if config.tg_bot.division == "НЦК"
-            else f"{user.Division} | {user.FIO}",
-            icon_custom_emoji_id=dicts.topicEmojis["open"],
-        )  # Создание темы
+    # Выключаем все предыдущие кнопки
+    await disable_previous_buttons(message, state)
 
-        # Now add the question within the same session
-        new_question = await repo.questions.add_question(
-            employee_chat_id=message.chat.id,
-            employee_fullname=user.FIO,
-            topic_id=new_topic.message_thread_id,
-            start_time=datetime.datetime.now(),
-            question_text=state_data.get("question"),
-            clever_link=clever_link,
-        )  # Добавление вопроса в БД
+    new_topic = await message.bot.create_forum_topic(
+        chat_id=config.tg_bot.forum_id,
+        name=user.FIO
+        if config.tg_bot.division == "НЦК"
+        else f"{user.Division} | {user.FIO}",
+        icon_custom_emoji_id=dicts.topicEmojis["open"],
+    )  # Создание темы
+
+    # Now add the question within the same session
+    new_question = await repo.questions.add_question(
+        employee_chat_id=message.chat.id,
+        employee_fullname=user.FIO,
+        topic_id=new_topic.message_thread_id,
+        start_time=datetime.datetime.now(),
+        question_text=state_data.get("question"),
+        clever_link=clever_link,
+    )  # Добавление вопроса в БД
 
     # All database operations are now complete
     await message.answer(
@@ -224,7 +211,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     # Запускаем таймер неактивности для нового вопроса (только если статус "open")
     if new_question.Status == "open" and config.tg_bot.activity_status:
-        start_inactivity_timer(new_question.Token, message.bot, stp_db)
+        start_inactivity_timer(new_question.Token, message.bot, repo)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=config.tg_bot.forum_id,
@@ -261,13 +248,12 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
 @user_router.callback_query(CancelQuestion.filter(F.action == "cancel"))
 async def cancel_question(
-    callback: CallbackQuery, callback_data: CancelQuestion, stp_db, state: FSMContext
+    callback: CallbackQuery,
+    callback_data: CancelQuestion,
+    state: FSMContext,
+    repo: RequestsRepo,
 ):
-    async with stp_db() as session:
-        repo = RequestsRepo(session)
-        question: Question = await repo.questions.get_question(
-            token=callback_data.token
-        )
+    question: Question = await repo.questions.get_question(token=callback_data.token)
 
     if (
         question
@@ -283,16 +269,20 @@ async def cancel_question(
         await callback.bot.close_forum_topic(
             chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
         )
-        await remove_question_timer(bot=callback.bot, question=question, stp_db=stp_db)
-        await callback.bot.send_message(chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId, text="""<b>🔥 Отмена вопроса</b>
+        await remove_question_timer(bot=callback.bot, question=question, repo=repo)
+        await callback.bot.send_message(
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=question.TopicId,
+            text="""<b>🔥 Отмена вопроса</b>
         
 Специалист отменил вопрос
 
-<i>Вопрос будет удален через 30 секунд</i>""")
+<i>Вопрос будет удален через 30 секунд</i>""",
+        )
         await callback.answer("Вопрос успешно удален")
-        await main_cb(callback=callback, state=state, stp_db=stp_db)
+        await main_cb(callback=callback, state=state, repo=repo)
     elif not question:
         await callback.answer("Не удалось найти отменяемый вопрос")
-        await main_cb(callback=callback, state=state, stp_db=stp_db)
+        await main_cb(callback=callback, state=state, repo=repo)
     else:
         await callback.answer("Вопрос не может быть отменен. Он уже в работе")
