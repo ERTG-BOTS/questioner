@@ -172,11 +172,11 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
             [
                 InlineKeyboardButton(
                     text="👎 Да",
-                    callback_data=QuestionQualityDuty(answer=False, token=token).pack(),
+                    callback_data=QuestionQualityDuty(answer=True, token=token).pack(),
                 ),
                 InlineKeyboardButton(
                     text="👍 Нет",
-                    callback_data=QuestionQualityDuty(answer=True, token=token).pack(),
+                    callback_data=QuestionQualityDuty(answer=False, token=token).pack(),
                 ),
             ],
             [

@@ -75,7 +75,10 @@ async def main_cmd(message: Message, state: FSMContext, user: User, repo: Reques
 
 @user_router.callback_query(MainMenu.filter(F.menu == "main"))
 async def main_cb(
-    callback: CallbackQuery, state: FSMContext, user: User, repo: RequestsRepo,
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: User,
+    repo: RequestsRepo,
 ):
     employee_topics_today = await repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
@@ -252,6 +255,7 @@ async def cancel_question(
     callback_data: CancelQuestion,
     state: FSMContext,
     repo: RequestsRepo,
+    user: User,
 ):
     question: Question = await repo.questions.get_question(token=callback_data.token)
 
@@ -280,7 +284,7 @@ async def cancel_question(
 <i>Вопрос будет удален через 30 секунд</i>""",
         )
         await callback.answer("Вопрос успешно удален")
-        await main_cb(callback=callback, state=state, repo=repo)
+        await main_cb(callback=callback, state=state, user=user, repo=repo)
     elif not question:
         await callback.answer("Не удалось найти отменяемый вопрос")
         await main_cb(callback=callback, state=state, repo=repo)

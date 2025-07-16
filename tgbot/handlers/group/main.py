@@ -43,18 +43,18 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
 
     if question is not None and question.Status != "closed":
         if not question.TopicDutyFullname:
-            await repo.questions.update_question_duty(
-                token=question.Token, topic_duty=user.FIO
-            )
-            await repo.questions.update_question_status(
-                token=question.Token, status="in_progress"
-            )
-
             duty_topics_today = await repo.questions.get_questions_count_today(
                 duty_fullname=user.FIO
             )
             duty_topics_month = await repo.questions.get_questions_count_last_month(
                 duty_fullname=user.FIO
+            )
+
+            await repo.questions.update_question_duty(
+                token=question.Token, topic_duty=user.FIO
+            )
+            await repo.questions.update_question_status(
+                token=question.Token, status="in_progress"
             )
 
             employee: User = await repo.users.get_user(
