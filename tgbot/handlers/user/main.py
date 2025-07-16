@@ -9,7 +9,6 @@ from aiogram.types import CallbackQuery, Message
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
-from tgbot.filters.active_question import ActiveQuestion
 from tgbot.keyboards.user.main import MainMenu, back_kb, cancel_question_kb, user_kb
 from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons
@@ -53,7 +52,9 @@ async def main_cmd(message: Message, state: FSMContext, stp_db):
 
 <i>Используй меню для управление ботом</i>""",
             reply_markup=user_kb(
-                is_role_changed=True if state_data.get("role") or user.Role == 10 else False
+                is_role_changed=True
+                if state_data.get("role") or user.Role == 10
+                else False
             ),
         )
     else:
@@ -93,7 +94,9 @@ async def main_cb(callback: CallbackQuery, stp_db, state: FSMContext):
 - За месяц {employee_topics_month}
 
 Используй меню, чтобы выбрать действие""",
-        reply_markup=user_kb(is_role_changed=True if state_data.get("role") or user.Role == 10 else False),
+        reply_markup=user_kb(
+            is_role_changed=True if state_data.get("role") or user.Role == 10 else False
+        ),
     )
 
 
@@ -172,7 +175,9 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     new_topic = await message.bot.create_forum_topic(
         chat_id=config.tg_bot.forum_id,
-        name=user.FIO if config.tg_bot.division == "НЦК" else f"{user.Division} | {user.FIO}",
+        name=user.FIO
+        if config.tg_bot.division == "НЦК"
+        else f"{user.Division} | {user.FIO}",
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
     # await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
