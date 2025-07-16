@@ -49,8 +49,8 @@ class TgBot:
         activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
         activity_close_minutes = env.int("ACTIVITY_CLOSE_MINUTES")
 
-        if division != "NTP" and division != "NCK":
-            raise ValueError("[CONFIG] DIVISION must be NTP or NCK")
+        if division != "НТП" and division != "НЦК":
+            raise ValueError("[CONFIG] DIVISION должен быть НТП или НЦК")
         return TgBot(
             token=token,
             use_redis=use_redis,

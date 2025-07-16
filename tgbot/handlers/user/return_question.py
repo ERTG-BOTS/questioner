@@ -57,7 +57,7 @@ async def return_finished_q(
         await callback.bot.edit_forum_topic(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.TopicId,
-            name=employee.FIO,
+            name=employee.FIO if config.tg_bot.division == "НЦК" else f"{employee.Division} | {employee.FIO}",
             icon_custom_emoji_id=dicts.topicEmojis["open"],
         )
         await callback.bot.reopen_forum_topic(
@@ -194,7 +194,7 @@ async def return_q_confirm(
         await callback.bot.edit_forum_topic(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.TopicId,
-            name=user.FIO,
+            name=user.FIO if config.tg_bot.division == "НЦК" else f"{user.Division} | {user.FIO}",
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
 

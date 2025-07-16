@@ -138,6 +138,12 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
+        employee_topics_today = await repo.dialogs.get_questions_count_today(
+            employee_fullname=user.FIO
+        )
+        employee_topics_month = await repo.dialogs.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
 
     clever_link = message.text
     state_data = await state.get_data()
@@ -166,7 +172,7 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
 
     new_topic = await message.bot.create_forum_topic(
         chat_id=config.tg_bot.forum_id,
-        name=user.FIO,
+        name=user.FIO if config.tg_bot.division == "НЦК" else f"{user.Division} | {user.FIO}",
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
     # await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
@@ -184,13 +190,6 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
     # Запускаем таймер неактивности для нового вопроса (только если статус "open")
     if new_question.Status == "new" and config.tg_bot.activity_status:
         start_inactivity_timer(new_question.Token, message.bot, stp_db)
-
-    employee_topics_today = await repo.dialogs.get_questions_count_today(
-        employee_fullname=user.FIO
-    )
-    employee_topics_month = await repo.dialogs.get_questions_count_last_month(
-        employee_fullname=user.FIO
-    )
 
     topic_info_msg = await message.bot.send_message(
         chat_id=config.tg_bot.forum_id,
