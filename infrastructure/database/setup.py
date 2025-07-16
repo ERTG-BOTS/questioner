@@ -16,5 +16,5 @@ def create_engine(db: DbConfig, db_name:str, echo=False):
 
 
 def create_session_pool(engine):
-    session_pool = async_sessionmaker(bind=engine, expire_on_commit=False)
+    session_pool = async_sessionmaker(bind=engine, expire_on_commit=False, )
     return session_pool

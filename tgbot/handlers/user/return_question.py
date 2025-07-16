@@ -44,38 +44,43 @@ async def return_finished_q(
     await state.clear()
     async with stp_db() as session:
         repo = RequestsRepo(session)
+        active_dialogs = await repo.questions.get_active_questions()
+        question: Question = await repo.questions.get_question(
+            token=callback_data.token
+        )
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        question: Question = await repo.questions.get_question(token=callback_data.token)
         duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
 
-    active_dialogs = await repo.questions.get_active_questions()
+        if question.Status == "closed" and employee.FIO not in [
+            d.EmployeeFullname for d in active_dialogs
+        ]:
+            await repo.questions.update_question_status(
+                token=question.Token, status="open"
+            )
+            await session.commit()
 
-    if question.Status == "closed" and employee.FIO not in [
-        d.EmployeeFullname for d in active_dialogs
-    ]:
-        await repo.questions.update_question_status(token=question.Token, status="open")
-        await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
-            name=employee.FIO
-            if config.tg_bot.division == "НЦК"
-            else f"{employee.Division} | {employee.FIO}",
-            icon_custom_emoji_id=dicts.topicEmojis["open"],
-        )
-        await callback.bot.reopen_forum_topic(
-            chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
-        )
+            await callback.bot.edit_forum_topic(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                name=employee.FIO
+                if config.tg_bot.division == "НЦК"
+                else f"{employee.Division} | {employee.FIO}",
+                icon_custom_emoji_id=dicts.topicEmojis["open"],
+            )
+            await callback.bot.reopen_forum_topic(
+                chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            )
 
-        await callback.message.answer(
-            """<b>🔓 Вопрос переоткрыт</b>
+            await callback.message.answer(
+                """<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""",
-            reply_markup=finish_question_kb(),
-        )
-        await callback.bot.send_message(
-            chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
-            text=f"""<b>🔓 Вопрос переоткрыт</b>
+                reply_markup=finish_question_kb(),
+            )
+            await callback.bot.send_message(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Специалист <b>{employee.FIO}</b> переоткрыл вопрос после его закрытия
 
@@ -83,22 +88,22 @@ async def return_finished_q(
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",
-            reply_markup=reopened_question_kb(),
-            disable_web_page_preview=True,
-        )
-        logger.info(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} переоткрыт специалистом"
-        )
-    elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
-        await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
-        logger.info(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста есть другой открытй вопрос"
-        )
-    elif question.Status != "closed":
-        await callback.answer("Этот вопрос не закрыт", show_alert=True)
-        logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} не закрыт"
-        )
+                reply_markup=reopened_question_kb(),
+                disable_web_page_preview=True,
+            )
+            logger.info(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} переоткрыт специалистом"
+            )
+        elif employee.FIO in [d.EmployeeFullname for d in active_dialogs]:
+            await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
+            logger.info(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста есть другой открытй вопрос"
+            )
+        elif question.Status != "closed":
+            await callback.answer("Этот вопрос не закрыт", show_alert=True)
+            logger.error(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} не закрыт"
+            )
 
 
 @employee_return_q.callback_query(MainMenu.filter(F.menu == "return"))
@@ -142,12 +147,16 @@ async def q_list(callback: CallbackQuery, stp_db, state: FSMContext):
 
 
 @employee_return_q.callback_query(ReturnQuestion.filter(F.action == "show"))
-async def q_info(callback: CallbackQuery, callback_data: ReturnQuestion, stp_db, state: FSMContext):
+async def q_info(
+    callback: CallbackQuery, callback_data: ReturnQuestion, stp_db, state: FSMContext
+):
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
-        question: Question = await repo.questions.get_question(token=callback_data.token)
+        question: Question = await repo.questions.get_question(
+            token=callback_data.token
+        )
 
     if not question:
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
@@ -197,48 +206,53 @@ async def return_q_confirm(
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
         question = await repo.questions.get_question(token=callback_data.token)
+
+        if not question:
+            await callback.message.edit_text(
+                "❌ Вопрос не найден", reply_markup=user_kb()
+            )
+            return
+
         duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
+        active_dialogs = await repo.questions.get_active_questions()
 
-    if not question:
-        await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
-        return
+        if question.Status == "closed" and user.FIO not in [
+            d.EmployeeFullname for d in active_dialogs
+        ]:
+            # 1. Обновляем статус вопроса на "open"
+            await repo.questions.update_question_status(
+                token=question.Token, status="open"
+            )
+            await session.commit()
 
-    active_dialogs = await repo.questions.get_active_questions()
+            # 2. Обновляем название и иконку темы
+            await callback.bot.edit_forum_topic(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                name=user.FIO
+                if config.tg_bot.division == "НЦК"
+                else f"{user.Division} | {user.FIO}",
+                icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
+            )
 
-    if question.Status == "closed" and user.FIO not in [
-        d.EmployeeFullname for d in active_dialogs
-    ]:
-        # 1. Обновляем статус вопроса на "open"
-        await repo.questions.update_question_status(token=question.Token, status="open")
+            # 3. Переоткрываем тему
+            await callback.bot.reopen_forum_topic(
+                chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            )
 
-        # 2. Обновляем название и иконку темы
-        await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
-            name=user.FIO
-            if config.tg_bot.division == "НЦК"
-            else f"{user.Division} | {user.FIO}",
-            icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
-        )
-
-        # 3. Переоткрываем тему
-        await callback.bot.reopen_forum_topic(
-            chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
-        )
-
-        # 4. Отправляем подтверждающее сообщение специалисту
-        await callback.message.answer(
-            """<b>🔓 Вопрос переоткрыт</b>
+            # 4. Отправляем подтверждающее сообщение специалисту
+            await callback.message.answer(
+                """<b>🔓 Вопрос переоткрыт</b>
 
 Можешь писать сообщения, они будут переданы старшему""",
-            reply_markup=finish_question_kb(),
-        )
+                reply_markup=finish_question_kb(),
+            )
 
-        # 5. Отправляем уведомление дежурному в тему
-        await callback.bot.send_message(
-            chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
-            text=f"""<b>🔓 Вопрос переоткрыт</b>
+            # 5. Отправляем уведомление дежурному в тему
+            await callback.bot.send_message(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
 
@@ -246,23 +260,23 @@ async def return_q_confirm(
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",
-            reply_markup=reopened_question_kb(),
-            disable_web_page_preview=True,
-        )
-    elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
-        # Проверка на наличие открытых вопросов у специалиста
-        await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
-        logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.EmployeeFullname} есть другой открытый вопрос"
-        )
-    elif question.Status != "closed":
-        # Проверка на закрытость вопроса
-        await callback.answer("Этот вопрос не закрыт", show_alert=True)
-        logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.Token} не закрыт"
-        )
-    else:
-        await callback.answer("Не удалось переоткрыть вопрос", show_alert=True)
-        logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия вопроса {question.Token}"
-        )
+                reply_markup=reopened_question_kb(),
+                disable_web_page_preview=True,
+            )
+        elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
+            # Проверка на наличие открытых вопросов у специалиста
+            await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
+            logger.error(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.EmployeeFullname} есть другой открытый вопрос"
+            )
+        elif question.Status != "closed":
+            # Проверка на закрытость вопроса
+            await callback.answer("Этот вопрос не закрыт", show_alert=True)
+            logger.error(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.Token} не закрыт"
+            )
+        else:
+            await callback.answer("Не удалось переоткрыть вопрос", show_alert=True)
+            logger.error(
+                f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия вопроса {question.Token}"
+            )

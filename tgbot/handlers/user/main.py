@@ -20,7 +20,7 @@ from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons
 from tgbot.misc.states import AskQuestion
 from tgbot.services.logger import setup_logging
-from tgbot.services.scheduler import start_inactivity_timer, remove_question_timer
+from tgbot.services.scheduler import remove_question_timer, start_inactivity_timer
 
 user_router = Router()
 
@@ -166,9 +166,26 @@ async def question_text(message: Message, stp_db, state: FSMContext):
 
 @user_router.message(AskQuestion.clever_link)
 async def clever_link_handler(message: Message, state: FSMContext, stp_db):
+    clever_link = message.text
+    state_data = await state.get_data()
+
+    # Create a single session for all database operations
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=message.from_user.id)
+
+        # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
+        if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
+            await message.answer(
+                """<b>🗃️ Регламент</b>
+
+Сообщение <b>не содержит ссылку на клевер</b> 🥺
+
+Отправь ссылку на регламент из клевера, по которому у тебя вопрос""",
+                reply_markup=back_kb(),
+            )
+            return
+
         employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
         )
@@ -176,43 +193,28 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
             employee_fullname=user.FIO
         )
 
-    clever_link = message.text
-    state_data = await state.get_data()
+        # Выключаем все предыдущие кнопки
+        await disable_previous_buttons(message, state)
 
-    # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
-        await message.answer(
-            """<b>🗃️ Регламент</b>
+        new_topic = await message.bot.create_forum_topic(
+            chat_id=config.tg_bot.forum_id,
+            name=user.FIO
+            if config.tg_bot.division == "НЦК"
+            else f"{user.Division} | {user.FIO}",
+            icon_custom_emoji_id=dicts.topicEmojis["open"],
+        )  # Создание темы
 
-Сообщение <b>не содержит ссылку на клевер</b> 🥺
+        # Now add the question within the same session
+        new_question = await repo.questions.add_question(
+            employee_chat_id=message.chat.id,
+            employee_fullname=user.FIO,
+            topic_id=new_topic.message_thread_id,
+            start_time=datetime.datetime.now(),
+            question_text=state_data.get("question"),
+            clever_link=clever_link,
+        )  # Добавление вопроса в БД
 
-Отправь ссылку на регламент из клевера, по которому у тебя вопрос""",
-            reply_markup=back_kb(),
-        )
-        return
-
-    # Выключаем все предыдущие кнопки
-    await disable_previous_buttons(message, state)
-
-    new_topic = await message.bot.create_forum_topic(
-        chat_id=config.tg_bot.forum_id,
-        name=user.FIO
-        if config.tg_bot.division == "НЦК"
-        else f"{user.Division} | {user.FIO}",
-        icon_custom_emoji_id=dicts.topicEmojis["open"],
-    )  # Создание темы
-    # await message.bot.close_forum_topic(chat_id=config.tg_bot.forum_id,
-    #                                     message_thread_id=new_topic.message_thread_id)  # Закрытие темы
-
-    new_question = await repo.questions.add_question(
-        employee_chat_id=message.chat.id,
-        employee_fullname=user.FIO,
-        topic_id=new_topic.message_thread_id,
-        start_time=datetime.datetime.now(),
-        question_text=state_data.get("question"),
-        clever_link=clever_link,
-    )  # Добавление вопроса в БД
-
+    # All database operations are now complete
     await message.answer(
         """<b>✅ Успешно</b>
 
@@ -244,9 +246,6 @@ async def clever_link_handler(message: Message, state: FSMContext, stp_db):
         from_chat_id=message.chat.id,
         message_id=state_data.get("question_message_id"),
     )  # Копирование сообщения специалиста в тему
-
-    # await message.bot.reopen_forum_topic(chat_id=config.tg_bot.forum_id,
-    #                                      message_thread_id=new_topic.message_thread_id)  # Переоткрытие темы
 
     await message.bot.pin_chat_message(
         chat_id=config.tg_bot.forum_id,
