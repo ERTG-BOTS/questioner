@@ -2,6 +2,7 @@ import logging
 from typing import Sequence
 
 from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from infrastructure.database.models import User, Question
@@ -84,9 +85,10 @@ async def return_question_show(callback: CallbackQuery, callback_data: ReturnQue
 
 
 @user_return_question_router.callback_query(ReturnQuestion.filter(F.action == "confirm"))
-async def return_question_confirm(callback: CallbackQuery, callback_data: ReturnQuestion, stp_db):
+async def return_question_confirm(callback: CallbackQuery, callback_data: ReturnQuestion, stp_db, state: FSMContext):
     """Подтвердить возврат вопроса"""
     await callback.answer()
+    await state.clear()
     async with stp_db() as session:
         repo = RequestsRepo(session)
         user: User = await repo.users.get_user(user_id=callback.from_user.id)

@@ -2,6 +2,7 @@ import datetime
 import logging
 
 from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 
 from infrastructure.database.models import User, Question
@@ -82,8 +83,9 @@ async def active_question(message: Message, stp_db, active_dialog_token: str = N
 
 
 @user_dialog_router.callback_query(QuestionQualitySpecialist.filter(F.return_dialog))
-async def return_dialog_by_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db):
+async def return_dialog_by_employee(callback: CallbackQuery, callback_data: QuestionQualitySpecialist, stp_db, state: FSMContext):
     await callback.answer()
+    await state.clear()
     async with stp_db() as session:
         repo = RequestsRepo(session)
         employee: User = await repo.users.get_user(user_id=callback.from_user.id)
