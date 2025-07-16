@@ -85,11 +85,6 @@ async def change_role(
         user: User = await repo.users.get_user(user_id=callback.from_user.id)
 
     match callback_data.role:
-        case "duty":
-            await state.update_data(role=3)  # Старший (не руководитель группы)
-            logging.info(
-                f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 3"
-            )
         case "spec":
             await state.update_data(role=1)  # Специалист
             logging.info(
