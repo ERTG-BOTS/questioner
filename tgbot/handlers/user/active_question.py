@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from infrastructure.database.models import Question, User
@@ -32,9 +32,8 @@ logger = logging.getLogger(__name__)
 
 @user_q_router.message(ActiveQuestionWithCommand("end"))
 async def active_question_end(
-    message: Message, repo: RequestsRepo, active_dialog_token: str = None
+    message: Message, repo: RequestsRepo, user: User, active_dialog_token: str = None
 ):
-    employee: User = await repo.users.get_user(message.from_user.id)
     question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if question is not None:
@@ -54,7 +53,7 @@ async def active_question_end(
                 message_thread_id=question.TopicId,
                 text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{employee.FIO}</b> закрыл вопрос
+Специалист <b>{user.FIO}</b> закрыл вопрос
 Оцени, мог ли специалист решить вопрос самостоятельно""",
                 reply_markup=dialog_quality_kb(token=question.Token, role="duty"),
             )

@@ -179,7 +179,6 @@ async def return_q_duty(
 ):
     await callback.answer()
     question: Question = await repo.questions.get_question(token=callback_data.token)
-    duty: User = await repo.users.get_user(user_id=callback.from_user.id)
     available_to_return_questions: Sequence[
         Question
     ] = await repo.questions.get_available_to_return_questions()
@@ -189,7 +188,7 @@ async def return_q_duty(
         question.Status == "closed"
         and user.FIO not in [u.EmployeeFullname for u in active_dialogs]
         and question.Token in [d.Token for d in available_to_return_questions]
-        and question.TopicDutyFullname == duty.FIO
+        and question.TopicDutyFullname == user.FIO
     ):
         await repo.questions.update_question_status(token=question.Token, status="open")
 
@@ -219,7 +218,7 @@ async def return_q_duty(
         logger.info(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} переоткрыт старшим"
         )
-    elif question.TopicDutyFullname != duty.FIO:
+    elif question.TopicDutyFullname != user.FIO:
         await callback.answer("Это не твой чат!", show_alert=True)
         logger.warning(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.Token} принадлежит другому старшему"

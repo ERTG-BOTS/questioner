@@ -1,9 +1,7 @@
 import datetime
 from typing import Optional
-from datetime import date
 
-from sqlalchemy import BIGINT, String, Boolean, Integer, Date, DateTime
-from sqlalchemy import Unicode
+from sqlalchemy import BIGINT, Boolean, DateTime, Integer, String, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TableNameMixin
@@ -35,7 +33,8 @@ class Question(Base, TableNameMixin):
     Inherited Methods:
         Inherits methods from Base and TableNameMixin classes, which provide additional functionality.
     """
-    __tablename__ = 'QuestionsNew'
+
+    __tablename__ = "QuestionsNew"
 
     Token: Mapped[str] = mapped_column(String(255), primary_key=True)
     TopicId: Mapped[int] = mapped_column(Integer, nullable=False)

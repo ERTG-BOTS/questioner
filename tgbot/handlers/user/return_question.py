@@ -46,8 +46,6 @@ async def return_finished_q(
 
     active_dialogs = await repo.questions.get_active_questions()
     question: Question = await repo.questions.get_question(token=callback_data.token)
-    duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
-    logger.info(duty, question.TopicDutyFullname)
 
     if question.Status == "closed" and user.FIO not in [
         d.EmployeeFullname for d in active_dialogs
@@ -79,7 +77,7 @@ async def return_finished_q(
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос после его закрытия
 
-<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Ответственный:</b> {user.FIO} {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",
@@ -148,6 +146,7 @@ async def q_info(
 ):
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
     question: Question = await repo.questions.get_question(token=callback_data.token)
+    duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
 
     if not question:
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
@@ -174,6 +173,7 @@ async def q_info(
 
 🗃️ <b>Регламент:</b> <a href='{question.CleverLink}'>тык</a>
 
+<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 
@@ -204,7 +204,6 @@ async def return_q_confirm(
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
         return
 
-    duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
     active_dialogs = await repo.questions.get_active_questions()
 
     if question.Status == "closed" and user.FIO not in [
@@ -244,7 +243,7 @@ async def return_q_confirm(
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
 
-<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Ответственный:</b> {user.FIO} {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",

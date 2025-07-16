@@ -9,9 +9,7 @@ ADMIN_ROLE = 10
 
 
 class AdminFilter(BaseFilter):
-    async def __call__(self, obj: Message, repo: RequestsRepo, **kwargs) -> bool:
-        user: User = await repo.users.get_user(user_id=obj.from_user.id)
-
+    async def __call__(self, obj: Message, user: User, **kwargs) -> bool:
         if user is None:
             return False
 

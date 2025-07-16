@@ -10,8 +10,13 @@ from infrastructure.database.repo.base import BaseRepo
 
 class QuestionsRepo(BaseRepo):
     async def add_question(
-            self, employee_chat_id: int, employee_fullname: str, topic_id: int,
-            question_text: str, start_time: date, clever_link: str
+        self,
+        employee_chat_id: int,
+        employee_fullname: str,
+        topic_id: int,
+        question_text: str,
+        start_time: date,
+        clever_link: str,
     ) -> Question:
         """
         Добавляет новый вопрос в базу данных.
@@ -48,7 +53,9 @@ class QuestionsRepo(BaseRepo):
 
         return question
 
-    async def update_question_end(self, token: str, end_time: date) -> Optional[Question]:
+    async def update_question_end(
+        self, token: str, end_time: date
+    ) -> Optional[Question]:
         """
         Обновляет дату окончания вопроса.
 
@@ -66,7 +73,9 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(question)
         return question
 
-    async def update_question_quality(self, token: str, quality: bool, is_duty: bool = False) -> Optional[Question]:
+    async def update_question_quality(
+        self, token: str, quality: bool, is_duty: bool = False
+    ) -> Optional[Question]:
         """
         Обновляет качество вопроса.
 
@@ -88,7 +97,9 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(question)
         return question
 
-    async def update_question_status(self, token: str, status: str) -> Optional[Question]:
+    async def update_question_status(
+        self, token: str, status: str
+    ) -> Optional[Question]:
         """
         Обновляет качество вопроса.
 
@@ -106,7 +117,9 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(question)
         return question
 
-    async def update_question_duty(self, token: str, topic_duty: Optional[str]) -> Optional[Question]:
+    async def update_question_duty(
+        self, token: str, topic_duty: Optional[str]
+    ) -> Optional[Question]:
         """
         Обновляет ответственного по вопросу.
 
@@ -124,7 +137,9 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(question)
         return question
 
-    async def get_question(self, token: str = None, topic_id: int = None) -> Optional[Question]:
+    async def get_question(
+        self, token: str = None, topic_id: int = None
+    ) -> Optional[Question]:
         """
         Получает вопрос по токену или идентификатору топика.
 
@@ -142,8 +157,9 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_questions_by_fullname(self, employee_fullname: str = None, duty_fullname: str = None) -> Sequence[
-        Question]:
+    async def get_questions_by_fullname(
+        self, employee_fullname: str = None, duty_fullname: str = None
+    ) -> Sequence[Question]:
         """
         Получает все вопросы сотрудника или старшего по ФИО.
 
@@ -155,13 +171,17 @@ class QuestionsRepo(BaseRepo):
             Sequence[Question]: Список вопросов сотрудника
         """
         if employee_fullname:
-            stmt = select(Question).where(Question.EmployeeFullname == employee_fullname)
+            stmt = select(Question).where(
+                Question.EmployeeFullname == employee_fullname
+            )
         else:
             stmt = select(Question).where(Question.TopicDutyFullname == duty_fullname)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_questions_count_today(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
+    async def get_questions_count_today(
+        self, employee_fullname: str = None, duty_fullname: str = None
+    ) -> int:
         """
         Получает количество вопросов специалиста или старшего за сегодня.
 
@@ -180,7 +200,7 @@ class QuestionsRepo(BaseRepo):
                 and_(
                     Question.EmployeeFullname == employee_fullname,
                     Question.StartTime >= today,
-                    Question.StartTime < tomorrow
+                    Question.StartTime < tomorrow,
                 )
             )
         else:
@@ -188,13 +208,15 @@ class QuestionsRepo(BaseRepo):
                 and_(
                     Question.TopicDutyFullname == duty_fullname,
                     Question.StartTime >= today,
-                    Question.StartTime < tomorrow
+                    Question.StartTime < tomorrow,
                 )
             )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_questions_count_last_month(self, employee_fullname: str = None, duty_fullname: str = None) -> int:
+    async def get_questions_count_last_month(
+        self, employee_fullname: str = None, duty_fullname: str = None
+    ) -> int:
         """
         Получает количество вопросов специалиста или старшего за текущий месяц.
 
@@ -224,7 +246,7 @@ class QuestionsRepo(BaseRepo):
                 and_(
                     Question.EmployeeFullname == employee_fullname,
                     Question.StartTime >= first_day_current_month,
-                    Question.StartTime < first_day_next_month
+                    Question.StartTime < first_day_next_month,
                 )
             )
         else:
@@ -232,13 +254,15 @@ class QuestionsRepo(BaseRepo):
                 and_(
                     Question.TopicDutyFullname == duty_fullname,
                     Question.StartTime >= first_day_current_month,
-                    Question.StartTime < first_day_next_month
+                    Question.StartTime < first_day_next_month,
                 )
             )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_questions_by_employee_chat_id(self, employee_chat_id: int) -> Sequence[Question]:
+    async def get_questions_by_employee_chat_id(
+        self, employee_chat_id: int
+    ) -> Sequence[Question]:
         """
         Получает все вопросы сотрудника по Chat ID.
 
@@ -282,7 +306,9 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_last_questions_by_chat_id(self, employee_chat_id: int, limit: int = 5) -> Sequence[Question]:
+    async def get_last_questions_by_chat_id(
+        self, employee_chat_id: int, limit: int = 5
+    ) -> Sequence[Question]:
         """
         Получает последние N закрытых вопросов пользователя за последние 24 часа по Chat ID, отсортированные по дате окончания.
 
@@ -295,16 +321,21 @@ class QuestionsRepo(BaseRepo):
         """
         # Вычисляем время 24 часа назад
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
-        
-        stmt = select(Question).where(
-            and_(
-                Question.EmployeeChatId == employee_chat_id,
-                Question.QuestionText != None,
-                Question.Status == "closed",
-                Question.EndTime.is_not(None),
-                Question.EndTime >= twenty_four_hours_ago
+
+        stmt = (
+            select(Question)
+            .where(
+                and_(
+                    Question.EmployeeChatId == employee_chat_id,
+                    Question.QuestionText != None,
+                    Question.Status == "closed",
+                    Question.EndTime.is_not(None),
+                    Question.EndTime >= twenty_four_hours_ago,
+                )
             )
-        ).order_by(Question.EndTime.desc()).limit(limit)
+            .order_by(Question.EndTime.desc())
+            .limit(limit)
+        )
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
@@ -318,18 +349,24 @@ class QuestionsRepo(BaseRepo):
         # Вычисляем время 24 часа назад
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
-        stmt = select(Question).where(
-            and_(
-                Question.QuestionText != None,
-                Question.Status == "closed",
-                Question.EndTime.is_not(None),
-                Question.EndTime >= twenty_four_hours_ago
+        stmt = (
+            select(Question)
+            .where(
+                and_(
+                    Question.QuestionText != None,
+                    Question.Status == "closed",
+                    Question.EndTime.is_not(None),
+                    Question.EndTime >= twenty_four_hours_ago,
+                )
             )
-        ).order_by(Question.EndTime.desc())
+            .order_by(Question.EndTime.desc())
+        )
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def delete_question(self, token: str = None, dialogs: Sequence[Question] = None) -> dict:
+    async def delete_question(
+        self, token: str = None, dialogs: Sequence[Question] = None
+    ) -> dict:
         """
         Удаляет вопрос(ы) из базы данных по токену или последовательности вопросов.
 
@@ -349,7 +386,7 @@ class QuestionsRepo(BaseRepo):
                 "success": False,
                 "deleted_count": 0,
                 "total_count": 0,
-                "errors": ["Either token or dialogs must be provided"]
+                "errors": ["Either token or dialogs must be provided"],
             }
 
         if token is not None and dialogs is not None:
@@ -357,7 +394,7 @@ class QuestionsRepo(BaseRepo):
                 "success": False,
                 "deleted_count": 0,
                 "total_count": 0,
-                "errors": ["Cannot specify both token and dialogs"]
+                "errors": ["Cannot specify both token and dialogs"],
             }
 
         deleted_count = 0
@@ -373,7 +410,7 @@ class QuestionsRepo(BaseRepo):
                         "success": False,
                         "deleted_count": 0,
                         "total_count": 1,
-                        "errors": [f"Question with token {token} not found"]
+                        "errors": [f"Question with token {token} not found"],
                     }
 
                 await self.session.delete(question)
@@ -391,7 +428,9 @@ class QuestionsRepo(BaseRepo):
                         await self.session.delete(question)
                         deleted_count += 1
                     except Exception as e:
-                        errors.append(f"Error deleting question {question.Token}: {str(e)}")
+                        errors.append(
+                            f"Error deleting question {question.Token}: {str(e)}"
+                        )
 
             # Commit all deletions
             await self.session.commit()
@@ -400,7 +439,7 @@ class QuestionsRepo(BaseRepo):
                 "success": deleted_count > 0,
                 "deleted_count": deleted_count,
                 "total_count": total_count,
-                "errors": errors
+                "errors": errors,
             }
 
         except Exception as e:
