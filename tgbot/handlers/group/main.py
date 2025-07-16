@@ -42,7 +42,7 @@ async def handle_q_message(message: Message, stp_db):
         await end_q_cmd(message, stp_db)
         return
 
-    if topic is not None:
+    if topic is not None and topic.Status != "closed":
         if not topic.TopicDutyFullname:
             await repo.dialogs.update_question_duty(
                 token=topic.Token, topic_duty=duty.FIO
@@ -106,7 +106,12 @@ async def handle_q_message(message: Message, stp_db):
 Это не твой чат!
 
 <i>Твое сообщение не отобразится специалисту</i>""")
+    elif topic.Status == "closed":
+        await message.reply("""<b>⚠️ Предупреждение</b>
 
+Текущий вопрос уже закрыт!
+
+<i>Твое сообщение не отобразится специалисту</i>""")
     else:
         await message.answer("""<b>⚠️ Ошибка</b>
 
