@@ -17,7 +17,7 @@ from tgbot.keyboards.user.main import (
     user_kb,
 )
 from tgbot.misc import dicts
-from tgbot.misc.helpers import disable_previous_buttons
+from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
 from tgbot.misc.states import AskQuestion
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import remove_question_timer, start_inactivity_timer
@@ -132,12 +132,87 @@ async def ask_question(
 
 
 @user_router.message(AskQuestion.question)
-async def question_text(message: Message, state: FSMContext, user: User):
+async def question_text(
+    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+):
     await state.update_data(question=message.text)
     await state.update_data(question_message_id=message.message_id)
 
     # Отключаем кнопки на предыдущих шагах
+    state_data = await state.get_data()
     await disable_previous_buttons(message, state)
+
+    # Если текст вопроса уже содержит ссылку на регламент - пропускаем отдельный шаг уточнения регламента и сразу отправляем вопрос
+    if "clever.ertelecom.ru/content/space/" in message.text or user.Role == 10:
+        clever_link = extract_clever_link(message.text)
+
+        employee_topics_today = await repo.questions.get_questions_count_today(
+            employee_fullname=user.FIO
+        )
+        employee_topics_month = await repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
+
+        new_topic = await message.bot.create_forum_topic(
+            chat_id=config.tg_bot.forum_id,
+            name=user.FIO
+            if config.tg_bot.division == "НЦК"
+            else f"{user.Division} | {user.FIO}",
+            icon_custom_emoji_id=dicts.topicEmojis["open"],
+        )  # Создание темы
+
+        new_question = await repo.questions.add_question(
+            employee_chat_id=message.chat.id,
+            employee_fullname=user.FIO,
+            topic_id=new_topic.message_thread_id,
+            start_time=datetime.datetime.now(),
+            question_text=state_data.get("question"),
+            clever_link=clever_link,
+        )  # Добавление вопроса в БД
+
+        await message.answer(
+            """<b>✅ Успешно</b>
+
+Вопрос передан на рассмотрение, в скором времени тебе ответят""",
+            reply_markup=cancel_question_kb(token=new_question.Token),
+        )
+
+        # Запускаем таймер неактивности для нового вопроса (только если статус "open")
+        if new_question.Status == "open" and config.tg_bot.activity_status:
+            start_inactivity_timer(new_question.Token, message.bot, repo)
+
+        topic_info_msg = await message.bot.send_message(
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=new_topic.message_thread_id,
+            text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+
+<b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
+
+<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<b>👑 РГ:</b> {user.Boss}
+
+<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
+            disable_web_page_preview=True,
+        )
+
+        await message.bot.copy_message(
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=new_topic.message_thread_id,
+            from_chat_id=message.chat.id,
+            message_id=state_data.get("question_message_id"),
+        )  # Копирование сообщения специалиста в тему
+
+        await message.bot.pin_chat_message(
+            chat_id=config.tg_bot.forum_id,
+            message_id=topic_info_msg.message_id,
+            disable_notification=True,
+        )  # Пин информации о специалисте
+
+        await state.clear()
+        logging.info(
+            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.Token}"
+        )
+        return
 
     response_msg = await message.answer(
         """<b>🗃️ Регламент</b>
@@ -146,7 +221,6 @@ async def question_text(message: Message, state: FSMContext, user: User):
         reply_markup=back_kb(),
     )
 
-    state_data = await state.get_data()
     messages_with_buttons = state_data.get("messages_with_buttons", [])
     messages_with_buttons.append(response_msg.message_id)
     await state.update_data(messages_with_buttons=messages_with_buttons)
@@ -194,7 +268,6 @@ async def clever_link_handler(
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
 
-    # Now add the question within the same session
     new_question = await repo.questions.add_question(
         employee_chat_id=message.chat.id,
         employee_fullname=user.FIO,
@@ -204,7 +277,6 @@ async def clever_link_handler(
         clever_link=clever_link,
     )  # Добавление вопроса в БД
 
-    # All database operations are now complete
     await message.answer(
         """<b>✅ Успешно</b>
 

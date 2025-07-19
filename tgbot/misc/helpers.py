@@ -1,3 +1,5 @@
+import re
+
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -27,3 +29,13 @@ async def check_premium_emoji(message: Message) -> tuple[bool, list[str]]:
             if entity.type == "custom_emoji":
                 emoji_ids.append(entity.custom_emoji_id)
     return len(emoji_ids) > 0, emoji_ids
+
+
+def extract_clever_link(message_text):
+    pattern = r"https?://[^\s]*clever\.ertelecom\.ru/content/space/[^\s]*"
+
+    match = re.search(pattern, message_text)
+    if match:
+        return match.group(0)
+    return None
+
