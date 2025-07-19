@@ -41,7 +41,6 @@ async def return_finished_q(
     """
     Возврат вопроса специалистом по клику на клавиатуру после закрытия вопроса.
     """
-    await callback.answer()
     await state.clear()
 
     active_dialogs = await repo.questions.get_active_questions()
@@ -195,7 +194,6 @@ async def return_q_confirm(
     repo: RequestsRepo,
 ):
     """Возврат выбранного специалистом вопроса в работу"""
-    await callback.answer()
     await state.clear()
 
     question = await repo.questions.get_question(token=callback_data.token)
