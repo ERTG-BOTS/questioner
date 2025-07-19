@@ -42,7 +42,7 @@ async def on_startup(bot: Bot):
 <b>- Закрывать по таймауту:</b> {timeout_msg}
 <b>- Удалять старые вопросы:</b> {remove_topics_msg}
 
-<blockquote>База данных: {'Основная' if bot_config.db.main_db == 'STPMain' else 'Запасная'}""",
+<blockquote>База данных: {'Основная' if bot_config.db.main_db == 'STPMain' else 'Запасная'}</blockquote>""",
     )
 
 def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, session_pool=None):
