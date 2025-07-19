@@ -16,12 +16,28 @@ from tgbot.services import broadcaster
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import remove_old_topics, scheduler
 
+bot_config = load_config(".env")
+
 logger = logging.getLogger(__name__)
 
 
-async def on_startup(bot: Bot, admin_ids: list[int]):
-    await broadcaster.broadcast(bot, admin_ids, "Bot started")
+async def on_startup(bot: Bot):
+    if bot_config.tg_bot.activity_status:
+        timeout_msg = f"Да ({bot_config.tg_bot.activity_warn_minutes}/{bot_config.tg_bot.activity_close_minutes} минут)"
+    else:
+        timeout_msg = "Нет"
 
+    await bot.send_message(
+        chat_id=bot_config.tg_bot.forum_id,
+        text=f"""<b>🚀 Запуск</b>
+
+Вопросник запущен со следующими параметрами:
+<b>- Направление:</b> {bot_config.tg_bot.division}
+<b>- Запрашивать регламент:</b> {"Да" if bot_config.tg_bot.ask_clever_link else "Нет"}
+<b>- Закрывать по таймауту:</b> {timeout_msg}
+
+<blockquote>База данных: {'Основная' if bot_config.db.main_db == 'STPMain' else 'Запасная'}""",
+    )
 
 def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, session_pool=None):
     """
@@ -68,11 +84,11 @@ def get_storage(config):
 async def main():
     setup_logging()
 
-    config = load_config(".env")
-    storage = get_storage(config)
+
+    storage = get_storage(bot_config)
 
     bot = Bot(
-        token=config.tg_bot.token, default=DefaultBotProperties(parse_mode="HTML")
+        token=bot_config.tg_bot.token, default=DefaultBotProperties(parse_mode="HTML")
     )
     await bot.set_my_commands(
         commands=[
@@ -86,7 +102,7 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
-    stp_db_engine = create_engine(config.db, db_name=config.db.main_db)
+    stp_db_engine = create_engine(bot_config.db, db_name=bot_config.db.main_db)
 
     stp_db = create_session_pool(stp_db_engine)
 
@@ -95,12 +111,12 @@ async def main():
 
     dp.include_routers(*routers_list)
 
-    register_global_middlewares(dp, config, bot, stp_db)
+    register_global_middlewares(dp, bot_config, bot, stp_db)
 
     scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])
     scheduler.start()
 
-    # await on_startup(bot, config.tg_bot.admin_ids)
+    await on_startup(bot)
     try:
         await dp.start_polling(bot)
     finally:
