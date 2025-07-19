@@ -352,7 +352,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn == True
+                    Question.AllowReturn
                 )
             )
             .order_by(Question.EndTime.desc())
@@ -379,7 +379,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn == True
+                    Question.AllowReturn
                 )
             )
             .order_by(Question.EndTime.desc())
