@@ -45,10 +45,13 @@ async def return_finished_q(
 
     active_dialogs = await repo.questions.get_active_questions()
     question: Question = await repo.questions.get_question(token=callback_data.token)
+    available_to_return_questions: Sequence[
+        Question
+    ] = await repo.questions.get_available_to_return_questions()
 
     if question.Status == "closed" and user.FIO not in [
         d.EmployeeFullname for d in active_dialogs
-    ]:
+    ] and question.Token in [d.Token for d in available_to_return_questions]:
         await repo.questions.update_question_status(token=question.Token, status="open")
 
         await callback.bot.edit_forum_topic(
@@ -95,6 +98,13 @@ async def return_finished_q(
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} не закрыт"
+        )
+    elif question.Token not in [d.Token for d in available_to_return_questions]:
+        await callback.answer(
+            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован", show_alert=True
+        )
+        logger.error(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад или заблокирован"
         )
 
 

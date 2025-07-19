@@ -233,10 +233,10 @@ async def return_q_duty(
         )
     elif question.Token not in [d.Token for d in available_to_return_questions]:
         await callback.answer(
-            "Вопрос не переоткрыть. Прошло более 24 часов", show_alert=True
+            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован", show_alert=True
         )
         logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад"
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад или возврат заблокирован"
         )
     elif question.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
