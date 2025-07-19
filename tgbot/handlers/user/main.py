@@ -139,12 +139,19 @@ async def question_text(
     await state.update_data(question_message_id=message.message_id)
 
     # Отключаем кнопки на предыдущих шагах
-    state_data = await state.get_data()
     await disable_previous_buttons(message, state)
 
-    # Если текст вопроса уже содержит ссылку на регламент - пропускаем отдельный шаг уточнения регламента и сразу отправляем вопрос
-    if "clever.ertelecom.ru/content/space/" in message.text or user.Role == 10:
-        clever_link = extract_clever_link(message.text)
+    state_data = await state.get_data()
+
+    # Проверяем условия для пропуска запроса ссылки на регламент
+    has_clever_link = "clever.ertelecom.ru/content/space/" in message.text
+    is_root_user = user.Role == 10
+    skip_clever_link = not config.tg_bot.ask_clever_link
+
+    # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
+    if has_clever_link or is_root_user or skip_clever_link:
+        # Извлекаем ссылку если она есть, иначе None
+        clever_link = extract_clever_link(message.text) if has_clever_link else None
 
         employee_topics_today = await repo.questions.get_questions_count_today(
             employee_fullname=user.FIO
@@ -167,7 +174,7 @@ async def question_text(
             topic_id=new_topic.message_thread_id,
             start_time=datetime.datetime.now(),
             question_text=state_data.get("question"),
-            clever_link=clever_link,
+            clever_link=clever_link,  # Может быть None если ссылки нет
         )  # Добавление вопроса в БД
 
         await message.answer(
@@ -181,17 +188,28 @@ async def question_text(
         if new_question.Status == "open" and config.tg_bot.activity_status:
             start_inactivity_timer(new_question.Token, message.bot, repo)
 
-        topic_info_msg = await message.bot.send_message(
-            chat_id=config.tg_bot.forum_id,
-            message_thread_id=new_topic.message_thread_id,
-            text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+        # Формируем текст сообщения в зависимости от наличия ссылки на регламент
+        if clever_link:
+            topic_text = f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" and user.Username != "Скрыто/не определено") else ""}
 
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 РГ:</b> {user.Boss}
 
-<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
+<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
+        else:
+            topic_text = f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" and user.Username != "Скрыто/не определено") else ""}
+
+<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<b>👑 РГ:</b> {user.Boss}
+
+<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
+
+        topic_info_msg = await message.bot.send_message(
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=new_topic.message_thread_id,
+            text=topic_text,
             disable_web_page_preview=True,
         )
 
@@ -214,6 +232,7 @@ async def question_text(
         )
         return
 
+    # Если дошли до сюда, значит нужно запросить ссылку на регламент
     response_msg = await message.answer(
         """<b>🗃️ Регламент</b>
 

@@ -46,7 +46,7 @@ class Question(Base, TableNameMixin):
     QuestionText: Mapped[str] = mapped_column(Unicode, nullable=False)
     StartTime: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     EndTime: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    CleverLink: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
+    CleverLink: Mapped[Optional[str]] = mapped_column(Unicode)
     QualityEmployee: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     QualityDuty: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     Status: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)

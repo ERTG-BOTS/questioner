@@ -25,6 +25,7 @@ class TgBot:
     division: str
 
     forum_id: str
+    ask_clever_link: bool
 
     activity_status: bool
     activity_warn_minutes: int
@@ -44,6 +45,7 @@ class TgBot:
         division = env.str("DIVISION")
 
         forum_id = env.str("FORUM_ID")
+        ask_clever_link = env.bool("ASK_CLEVER_LINK")
 
         activity_status = env.bool("ACTIVITY_STATUS")
         activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
@@ -56,6 +58,7 @@ class TgBot:
             use_redis=use_redis,
             division=division,
             forum_id=forum_id,
+            ask_clever_link=ask_clever_link,
             activity_status=activity_status,
             activity_warn_minutes=activity_warn_minutes,
             activity_close_minutes=activity_close_minutes,
