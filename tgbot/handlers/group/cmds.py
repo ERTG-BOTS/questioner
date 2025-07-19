@@ -44,12 +44,49 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                 token=question.Token, end_time=datetime.datetime.now()
             )
 
-            await message.reply(
-                """<b>🔒 Вопрос закрыт</b>
+            if question.QualityDuty is not None:
+                if question.QualityDuty:
+                    await message.bot.send_message(
+                        chat_id=config.tg_bot.forum_id,
+                        message_thread_id=question.TopicId,
+                        text=f"""<b>🔒 Вопрос закрыт</b>
+
+👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
+                        reply_markup=dialog_quality_kb(
+                            token=question.Token,
+                            role="duty",
+                            show_quality=None,
+                            allow_return=question.AllowReturn,
+                        ),
+                    )
+                else:
+                    await message.bot.send_message(
+                        chat_id=config.tg_bot.forum_id,
+                        message_thread_id=question.TopicId,
+                        text=f"""<b>🔒 Вопрос закрыт</b>
+
+👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
+                        reply_markup=dialog_quality_kb(
+                            token=question.Token,
+                            role="duty",
+                            show_quality=None,
+                            allow_return=question.AllowReturn,
+                        ),
+                    )
+            else:
+                await message.bot.send_message(
+                    chat_id=config.tg_bot.forum_id,
+                    message_thread_id=question.TopicId,
+                    text=f"""<b>🔒 Вопрос закрыт</b>
 
 Оцени, мог ли специалист решить его самостоятельно""",
-                reply_markup=dialog_quality_kb(token=question.Token, role="duty"),
-            )
+                    reply_markup=dialog_quality_kb(
+                        token=question.Token,
+                        role="duty",
+                        show_quality=True,
+                        allow_return=question.AllowReturn,
+                    ),
+                )
 
             await message.bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
@@ -183,31 +220,27 @@ async def release_q_cmd(message: Message, user: User, repo: RequestsRepo):
 @topic_cmds_router.callback_query(FinishedQuestion.filter(F.action == "release"))
 async def release_q_cb(callback: CallbackQuery, repo: RequestsRepo):
     question: Question = await repo.questions.get_question(
-            topic_id=callback.message.message_thread_id
-        )
+        topic_id=callback.message.message_thread_id
+    )
 
     if question is not None:
-        await repo.questions.update_question_duty(
-                token=question.Token, topic_duty=None
-            )
-        await repo.questions.update_question_status(
-                token=question.Token, status="open"
-            )
+        await repo.questions.update_question_duty(token=question.Token, topic_duty=None)
+        await repo.questions.update_question_status(token=question.Token, status="open")
 
         await callback.message.answer("""<b>🕊️ Вопрос освобожден</b>
 
 Для взятия вопроса в работу напишите сообщение в эту тему""")
         logger.info(
-                f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} освобожден"
-            )
+            f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.Token} освобожден"
+        )
     else:
         await callback.message.answer("""<b>⚠️ Ошибка</b>
 
 Не удалось найти текущую тему в базе, закрываю""")
         await callback.bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id,
-                message_thread_id=callback.message.message_thread_id,
-            )
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=callback.message.message_thread_id,
+        )
         logger.error(
-                f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Попытка освобождения вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {callback.message.message_thread_id}"
-            )
+            f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Попытка освобождения вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {callback.message.message_thread_id}"
+        )

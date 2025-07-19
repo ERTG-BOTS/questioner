@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Coroutine
 
 from aiogram.filters import BaseFilter
 from aiogram.types import Message

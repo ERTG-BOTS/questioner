@@ -48,15 +48,52 @@ async def active_question_end(
                 token=question.Token, end_time=datetime.datetime.now()
             )
 
-            await message.bot.send_message(
-                chat_id=config.tg_bot.forum_id,
-                message_thread_id=question.TopicId,
-                text=f"""<b>🔒 Вопрос закрыт</b>
+            if question.QualityDuty is not None:
+                if question.QualityDuty:
+                    await message.bot.send_message(
+                        chat_id=config.tg_bot.forum_id,
+                        message_thread_id=question.TopicId,
+                        text=f"""<b>🔒 Вопрос закрыт</b>
+    
+Специалист <b>{user.FIO}</b> закрыл вопрос
+👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
+                        reply_markup=dialog_quality_kb(
+                            token=question.Token,
+                            role="duty",
+                            show_quality=None,
+                            allow_return=question.AllowReturn,
+                        ),
+                    )
+                else:
+                    await message.bot.send_message(
+                        chat_id=config.tg_bot.forum_id,
+                        message_thread_id=question.TopicId,
+                        text=f"""<b>🔒 Вопрос закрыт</b>
 
 Специалист <b>{user.FIO}</b> закрыл вопрос
-Оцени, мог ли специалист решить вопрос самостоятельно""",
-                reply_markup=dialog_quality_kb(token=question.Token, role="duty"),
-            )
+👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
+                        reply_markup=dialog_quality_kb(
+                            token=question.Token,
+                            role="duty",
+                            show_quality=None,
+                            allow_return=question.AllowReturn,
+                        ),
+                    )
+            else:
+                await message.bot.send_message(
+                    chat_id=config.tg_bot.forum_id,
+                    message_thread_id=question.TopicId,
+                    text=f"""<b>🔒 Вопрос закрыт</b>
+
+Специалист <b>{user.FIO}</b> закрыл вопрос
+Оцени, мог ли специалист решить его самостоятельно""",
+                    reply_markup=dialog_quality_kb(
+                        token=question.Token,
+                        role="duty",
+                        show_quality=True,
+                        allow_return=question.AllowReturn,
+                    ),
+                )
 
             await message.bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
@@ -151,7 +188,9 @@ async def active_question(
     )
 
 
-@user_q_router.callback_query(QuestionQualitySpecialist.filter(F.return_question == False))
+@user_q_router.callback_query(
+    QuestionQualitySpecialist.filter(F.return_question == False)
+)
 async def dialog_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,

@@ -10,8 +10,10 @@ from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.group.cmds import end_q_cmd
 from tgbot.keyboards.user.main import (
+    QuestionAllowReturn,
     QuestionQualityDuty,
     closed_dialog_kb,
+    dialog_quality_kb,
     finish_question_kb,
 )
 from tgbot.misc import dicts
@@ -244,6 +246,34 @@ async def return_q_duty(
         )
 
 
+@topic_router.callback_query(IsTopicMessage() and QuestionAllowReturn.filter())
+async def change_q_return_status(
+    callback: CallbackQuery,
+    callback_data: QuestionQualityDuty,
+    repo: RequestsRepo,
+):
+    question = await repo.questions.update_question_return_status(
+        token=callback_data.token, status=callback_data.allow_return
+    )
+    if callback_data.allow_return:
+        await callback.answer(
+            "🟢 Возврат текущего вопроса был разрешен", show_alert=True
+        )
+    else:
+        await callback.answer(
+            "⛔ Возврат текущего вопроса был разрешен", show_alert=True
+        )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=dialog_quality_kb(
+            token=callback_data.token,
+            role="duty",
+            show_quality=True if question.QualityDuty is None else None,
+            allow_return=callback_data.allow_return,
+        )
+    )
+
+
 @topic_router.callback_query(IsTopicMessage() and QuestionQualityDuty.filter())
 async def quality_q_duty(
     callback: CallbackQuery,
@@ -264,7 +294,7 @@ async def quality_q_duty(
 
 <b>{user.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"),
+                reply_markup=closed_dialog_kb(token=callback_data.token, role="duty", ),
             )
         else:
             await callback.message.edit_text(
@@ -281,3 +311,4 @@ async def quality_q_duty(
     else:
         await callback.answer("Это не твой чат!", show_alert=True)
         logger.warning(f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.Token}. Вопрос принадлежит другому старшему")
+

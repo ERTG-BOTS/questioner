@@ -45,6 +45,7 @@ class QuestionsRepo(BaseRepo):
             StartTime=start_time,
             CleverLink=clever_link,
             Status="open",
+            AllowReturn=True,
         )
 
         self.session.add(question)
@@ -113,6 +114,26 @@ class QuestionsRepo(BaseRepo):
         question = await self.session.get(Question, token)
         if question:
             question.Status = status
+            await self.session.commit()
+            await self.session.refresh(question)
+        return question
+
+    async def update_question_return_status(
+        self, token: str, status: bool
+    ) -> Optional[Question]:
+        """
+        Обновляет возможность возврата вопроса.
+
+        Args:
+            token (str): Токен вопроса
+            status (str): Статус вопроса
+
+        Returns:
+            Question: Обновленный объект вопроса или None если не найден
+        """
+        question = await self.session.get(Question, token)
+        if question:
+            question.AllowReturn = status
             await self.session.commit()
             await self.session.refresh(question)
         return question
@@ -300,7 +321,7 @@ class QuestionsRepo(BaseRepo):
 
         # Считаем дату два месяца назад
         today = datetime.now()
-        two_months_ago = today - timedelta(days=1)  # Примерно 2 месяца
+        two_months_ago = today - timedelta(days=60)  # Примерно 2 месяца
 
         stmt = select(Question).where(Question.StartTime < two_months_ago)
         result = await self.session.execute(stmt)
@@ -331,6 +352,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
+                    Question.AllowReturn == True
                 )
             )
             .order_by(Question.EndTime.desc())
@@ -357,6 +379,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
+                    Question.AllowReturn == True
                 )
             )
             .order_by(Question.EndTime.desc())

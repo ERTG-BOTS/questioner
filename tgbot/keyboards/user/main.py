@@ -16,16 +16,21 @@ class MainMenu(CallbackData, prefix="menu"):
     menu: str
 
 
-class QuestionQualitySpecialist(CallbackData, prefix="d_quality_spec"):
+class QuestionQualitySpecialist(CallbackData, prefix="q_quality_spec"):
     answer: bool = False
     token: str = None
     return_question: bool = False
 
 
-class QuestionQualityDuty(CallbackData, prefix="d_quality_duty"):
+class QuestionQualityDuty(CallbackData, prefix="q_quality_duty"):
     answer: bool = False
     token: str = None
     return_question: bool = False
+
+
+class QuestionAllowReturn(CallbackData, prefix="q_allow_return"):
+    allow_return: bool = False
+    token: str = None
 
 
 class ReturnQuestion(CallbackData, prefix="return_q"):
@@ -89,7 +94,8 @@ def cancel_question_kb(token: str) -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(
-                text="🙅‍♂️ Отменить вопрос", callback_data=CancelQuestion(action="cancel", token=token).pack()
+                text="🙅‍♂️ Отменить вопрос",
+                callback_data=CancelQuestion(action="cancel", token=token).pack(),
             ),
         ]
     ]
@@ -131,7 +137,14 @@ def finish_question_kb() -> ReplyKeyboardMarkup:
 
 
 # Клавиатура оценки вопроса
-def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup:
+def dialog_quality_kb(
+    token: str,
+    allow_return: bool = True,
+    show_quality: bool = None,
+    role: str = "employee",
+) -> InlineKeyboardMarkup:
+    buttons = []
+
     if role == "employee":
         buttons = [
             [
@@ -168,17 +181,25 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
             ],
         ]
     else:
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    text="👎 Да",
-                    callback_data=QuestionQualityDuty(answer=True, token=token).pack(),
-                ),
-                InlineKeyboardButton(
-                    text="👍 Нет",
-                    callback_data=QuestionQualityDuty(answer=False, token=token).pack(),
-                ),
-            ],
+        if show_quality is not None:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text="👎 Да",
+                        callback_data=QuestionQualityDuty(
+                            answer=True, token=token
+                        ).pack(),
+                    ),
+                    InlineKeyboardButton(
+                        text="👍 Нет",
+                        callback_data=QuestionQualityDuty(
+                            answer=False, token=token
+                        ).pack(),
+                    ),
+                ],
+            )
+
+        buttons.append(
             [
                 InlineKeyboardButton(
                     text="🔄 Вернуть вопрос",
@@ -187,7 +208,29 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
                     ).pack(),
                 )
             ],
-        ]
+        )
+        if allow_return:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text="🟢 Запретить возврат",
+                        callback_data=QuestionAllowReturn(
+                            token=token, allow_return=False
+                        ).pack(),
+                    )
+                ]
+            )
+        else:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text="⛔ Разрешить возврат",
+                        callback_data=QuestionAllowReturn(
+                            token=token, allow_return=True
+                        ).pack(),
+                    )
+                ]
+            )
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,
@@ -195,7 +238,9 @@ def dialog_quality_kb(token: str, role: str = "employee") -> InlineKeyboardMarku
     return keyboard
 
 
-def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup:
+def closed_dialog_kb(
+    token: str, allow_return: bool = True, role: str = "employee"
+) -> InlineKeyboardMarkup:
     if role == "employee":
         buttons = [
             [
@@ -226,6 +271,28 @@ def closed_dialog_kb(token: str, role: str = "employee") -> InlineKeyboardMarkup
                 )
             ]
         ]
+        if allow_return:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text="🟢 Запретить возврат",
+                        callback_data=QuestionAllowReturn(
+                            token=token, allow_return=False
+                        ).pack(),
+                    )
+                ]
+            )
+        else:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text="⛔ Разрешить возврат",
+                        callback_data=QuestionAllowReturn(
+                            token=token, allow_return=True
+                        ).pack(),
+                    )
+                ]
+            )
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,
