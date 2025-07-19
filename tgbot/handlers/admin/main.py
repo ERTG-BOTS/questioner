@@ -1,9 +1,12 @@
 import logging
+from datetime import datetime
+from io import BytesIO
 
+import pandas as pd
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, BufferedInputFile
 
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
@@ -12,6 +15,7 @@ from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
 from tgbot.keyboards.admin.main import AdminMenu, ChangeRole, admin_kb
+from tgbot.keyboards.admin.stats_extract import extract_kb, StatsExtract
 from tgbot.keyboards.user.main import user_kb
 from tgbot.misc.dicts import role_names
 from tgbot.services.logger import setup_logging
@@ -26,13 +30,15 @@ logger = logging.getLogger(__name__)
 
 
 @admin_router.message(CommandStart(), ~IsTopicMessage())
-async def admin_start(message: Message, state: FSMContext, user: User, repo: RequestsRepo) -> None:
+async def admin_start(
+    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+) -> None:
     employee_topics_today = await repo.questions.get_questions_count_today(
-            employee_fullname=user.FIO
+        employee_fullname=user.FIO
     )
     employee_topics_month = await repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
-        )
+        employee_fullname=user.FIO
+    )
 
     division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
 
@@ -74,7 +80,11 @@ async def admin_start(message: Message, state: FSMContext, user: User, repo: Req
 
 @admin_router.callback_query(ChangeRole.filter())
 async def change_role(
-    callback: CallbackQuery, callback_data: ChangeRole, state: FSMContext, repo: RequestsRepo, user: User
+    callback: CallbackQuery,
+    callback_data: ChangeRole,
+    state: FSMContext,
+    repo: RequestsRepo,
+    user: User,
 ) -> None:
     await callback.answer("")
 
@@ -118,7 +128,6 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
     state_data = await state.get_data()
     await state.clear()
 
-
     await message.answer(
         f"""👋 Привет, <b>{user.FIO}</b>!
 
@@ -131,5 +140,3 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
     logging.info(
         f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой"
     )
-
-

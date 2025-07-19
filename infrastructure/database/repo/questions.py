@@ -1,9 +1,10 @@
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Any, Coroutine
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, Row, extract
 
+from infrastructure.database.models import Question, User
 from infrastructure.database.models.question import Question
 from infrastructure.database.repo.base import BaseRepo
 
@@ -53,6 +54,34 @@ class QuestionsRepo(BaseRepo):
         await self.session.refresh(question)
 
         return question
+
+    async def get_questions(
+        self,
+    ) -> Sequence[Row[tuple[Question]]]:
+        stmt = select(Question)
+        result = await self.session.execute(stmt)
+        return result.fetchall()
+
+    async def get_questions_by_month(
+        self, month: int, year: int, division: str = None
+    ) -> Sequence[Row[tuple[Question]]]:
+        stmt = select(Question).where(
+            extract("month", Question.StartTime) == month,
+            extract("year", Question.StartTime) == year,
+        )
+
+        if division:
+            if division == "НТП":
+                stmt = stmt.join(User, Question.EmployeeChatId == User.ChatId).where(
+                    User.Division.contains("НТП")
+                )
+            else:
+                stmt = stmt.join(User, Question.EmployeeChatId == User.ChatId).where(
+                    User.Division.contains("НЦК")
+                )
+
+        result = await self.session.execute(stmt)
+        return result.fetchall()
 
     async def update_question_end(
         self, token: str, end_time: date

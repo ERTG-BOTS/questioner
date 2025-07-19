@@ -15,8 +15,8 @@ def admin_kb() -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(
-                text="📥 Файл вопросов",
-                callback_data=AdminMenu(menu="dialog_download").pack(),
+                text="📥 Выгрузка статистики",
+                callback_data=AdminMenu(menu="stats_extract").pack(),
             ),
         ],
         [
