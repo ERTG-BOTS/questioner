@@ -1,12 +1,9 @@
 import logging
-from datetime import datetime
-from io import BytesIO
 
-import pandas as pd
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, BufferedInputFile
+from aiogram.types import CallbackQuery, Message
 
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
@@ -15,7 +12,6 @@ from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
 from tgbot.keyboards.admin.main import AdminMenu, ChangeRole, admin_kb
-from tgbot.keyboards.admin.stats_extract import extract_kb, StatsExtract
 from tgbot.keyboards.user.main import user_kb
 from tgbot.misc.dicts import role_names
 from tgbot.services.logger import setup_logging

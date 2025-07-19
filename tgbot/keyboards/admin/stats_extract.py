@@ -6,11 +6,10 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from tgbot.keyboards.admin.main import AdminMenu
 
 
-class StatsExtract(CallbackData, prefix="stats_extract"):
+class MonthStatsExtract(CallbackData, prefix="month_stats"):
     menu: str
-    month: int = None
-    year: int = None
-    months: int = None
+    month: int
+    year: int
 
 
 # Выбор дат для выгрузки статистики
@@ -36,13 +35,10 @@ def extract_kb() -> InlineKeyboardMarkup:
     buttons = []
 
     # Generate last 6 months in pairs (2 columns)
-    for i in range(0, 6, 2):
+    for i in range(0, 2, 2):
         row = []
 
         # First month in the row
-        month1_date = current_date.replace(day=1) - timedelta(days=i * 30)
-        month1_date = month1_date.replace(day=1)  # Ensure we're at the start of month
-        # Calculate actual previous months
         year1 = current_date.year
         month1 = current_date.month - i
         if month1 <= 0:
@@ -53,7 +49,7 @@ def extract_kb() -> InlineKeyboardMarkup:
         row.append(
             InlineKeyboardButton(
                 text=f"📅 {month1_name} {year1}",
-                callback_data=StatsExtract(
+                callback_data=MonthStatsExtract(
                     menu="month", month=month1, year=year1
                 ).pack(),
             )
@@ -71,7 +67,7 @@ def extract_kb() -> InlineKeyboardMarkup:
             row.append(
                 InlineKeyboardButton(
                     text=f"📅 {month2_name} {year2}",
-                    callback_data=StatsExtract(
+                    callback_data=MonthStatsExtract(
                         menu="month", month=month2, year=year2
                     ).pack(),
                 )
