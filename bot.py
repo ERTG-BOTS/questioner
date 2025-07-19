@@ -27,6 +27,11 @@ async def on_startup(bot: Bot):
     else:
         timeout_msg = "Нет"
 
+    if bot_config.tg_bot.remove_old_questions:
+        remove_topics_msg = f"Да (старше {bot_config.tg_bot.remove_old_questions_days} дней)"
+    else:
+        remove_topics_msg = "Нет"
+
     await bot.send_message(
         chat_id=bot_config.tg_bot.forum_id,
         text=f"""<b>🚀 Запуск</b>
@@ -35,6 +40,7 @@ async def on_startup(bot: Bot):
 <b>- Направление:</b> {bot_config.tg_bot.division}
 <b>- Запрашивать регламент:</b> {"Да" if bot_config.tg_bot.ask_clever_link else "Нет"}
 <b>- Закрывать по таймауту:</b> {timeout_msg}
+<b>- Удалять старые вопросы:</b> {remove_topics_msg}
 
 <blockquote>База данных: {'Основная' if bot_config.db.main_db == 'STPMain' else 'Запасная'}""",
     )
