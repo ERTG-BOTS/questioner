@@ -179,7 +179,6 @@ async def return_q_duty(
     user: User,
     repo: RequestsRepo,
 ):
-    await callback.answer()
     question: Question = await repo.questions.get_question(token=callback_data.token)
     available_to_return_questions: Sequence[
         Question
