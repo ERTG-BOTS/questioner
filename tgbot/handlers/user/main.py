@@ -39,7 +39,7 @@ async def main_cmd(message: Message, state: FSMContext, user: User, repo: Reques
         employee_fullname=user.FIO
     )
 
-    division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
+    division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
     state_data = await state.get_data()
 
     if user:
@@ -87,7 +87,7 @@ async def main_cb(
         employee_fullname=user.FIO
     )
 
-    division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
+    division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
     state_data = await state.get_data()
 
     await callback.message.edit_text(

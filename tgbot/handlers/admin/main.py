@@ -36,7 +36,7 @@ async def admin_start(
         employee_fullname=user.FIO
     )
 
-    division = "НТП" if config.tg_bot.division == "ntp" else "НЦК"
+    division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
 
     state_data = await state.get_data()
 
