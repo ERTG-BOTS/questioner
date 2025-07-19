@@ -25,9 +25,10 @@ class TgBot:
     division: str
 
     forum_id: str
+    ask_clever_link: bool
+
     remove_old_questions: bool
     remove_old_questions_days: int
-    ask_clever_link: bool
 
     activity_status: bool
     activity_warn_minutes: int
@@ -48,7 +49,7 @@ class TgBot:
 
         forum_id = env.str("FORUM_ID")
         remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
-        remove_old_questions_days = env.bool("REMOVE_OLD_QUESTIONS_DAYS")
+        remove_old_questions_days = env.int("REMOVE_OLD_QUESTIONS_DAYS")
         ask_clever_link = env.bool("ASK_CLEVER_LINK")
 
         activity_status = env.bool("ACTIVITY_STATUS")
