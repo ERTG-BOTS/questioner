@@ -1,12 +1,15 @@
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Optional, Sequence, Any, Coroutine
+from typing import Optional, Sequence
 
-from sqlalchemy import and_, func, or_, select, Row, extract
+from sqlalchemy import Row, and_, extract, func, or_, select
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.models.question import Question
 from infrastructure.database.repo.base import BaseRepo
+from tgbot.config import load_config
+
+config = load_config(".env")
 
 
 class QuestionsRepo(BaseRepo):
@@ -350,7 +353,7 @@ class QuestionsRepo(BaseRepo):
 
         # Считаем дату два месяца назад
         today = datetime.now()
-        two_months_ago = today - timedelta(days=60)  # Примерно 2 месяца
+        two_months_ago = today - timedelta(days=config.tg_bot.remove_old_questions_days)  # Примерно 2 месяца
 
         stmt = select(Question).where(Question.StartTime < two_months_ago)
         result = await self.session.execute(stmt)
@@ -381,7 +384,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn
+                    Question.AllowReturn,
                 )
             )
             .order_by(Question.EndTime.desc())
@@ -408,7 +411,7 @@ class QuestionsRepo(BaseRepo):
                     Question.Status == "closed",
                     Question.EndTime.is_not(None),
                     Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn
+                    Question.AllowReturn,
                 )
             )
             .order_by(Question.EndTime.desc())

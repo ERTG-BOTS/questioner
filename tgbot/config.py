@@ -25,6 +25,8 @@ class TgBot:
     division: str
 
     forum_id: str
+    remove_old_questions: bool
+    remove_old_questions_days: int
     ask_clever_link: bool
 
     activity_status: bool
@@ -45,6 +47,8 @@ class TgBot:
         division = env.str("DIVISION")
 
         forum_id = env.str("FORUM_ID")
+        remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
+        remove_old_questions_days = env.bool("REMOVE_OLD_QUESTIONS_DAYS")
         ask_clever_link = env.bool("ASK_CLEVER_LINK")
 
         activity_status = env.bool("ACTIVITY_STATUS")
@@ -58,6 +62,8 @@ class TgBot:
             use_redis=use_redis,
             division=division,
             forum_id=forum_id,
+            remove_old_questions=remove_old_questions,
+            remove_old_questions_days=remove_old_questions_days,
             ask_clever_link=ask_clever_link,
             activity_status=activity_status,
             activity_warn_minutes=activity_warn_minutes,
