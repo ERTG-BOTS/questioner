@@ -293,7 +293,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-<b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Старший <b>{user.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_dialog_duty_kb(
                     token=callback_data.token,
@@ -303,7 +303,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-<b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Старший <b>{user.FIO}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_dialog_duty_kb(token=callback_data.token),
             )

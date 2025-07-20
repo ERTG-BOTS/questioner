@@ -49,6 +49,7 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                         message_thread_id=question.TopicId,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
+👮‍♂️ Старший: <b>{question.TopicDutyFullname}</b>
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                         reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
@@ -61,7 +62,8 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                         chat_id=config.tg_bot.forum_id,
                         message_thread_id=question.TopicId,
                         text=f"""<b>🔒 Вопрос закрыт</b>
-
+                        
+👮‍♂️ Старший: <b>{question.TopicDutyFullname}</b>
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                         reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
@@ -74,7 +76,8 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                     chat_id=config.tg_bot.forum_id,
                     message_thread_id=question.TopicId,
                     text=f"""<b>🔒 Вопрос закрыт</b>
-
+                    
+👮‍♂️ Старший: <b>{question.TopicDutyFullname}</b>
 Оцени, мог ли специалист решить его самостоятельно""",
                     reply_markup=dialog_quality_duty_kb(
                         token=question.Token,
