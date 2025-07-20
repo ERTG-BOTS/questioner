@@ -32,16 +32,15 @@ class DatabaseMiddleware(BaseMiddleware):
 
             user: User = await repo.users.get_user(user_id=event.from_user.id)
 
-            # Handle different event types
             message_thread_id = None
             is_bot = False
 
             if isinstance(event, Message):
-                # Direct message
+                # Обычное текстовое сообщение
                 message_thread_id = event.message_thread_id
                 is_bot = event.from_user.is_bot
             elif isinstance(event, CallbackQuery) and event.message:
-                # CallbackQuery - check the original message
+                # CallbackQuery - проверяем оригинальное сообщение
                 message_thread_id = getattr(event.message, "message_thread_id", None)
                 is_bot = event.from_user.is_bot
 

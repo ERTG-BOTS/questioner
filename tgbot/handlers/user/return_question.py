@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
+from tgbot.keyboards.group.main import reopened_question_kb
 from tgbot.keyboards.user.main import (
     MainMenu,
     QuestionQualitySpecialist,
@@ -16,7 +17,6 @@ from tgbot.keyboards.user.main import (
     finish_question_kb,
     question_confirm_kb,
     questions_list_kb,
-    reopened_question_kb,
     user_kb,
 )
 from tgbot.misc import dicts
@@ -49,9 +49,11 @@ async def return_finished_q(
         Question
     ] = await repo.questions.get_available_to_return_questions()
 
-    if question.Status == "closed" and user.FIO not in [
-        d.EmployeeFullname for d in active_dialogs
-    ] and question.Token in [d.Token for d in available_to_return_questions]:
+    if (
+        question.Status == "closed"
+        and user.FIO not in [d.EmployeeFullname for d in active_dialogs]
+        and question.Token in [d.Token for d in available_to_return_questions]
+    ):
         await repo.questions.update_question_status(token=question.Token, status="open")
 
         await callback.bot.edit_forum_topic(
@@ -101,7 +103,8 @@ async def return_finished_q(
         )
     elif question.Token not in [d.Token for d in available_to_return_questions]:
         await callback.answer(
-            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован", show_alert=True
+            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован",
+            show_alert=True,
         )
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад или заблокирован"

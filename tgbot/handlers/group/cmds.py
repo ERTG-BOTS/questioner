@@ -8,10 +8,8 @@ from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessageWithCommand
-from tgbot.keyboards.user.main import (
-    FinishedQuestion,
-    dialog_quality_kb,
-)
+from tgbot.keyboards.group.main import dialog_quality_duty_kb, FinishedQuestion
+from tgbot.keyboards.user.main import dialog_quality_specialist_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
@@ -52,9 +50,8 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
-                        reply_markup=dialog_quality_kb(
+                        reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
-                            role="duty",
                             show_quality=None,
                             allow_return=question.AllowReturn,
                         ),
@@ -66,9 +63,8 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
-                        reply_markup=dialog_quality_kb(
+                        reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
-                            role="duty",
                             show_quality=None,
                             allow_return=question.AllowReturn,
                         ),
@@ -80,9 +76,8 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                     text=f"""<b>🔒 Вопрос закрыт</b>
 
 Оцени, мог ли специалист решить его самостоятельно""",
-                    reply_markup=dialog_quality_kb(
+                    reply_markup=dialog_quality_duty_kb(
                         token=question.Token,
-                        role="duty",
                         show_quality=True,
                         allow_return=question.AllowReturn,
                     ),
@@ -112,7 +107,7 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
                 chat_id=employee.ChatId,
                 text=f"""Старший <b>{user.FIO}</b> закрыл вопрос
 Оцени, помогли ли тебе решить его""",
-                reply_markup=dialog_quality_kb(token=question.Token, role="employee"),
+                reply_markup=dialog_quality_specialist_kb(token=question.Token),
             )
 
             logger.info(

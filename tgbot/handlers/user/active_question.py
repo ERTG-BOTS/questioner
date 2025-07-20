@@ -8,10 +8,11 @@ from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
+from tgbot.keyboards.group.main import dialog_quality_duty_kb
 from tgbot.keyboards.user.main import (
     QuestionQualitySpecialist,
-    closed_dialog_kb,
-    dialog_quality_kb,
+    dialog_quality_specialist_kb,
+    closed_dialog_specialist_kb,
 )
 from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
@@ -57,9 +58,8 @@ async def active_question_end(
     
 Специалист <b>{user.FIO}</b> закрыл вопрос
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
-                        reply_markup=dialog_quality_kb(
+                        reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
-                            role="duty",
                             show_quality=None,
                             allow_return=question.AllowReturn,
                         ),
@@ -72,9 +72,8 @@ async def active_question_end(
 
 Специалист <b>{user.FIO}</b> закрыл вопрос
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
-                        reply_markup=dialog_quality_kb(
+                        reply_markup=dialog_quality_duty_kb(
                             token=question.Token,
-                            role="duty",
                             show_quality=None,
                             allow_return=question.AllowReturn,
                         ),
@@ -87,9 +86,8 @@ async def active_question_end(
 
 Специалист <b>{user.FIO}</b> закрыл вопрос
 Оцени, мог ли специалист решить его самостоятельно""",
-                    reply_markup=dialog_quality_kb(
+                    reply_markup=dialog_quality_duty_kb(
                         token=question.Token,
-                        role="duty",
                         show_quality=True,
                         allow_return=question.AllowReturn,
                     ),
@@ -111,7 +109,7 @@ async def active_question_end(
             await message.answer(
                 """Ты закрыл вопрос
 Оцени, помогли ли тебе решить вопрос""",
-                reply_markup=dialog_quality_kb(token=question.Token, role="employee"),
+                reply_markup=dialog_quality_specialist_kb(token=question.Token),
             )
 
             logger.info(
@@ -206,13 +204,13 @@ async def dialog_quality_employee(
         await callback.message.edit_text(
             """Ты поставил оценку:
 👍 Старший <b>помог решить твой вопрос</b>""",
-            reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"),
+            reply_markup=closed_dialog_specialist_kb(token=callback_data.token),
         )
     else:
         await callback.message.edit_text(
             """Ты поставил оценку:
 👎 Старший <b>не помог решить твой вопрос</b>""",
-            reply_markup=closed_dialog_kb(token=callback_data.token, role="employee"),
+            reply_markup=closed_dialog_specialist_kb(token=callback_data.token),
         )
     logger.info(
         f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Выставлена оценка {callback_data.answer} вопросу {question.Token} от специалиста"

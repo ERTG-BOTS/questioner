@@ -9,11 +9,13 @@ from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.group.cmds import end_q_cmd
-from tgbot.keyboards.user.main import (
+from tgbot.keyboards.group.main import (
     QuestionAllowReturn,
     QuestionQualityDuty,
-    closed_dialog_kb,
-    dialog_quality_kb,
+    closed_dialog_duty_kb,
+    dialog_quality_duty_kb,
+)
+from tgbot.keyboards.user.main import (
     finish_question_kb,
 )
 from tgbot.misc import dicts
@@ -233,7 +235,8 @@ async def return_q_duty(
         )
     elif question.Token not in [d.Token for d in available_to_return_questions]:
         await callback.answer(
-            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован", show_alert=True
+            "Вопрос не переоткрыть. Прошло более 24 часов или возврат заблокирован",
+            show_alert=True,
         )
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.Token} был закрыт более 24 часов назад или возврат заблокирован"
@@ -264,9 +267,8 @@ async def change_q_return_status(
         )
 
     await callback.message.edit_reply_markup(
-        reply_markup=dialog_quality_kb(
+        reply_markup=dialog_quality_duty_kb(
             token=callback_data.token,
-            role="duty",
             show_quality=True if question.QualityDuty is None else None,
             allow_return=callback_data.allow_return,
         )
@@ -293,7 +295,9 @@ async def quality_q_duty(
 
 <b>{user.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_dialog_kb(token=callback_data.token, role="duty", ),
+                reply_markup=closed_dialog_duty_kb(
+                    token=callback_data.token,
+                ),
             )
         else:
             await callback.message.edit_text(
@@ -301,7 +305,7 @@ async def quality_q_duty(
 
 <b>{user.FIO}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_dialog_kb(token=callback_data.token, role="duty"),
+                reply_markup=closed_dialog_duty_kb(token=callback_data.token),
             )
 
         logger.info(
