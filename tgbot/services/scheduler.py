@@ -10,7 +10,8 @@ from sqlalchemy import Sequence
 from infrastructure.database.models import Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
-from tgbot.keyboards.user.main import closed_dialog_kb
+from tgbot.keyboards.group.main import closed_dialog_duty_kb
+from tgbot.keyboards.user.main import closed_dialog_specialist_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
@@ -138,7 +139,7 @@ async def auto_close_question(bot: Bot, question_token: str, repo: RequestsRepo)
                 chat_id=config.tg_bot.forum_id,
                 message_thread_id=question.TopicId,
                 text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
-                reply_markup=closed_dialog_kb(token=question_token, role="duty"),
+                reply_markup=closed_dialog_duty_kb(token=question_token),
             )
 
             await bot.send_message(
@@ -149,7 +150,7 @@ async def auto_close_question(bot: Bot, question_token: str, repo: RequestsRepo)
             await bot.send_message(
                 chat_id=question.EmployeeChatId,
                 text="Твой вопрос был закрыт из-за отсутствия активности в течение 10 минут",
-                reply_markup=closed_dialog_kb(token=question_token, role="employee"),
+                reply_markup=closed_dialog_specialist_kb(token=question_token),
             )
 
     except Exception as e:
