@@ -80,7 +80,7 @@ async def return_finished_q(
             message_thread_id=question.TopicId,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос
+Специалист <b>{user.FIO}</b> переоткрыл вопрос сразу после закрытия
 
 <b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 
@@ -95,7 +95,7 @@ async def return_finished_q(
     elif user.FIO in [d.EmployeeFullname for d in active_dialogs]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
         logger.info(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста есть другой открытй вопрос"
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста есть другой открытый вопрос"
         )
     elif question.Status != "closed":
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
