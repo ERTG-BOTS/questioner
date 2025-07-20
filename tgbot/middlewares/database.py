@@ -44,7 +44,7 @@ class DatabaseMiddleware(BaseMiddleware):
                 message_thread_id = getattr(event.message, "message_thread_id", None)
                 is_bot = event.from_user.is_bot
 
-            # Check if user exists
+            # Проверка на существования пользователя
             if not user and message_thread_id and not is_bot:
                 await self.bot.ban_chat_member(
                     chat_id=self.config.tg_bot.forum_id, user_id=event.from_user.id
@@ -57,7 +57,7 @@ class DatabaseMiddleware(BaseMiddleware):
                 )
                 return
 
-            # Check user role for forum access
+            # Проверка роли пользователя для доступа к группе
             if (
                 user
                 and user.Role not in [2, 3, 10]
@@ -75,18 +75,51 @@ class DatabaseMiddleware(BaseMiddleware):
                 )
                 return
 
-            # NEW: Check user division for private messages
-            if user and not message_thread_id and not is_bot:
+            # Проверка направления пользователя для всех взаимодействий (кроме ботов)
+            if user and not is_bot:
                 if self.config.tg_bot.division not in user.Division:
+                    # Определяем ссылки в зависимости от направления пользователя
                     if "НТП" in user.Division:
-                        correct_bot_link = "https://t.me/ntp2question_bot"
+                        bot_link = "https://t.me/ntp2question_bot"
+                        group_link = "https://t.me/+roCjjAKZk8NhYjQy"
                     else:
-                        correct_bot_link = "https://t.me/NCKQuestionBot"
+                        bot_link = "https://t.me/NCKQuestionBot"
+                        group_link = "https://t.me/+FJhHF8qbGJkzY2Iy"
 
-                    await self.bot.send_message(
-                        chat_id=event.from_user.id,
-                        text=f"Текущий бот работает только для <b>{self.config.tg_bot.division}</b>. Перейди в <a href='{correct_bot_link}'>своего бота</a>"
-                    )
+                    # Если это сообщение - отправляем предупреждение в лс
+                    try:
+                        await self.bot.send_message(
+                            chat_id=event.from_user.id,
+                            text=f"Текущий бот работает только для <b>{self.config.tg_bot.division}</b>. Перейди в <a href='{bot_link}'>своего бота</a>",
+                            disable_web_page_preview=True,
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"[Доступ] Не удалось отправить сообщение пользователю {event.from_user.id}: {e}"
+                        )
+
+                    # Если это топик - отправляем предложение перейти в группу своего направления
+                    if message_thread_id and isinstance(event, Message):
+                        try:
+                            await event.reply(
+                                f"<b>⚠️ Неверное направление</b>\n\nДанный бот работает только для <b>{self.config.tg_bot.division}</b>. Перейди в <a href='{group_link}'>свою группу</a>",
+                                disable_web_page_preview=True,
+                            )
+                        except Exception as e:
+                            logger.error(f"[Доступ] Не удалось ответить в топике: {e}")
+
+                    # Если это callback - отвечаем на него
+                    if isinstance(event, CallbackQuery):
+                        try:
+                            await event.answer(
+                                f"Данный бот работает только для {self.config.tg_bot.division}. Перейди в своего бота",
+                                show_alert=True,
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"[Доступ] Не удалось ответить на callback: {e}"
+                            )
+
                     logger.warning(
                         f"[Доступ] Пользователь {event.from_user.username} ({event.from_user.id}) из {user.Division} попытался использовать бот для {self.config.tg_bot.division}"
                     )
