@@ -54,6 +54,7 @@ async def return_finished_q(
         and user.FIO not in [d.EmployeeFullname for d in active_dialogs]
         and question.Token in [d.Token for d in available_to_return_questions]
     ):
+        duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
         await repo.questions.update_question_status(token=question.Token, status="open")
 
         await callback.bot.edit_forum_topic(
@@ -81,7 +82,7 @@ async def return_finished_q(
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос после его закрытия
 
-<b>👮‍♂️ Ответственный:</b> {user.FIO} {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",
@@ -185,7 +186,7 @@ async def q_info(
 
 🗃️ <b>Регламент:</b> <a href='{question.CleverLink}'>тык</a>
 
-<b>👮‍♂️ Ответственный:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 
@@ -220,6 +221,7 @@ async def return_q_confirm(
     if question.Status == "closed" and user.FIO not in [
         d.EmployeeFullname for d in active_dialogs
     ]:
+        duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
         # 1. Обновляем статус вопроса на "open"
         await repo.questions.update_question_status(token=question.Token, status="open")
 
@@ -254,7 +256,7 @@ async def return_q_confirm(
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
 
-<b>👮‍♂️ Ответственный:</b> {user.FIO} {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.QuestionText}</i></blockquote>""",

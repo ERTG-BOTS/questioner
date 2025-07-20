@@ -178,7 +178,7 @@ class QuestionsRepo(BaseRepo):
 
         Args:
             token (str): Токен вопроса
-            topic_duty (str): Ответственный за вопрос
+            topic_duty (str): Старший
 
         Returns:
             Question: Обновленный объект вопроса или None если не найден
