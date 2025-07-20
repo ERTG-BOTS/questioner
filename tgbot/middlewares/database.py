@@ -44,6 +44,7 @@ class DatabaseMiddleware(BaseMiddleware):
                 message_thread_id = getattr(event.message, "message_thread_id", None)
                 is_bot = event.from_user.is_bot
 
+            # Check if user exists
             if not user and message_thread_id and not is_bot:
                 await self.bot.ban_chat_member(
                     chat_id=self.config.tg_bot.forum_id, user_id=event.from_user.id
@@ -54,7 +55,10 @@ class DatabaseMiddleware(BaseMiddleware):
 
 Пользователь с id {event.from_user.id} не найден в базе""",
                 )
-            elif (
+                return
+
+            # Check user role for forum access
+            if (
                 user
                 and user.Role not in [2, 3, 10]
                 and message_thread_id
@@ -69,6 +73,24 @@ class DatabaseMiddleware(BaseMiddleware):
 
 Пользователь имеет роль {user.Role}, для доступа нужна одна из следующих ролей: 2, 3, 10""",
                 )
+                return
+
+            # NEW: Check user division for private messages
+            if user and not message_thread_id and not is_bot:
+                if self.config.tg_bot.division not in user.Division:
+                    if "НТП" in user.Division:
+                        correct_bot_link = "https://t.me/ntp2question_bot"
+                    else:
+                        correct_bot_link = "https://t.me/NCKQuestionBot"
+
+                    await self.bot.send_message(
+                        chat_id=event.from_user.id,
+                        text=f"Текущий бот работает только для <b>{self.config.tg_bot.division}</b>. Перейди в <a href='{correct_bot_link}'>своего бота</a>"
+                    )
+                    logger.warning(
+                        f"[Доступ] Пользователь {event.from_user.username} ({event.from_user.id}) из {user.Division} попытался использовать бот для {self.config.tg_bot.division}"
+                    )
+                    return
 
             data["session"] = session
             data["repo"] = repo
