@@ -135,7 +135,12 @@ async def ask_question(
 async def question_text(
     message: Message, state: FSMContext, user: User, repo: RequestsRepo
 ):
-    await state.update_data(question=message.text)
+    if message.caption:
+        await state.update_data(question=message.caption)
+        has_clever_link = "clever.ertelecom.ru/content/space/" in message.caption
+    else:
+        await state.update_data(question=message.text)
+        has_clever_link = "clever.ertelecom.ru/content/space/" in message.text
     await state.update_data(question_message_id=message.message_id)
 
     # Отключаем кнопки на предыдущих шагах
@@ -143,13 +148,11 @@ async def question_text(
 
     state_data = await state.get_data()
 
-    # Проверяем условия для пропуска запроса ссылки на регламент
-    has_clever_link = "clever.ertelecom.ru/content/space/" in message.text
     is_root_user = user.Role == 10
     skip_clever_link = not config.tg_bot.ask_clever_link
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
-    if has_clever_link or is_root_user or skip_clever_link:
+    if has_clever_link or skip_clever_link:
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
 
