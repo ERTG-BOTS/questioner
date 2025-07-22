@@ -152,7 +152,7 @@ async def question_text(
     skip_clever_link = not config.tg_bot.ask_clever_link
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
-    if has_clever_link or skip_clever_link:
+    if has_clever_link or is_root_user or skip_clever_link:
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
 
