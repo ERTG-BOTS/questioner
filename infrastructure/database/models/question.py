@@ -25,6 +25,7 @@ class Question(Base, TableNameMixin):
         QualityDuty (Mapped[Optional[bool]]): Качество вопроса от дежурного (может быть None).
         Status (Mapped[Optional[str]]): Статус вопроса.
         AllowReturn ([Mapped[Optional[bool]]): Статус доступности вопроса к возврату
+        ActivityStatusEnabled (Mapped[Optional[bool]]): Персональная настройка статуса активности для топика (может быть None)
 
     Methods:
         __repr__(): Returns a string representation of the Question object.
@@ -51,6 +52,9 @@ class Question(Base, TableNameMixin):
     QualityDuty: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     Status: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
     AllowReturn: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    ActivityStatusEnabled: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True, default=None
+    )
 
     def __repr__(self):
-        return f"<Question {self.Token} {self.TopicId} {self.TopicDutyFullname} {self.EmployeeFullname} {self.EmployeeChatId} {self.QuestionText} {self.StartTime} {self.EndTime} {self.CleverLink} {self.QualityEmployee} {self.QualityDuty} {self.Status} {self.AllowReturn}>"
+        return f"<Question {self.Token} {self.TopicId} {self.TopicDutyFullname} {self.EmployeeFullname} {self.EmployeeChatId} {self.QuestionText} {self.StartTime} {self.EndTime} {self.CleverLink} {self.QualityEmployee} {self.QualityDuty} {self.Status} {self.AllowReturn} {self.ActivityStatusEnabled}>"

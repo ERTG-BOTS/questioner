@@ -146,10 +146,9 @@ async def active_question(
         return
 
     # Перезапускаем таймер неактивности при сообщении от пользователя
-    if config.tg_bot.activity_status:
-        restart_inactivity_timer(
-            question_token=question.Token, bot=message.bot, repo=repo
-        )
+    await restart_inactivity_timer(
+        question_token=question.Token, bot=message.bot, repo=repo
+    )
 
     await message.bot.copy_message(
         from_chat_id=message.chat.id,

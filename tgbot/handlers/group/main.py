@@ -66,10 +66,9 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
             )
 
             # Запускаем таймер неактивности для нового вопроса
-            if config.tg_bot.activity_status:
-                start_inactivity_timer(
-                    question_token=question.Token, bot=message.bot, repo=repo
-                )
+            await start_inactivity_timer(
+                question_token=question.Token, bot=message.bot, repo=repo
+            )
 
             await message.bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
@@ -104,10 +103,9 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
         else:
             if question.TopicDutyFullname == user.FIO:
                 # Перезапускаем таймер неактивности при сообщении от дежурного
-                if config.tg_bot.activity_status:
-                    restart_inactivity_timer(
-                        question_token=question.Token, bot=message.bot, repo=repo
-                    )
+                await restart_inactivity_timer(
+                    question_token=question.Token, bot=message.bot, repo=repo
+                )
 
                 await message.bot.copy_message(
                     from_chat_id=config.tg_bot.forum_id,
@@ -259,11 +257,11 @@ async def change_q_return_status(
     )
     if callback_data.allow_return:
         await callback.answer(
-            "🟢 Возврат текущего вопроса был разрешен", show_alert=True
+            "🟢 Возврат текущего вопроса был разрешен"
         )
     else:
         await callback.answer(
-            "⛔ Возврат текущего вопроса был разрешен", show_alert=True
+            "⛔ Возврат текущего вопроса был разрешен"
         )
 
     await callback.message.edit_reply_markup(

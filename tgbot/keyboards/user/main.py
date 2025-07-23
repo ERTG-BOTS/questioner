@@ -32,6 +32,11 @@ class CancelQuestion(CallbackData, prefix="cancel_q"):
     token: str
 
 
+class ActivityStatusToggle(CallbackData, prefix="activity_toggle"):
+    action: str  # "enable" или "disable"
+    token: str
+
+
 def user_kb(is_role_changed: bool = False) -> InlineKeyboardMarkup:
     """
     Клавиатура главного меню.
@@ -260,6 +265,41 @@ def question_confirm_kb(token: str) -> InlineKeyboardMarkup:
                 text="↩️ Назад", callback_data=MainMenu(menu="return").pack()
             )
         ],
+    ]
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def activity_status_toggle_kb(
+    token: str, current_status: bool = None, global_status: bool = True
+) -> InlineKeyboardMarkup:
+    """
+    Клавиатура переключения статуса активности для топика
+
+    :param str token: Уникальный токен вопроса
+    :param bool current_status: Текущий статус активности для топика (None если не задан, используется глобальный)
+    :param bool global_status: Глобальный статус активности из конфига
+    :return: Объект встроенной клавиатуры для переключения статуса активности
+    """
+    # Определяем эффективный статус (персональный или глобальный)
+    effective_status = current_status if current_status is not None else global_status
+
+    if effective_status:
+        # Если активность включена - предлагаем отключить
+        button_text = "🟢 Автозакрытие включено"
+        action = "disable"
+    else:
+        # Если активность отключена - предлагаем включить
+        button_text = "🟠 Автозакрытие выключено"
+        action = "enable"
+
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=button_text,
+                callback_data=ActivityStatusToggle(action=action, token=token).pack(),
+            )
+        ]
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)

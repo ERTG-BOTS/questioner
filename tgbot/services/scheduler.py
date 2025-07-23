@@ -159,9 +159,25 @@ async def auto_close_question(bot: Bot, question_token: str, repo: RequestsRepo)
         )
 
 
-def start_inactivity_timer(question_token: str, bot: Bot, repo: RequestsRepo):
+async def start_inactivity_timer(question_token: str, bot: Bot, repo: RequestsRepo):
     """Запускает таймер неактивности для вопроса."""
     try:
+        # Проверяем, нужно ли запускать тайметр для этого вопроса
+        question = await repo.questions.get_question(token=question_token)
+        if not question:
+            return
+
+        # Определяем эффективный статус активности
+        activity_enabled = (
+            question.ActivityStatusEnabled
+            if question.ActivityStatusEnabled is not None
+            else config.tg_bot.activity_status
+        )
+
+        if not activity_enabled:
+            # Если активность отключена для этого топика, не запускаем таймер
+            return
+
         # Удаляем существующие задачи для этого вопроса
         stop_inactivity_timer(question_token)
 
@@ -212,7 +228,7 @@ def stop_inactivity_timer(question_token: str):
         )
 
 
-def restart_inactivity_timer(question_token: str, bot: Bot, repo):
+async def restart_inactivity_timer(question_token: str, bot: Bot, repo):
     """Перезапускает таймер неактивности для вопроса."""
     stop_inactivity_timer(question_token=question_token)
-    start_inactivity_timer(question_token=question_token, bot=bot, repo=repo)
+    await start_inactivity_timer(question_token=question_token, bot=bot, repo=repo)

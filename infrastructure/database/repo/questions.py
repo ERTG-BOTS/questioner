@@ -21,6 +21,7 @@ class QuestionsRepo(BaseRepo):
         question_text: str,
         start_time: date,
         clever_link: str,
+        activity_status_enabled: Optional[bool] = None,
     ) -> Question:
         """
         Добавляет новый вопрос в базу данных.
@@ -32,6 +33,7 @@ class QuestionsRepo(BaseRepo):
             question_text (str): Текст вопроса
             start_time (date): Дата начала вопроса
             clever_link (str): Ссылка на clever
+            activity_status_enabled (Optional[bool]): Персональная настройка статуса активности для топика
 
         Returns:
             Question: Созданный объект вопроса
@@ -50,6 +52,7 @@ class QuestionsRepo(BaseRepo):
             CleverLink=clever_link,
             Status="open",
             AllowReturn=True,
+            ActivityStatusEnabled=activity_status_enabled,
         )
 
         self.session.add(question)
@@ -166,6 +169,26 @@ class QuestionsRepo(BaseRepo):
         question = await self.session.get(Question, token)
         if question:
             question.AllowReturn = status
+            await self.session.commit()
+            await self.session.refresh(question)
+        return question
+
+    async def update_question_activity_status(
+        self, token: str, activity_status_enabled: Optional[bool]
+    ) -> Optional[Question]:
+        """
+        Обновляет персональную настройку статуса активности для топика.
+
+        Args:
+            token (str): Токен вопроса
+            activity_status_enabled (Optional[bool]): Статус активности (True/False/None)
+
+        Returns:
+            Question: Обновленный объект вопроса или None если не найден
+        """
+        question = await self.session.get(Question, token)
+        if question:
+            question.ActivityStatusEnabled = activity_status_enabled
             await self.session.commit()
             await self.session.refresh(question)
         return question
