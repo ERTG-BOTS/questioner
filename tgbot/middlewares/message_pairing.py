@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class MessagePairingMiddleware(BaseMiddleware):
     """
     Middleware to handle message pairing for edited messages.
-    
+
     This middleware finds the corresponding message pair when a message is edited,
     allowing handlers to edit the correct message instead of sending a new one.
     """
@@ -29,7 +29,7 @@ class MessagePairingMiddleware(BaseMiddleware):
         # Only process edited messages
         if not (hasattr(event, "edit_date") and event.edit_date):
             return await handler(event, data)
-        
+
         # Get repo from data (should be provided by DatabaseMiddleware)
         repo: RequestsRepo = data.get("repo")
         if not repo:
@@ -38,11 +38,12 @@ class MessagePairingMiddleware(BaseMiddleware):
 
         try:
             # Find the corresponding message pair for editing
-            connection: QuestionConnection = await repo.questions_connections.find_pair_for_edit(
-                chat_id=event.chat.id,
-                message_id=event.message_id
+            connection: QuestionConnection = (
+                await repo.questions_connections.find_pair_for_edit(
+                    chat_id=event.chat.id, message_id=event.message_id
+                )
             )
-            
+
             if connection:
                 # Determine target chat and message for editing
                 if event.chat.id == connection.user_chat_id:
@@ -57,7 +58,7 @@ class MessagePairingMiddleware(BaseMiddleware):
                     data["edit_target_message_id"] = connection.user_message_id
                     data["edit_target_thread_id"] = None
                     data["edit_direction"] = "topic_to_user"
-                
+
                 data["message_connection"] = connection
                 logger.info(
                     f"[Редактирование]: Найдена пара для редактирования {event.chat.id}:{event.message_id} -> "
@@ -70,7 +71,7 @@ class MessagePairingMiddleware(BaseMiddleware):
                 )
                 data["edit_target_chat_id"] = None
                 data["edit_target_message_id"] = None
-                
+
         except Exception as e:
             logger.error(f"Error in MessagePairingMiddleware: {e}")
             # Continue without edit pairing if there's an error
@@ -92,7 +93,7 @@ async def store_message_connection(
 ) -> QuestionConnection:
     """
     Helper function to store message connection in database.
-    
+
     Args:
         repo: Repository instance
         user_chat_id: User chat ID
@@ -102,7 +103,7 @@ async def store_message_connection(
         topic_thread_id: Thread ID in forum topic
         question_token: Associated question token
         direction: 'user_to_topic' or 'topic_to_user'
-        
+
     Returns:
         Created MessageConnection instance
     """

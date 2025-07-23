@@ -208,16 +208,22 @@ async def active_question_edited(
     question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if not question:
-        logger.error(f"[Редактирование] Не найдена вопроса с токеном {active_dialog_token}")
+        logger.error(
+            f"[Редактирование] Не найдена вопроса с токеном {active_dialog_token}"
+        )
         return
 
     # Check if the question is still active
     if question.Status == "closed":
-        logger.warning(f"[Редактирование] Специалист {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}")
+        logger.warning(
+            f"[Редактирование] Специалист {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}"
+        )
         return
 
-    pair_to_edit: QuestionConnection = await repo.questions_connections.find_pair_for_edit(
-        chat_id=message.chat.id, message_id=message.message_id
+    pair_to_edit: QuestionConnection = (
+        await repo.questions_connections.find_pair_for_edit(
+            chat_id=message.chat.id, message_id=message.message_id
+        )
     )
 
     await message.bot.edit_message_text(

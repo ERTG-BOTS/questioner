@@ -24,7 +24,7 @@ class QuestionsConnectionsRepo:
     ) -> QuestionConnection:
         """
         Add a new message connection between user chat and forum topic
-        
+
         Args:
             user_chat_id: User chat ID
             user_message_id: Message ID in user chat
@@ -33,7 +33,7 @@ class QuestionsConnectionsRepo:
             topic_thread_id: Thread ID in forum topic (optional)
             question_token: Associated question token
             direction: 'user_to_topic' or 'topic_to_user'
-        
+
         Returns:
             Created MessageConnection instance
         """
@@ -46,7 +46,7 @@ class QuestionsConnectionsRepo:
             question_token=question_token,
             direction=direction,
         )
-        
+
         self.session.add(connection)
         await self.session.commit()
         await self.session.flush()
@@ -84,11 +84,11 @@ class QuestionsConnectionsRepo:
     ) -> Optional[QuestionConnection]:
         """
         Find the corresponding message pair for editing
-        
+
         Args:
             chat_id: Chat ID of the message being edited
             message_id: Message ID being edited
-            
+
         Returns:
             MessageConnection if found, None otherwise
         """
@@ -96,9 +96,11 @@ class QuestionsConnectionsRepo:
         connection = await self.find_by_user_message(chat_id, message_id)
         if connection:
             return connection
-            
+
         # Try to find by topic message
-        connection: QuestionConnection = await self.find_by_topic_message(chat_id, message_id)
+        connection: QuestionConnection = await self.find_by_topic_message(
+            chat_id, message_id
+        )
         return connection
 
     async def get_connections_by_question(

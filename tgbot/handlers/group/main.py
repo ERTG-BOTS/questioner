@@ -203,11 +203,15 @@ async def handle_edited_message(message: Message, repo: RequestsRepo, user: User
         return
 
     if question.Status == "closed":
-        logger.warning(f"[Редактирование] Дежурный {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}")
+        logger.warning(
+            f"[Редактирование] Дежурный {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}"
+        )
         return
 
-    pair_to_edit: QuestionConnection = await repo.questions_connections.find_pair_for_edit(
-        chat_id=message.chat.id, message_id=message.message_id
+    pair_to_edit: QuestionConnection = (
+        await repo.questions_connections.find_pair_for_edit(
+            chat_id=message.chat.id, message_id=message.message_id
+        )
     )
 
     await message.bot.edit_message_text(

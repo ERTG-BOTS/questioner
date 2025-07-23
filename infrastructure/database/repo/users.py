@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Sequence
+from typing import Optional, Sequence
 
 from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,13 +11,14 @@ from tgbot.services.logger import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
 class UserRepo(BaseRepo):
     async def get_user(
-            self,
-            user_id: Optional[int] = None,
-            username: Optional[str] = None,
-            fullname: Optional[str] = None,
-            email: Optional[str] = None
+        self,
+        user_id: Optional[int] = None,
+        username: Optional[str] = None,
+        fullname: Optional[str] = None,
+        email: Optional[str] = None,
     ) -> Optional[User]:
         """
         Поиск пользователя в БД по фильтрам
@@ -56,9 +57,7 @@ class UserRepo(BaseRepo):
             return None
 
     async def get_users_by_fio_parts(
-            self,
-            fullname: str,
-            limit: int = 10
+        self, fullname: str, limit: int = 10
     ) -> Sequence[User]:
         """
         Поиск пользователей по частичному совпадению ФИО

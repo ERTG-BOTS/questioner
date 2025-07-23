@@ -1,4 +1,3 @@
-from typing import Optional
 
 from sqlalchemy import BIGINT
 from sqlalchemy import Unicode
@@ -32,7 +31,8 @@ class User(Base, TableNameMixin):
         Inherits methods from Base and TableNameMixin classes, which provide additional functionality.
 
     """
-    __tablename__ = 'RegisteredUsers'
+
+    __tablename__ = "RegisteredUsers"
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True)
     ChatId: Mapped[int] = mapped_column(BIGINT)

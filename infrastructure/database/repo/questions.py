@@ -376,7 +376,9 @@ class QuestionsRepo(BaseRepo):
 
         # Считаем дату два месяца назад
         today = datetime.now()
-        two_months_ago = today - timedelta(days=config.tg_bot.remove_old_questions_days)  # Примерно 2 месяца
+        two_months_ago = today - timedelta(
+            days=config.tg_bot.remove_old_questions_days
+        )  # Примерно 2 месяца
 
         stmt = select(Question).where(Question.StartTime < two_months_ago)
         result = await self.session.execute(stmt)
@@ -528,6 +530,6 @@ class QuestionsRepo(BaseRepo):
             return {
                 "success": False,
                 "deleted_count": deleted_count,
-                "total_count": total_count if 'total_count' in locals() else 0,
-                "errors": errors
+                "total_count": total_count if "total_count" in locals() else 0,
+                "errors": errors,
             }
