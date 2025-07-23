@@ -22,7 +22,11 @@ from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
 from tgbot.misc.states import AskQuestion
 from tgbot.services.logger import setup_logging
-from tgbot.services.scheduler import remove_question_timer, run_delete_timer, start_inactivity_timer
+from tgbot.services.scheduler import (
+    remove_question_timer,
+    run_delete_timer,
+    start_inactivity_timer,
+)
 
 user_router = Router()
 
@@ -474,7 +478,7 @@ async def toggle_activity_status(
             user_message_text = "🟢 <b>Автозакрытие включено</b>\n\nВопрос включил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
         else:
             user_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nДежурный выключил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
-        
+
         user_msg = await callback.bot.send_message(
             chat_id=question.EmployeeChatId,
             text=user_message_text,
@@ -487,7 +491,7 @@ async def toggle_activity_status(
             message_ids=[topic_msg.message_id],
             seconds=10,
         )
-        
+
         await run_delete_timer(
             bot=callback.bot,
             chat_id=question.EmployeeChatId,

@@ -38,4 +38,3 @@ def extract_clever_link(message_text):
     if match:
         return match.group(0)
     return None
-

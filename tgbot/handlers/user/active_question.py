@@ -214,4 +214,3 @@ async def dialog_quality_employee(
     logger.info(
         f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Выставлена оценка {callback_data.answer} вопросу {question.Token} от специалиста"
     )
-

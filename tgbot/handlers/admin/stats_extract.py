@@ -21,6 +21,7 @@ config = load_config(".env")
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
 @stats_router.callback_query(AdminMenu.filter(F.menu == "stats_extract"))
 async def extract_stats(callback: CallbackQuery) -> None:
     await callback.message.edit_text(

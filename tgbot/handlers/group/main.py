@@ -256,13 +256,9 @@ async def change_q_return_status(
         token=callback_data.token, status=callback_data.allow_return
     )
     if callback_data.allow_return:
-        await callback.answer(
-            "🟢 Возврат текущего вопроса был разрешен"
-        )
+        await callback.answer("🟢 Возврат текущего вопроса был разрешен")
     else:
-        await callback.answer(
-            "⛔ Возврат текущего вопроса был разрешен"
-        )
+        await callback.answer("⛔ Возврат текущего вопроса был разрешен")
 
     await callback.message.edit_reply_markup(
         reply_markup=dialog_quality_duty_kb(
@@ -311,5 +307,6 @@ async def quality_q_duty(
         )
     else:
         await callback.answer("Это не твой чат!", show_alert=True)
-        logger.warning(f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.Token}. Вопрос принадлежит другому старшему")
-
+        logger.warning(
+            f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.Token}. Вопрос принадлежит другому старшему"
+        )

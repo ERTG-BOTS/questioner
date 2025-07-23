@@ -30,5 +30,3 @@ def admin_kb() -> InlineKeyboardMarkup:
         inline_keyboard=buttons,
     )
     return keyboard
-
-
