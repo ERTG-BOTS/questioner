@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Sequence
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.models import QuestionConnection
@@ -112,3 +112,86 @@ class QuestionsConnectionsRepo:
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_old_connections(self) -> Sequence[QuestionConnection]:
+        """
+        Получает пары сообщений старше 2 дней.
+
+        Returns:
+            Sequence[QuestionConnection]: Список пар сообщений старше 2 ней
+        """
+        from datetime import datetime, timedelta
+
+        # Считаем дату два дня назад
+        today = datetime.now()
+        two_days_ago = today - timedelta(days=2)
+
+        stmt = select(QuestionConnection).where(
+            QuestionConnection.created_at < two_days_ago
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def delete_connections(
+        self, connections: Sequence[QuestionConnection] = None
+    ) -> dict:
+        """
+        Удаляет старые пары сообщений из базы данных.
+
+        Args:
+            connections (Sequence[QuestionConnection], optional): Последовательность связей для удаления.
+                                                                Если не указано, получает их автоматически.
+
+        Returns:
+            dict: Результат операции с ключами:
+                - success (bool): True если операция выполнена успешно
+                - deleted_count (int): Количество удаленных связей
+                - total_count (int): Общее количество связей для удаления
+                - errors (list): Список ошибок, если они возникли
+        """
+        deleted_count = 0
+        errors = []
+
+        try:
+            total_count = len(connections)
+
+            if total_count == 0:
+                return {
+                    "success": True,
+                    "deleted_count": 0,
+                    "total_count": 0,
+                    "errors": [],
+                }
+
+            # Удаляем каждую связь
+            for connection in connections:
+                try:
+                    # Обновляем объект в текущей сессии
+                    await self.session.refresh(connection)
+                    await self.session.delete(connection)
+                    deleted_count += 1
+                except Exception as e:
+                    errors.append(
+                        f"Error deleting connection {connection.id}: {str(e)}"
+                    )
+
+            await self.session.commit()
+
+            return {
+                "success": deleted_count > 0,
+                "deleted_count": deleted_count,
+                "total_count": total_count,
+                "errors": errors,
+            }
+
+        except Exception as e:
+            # Откатываем изменения в случае ошибки
+            await self.session.rollback()
+            errors.append(f"Database error: {str(e)}")
+
+            return {
+                "success": False,
+                "deleted_count": deleted_count,
+                "total_count": total_count if "total_count" in locals() else 0,
+                "errors": errors,
+            }

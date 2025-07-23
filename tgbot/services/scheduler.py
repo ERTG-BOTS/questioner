@@ -7,7 +7,7 @@ from aiogram.types import ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import Sequence
 
-from infrastructure.database.models import Question
+from infrastructure.database.models import Question, QuestionConnection
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.group.main import closed_dialog_duty_kb
@@ -68,19 +68,33 @@ async def remove_question(bot: Bot, question: Question, repo: RequestsRepo):
 
 async def remove_old_topics(bot: Bot, repo: RequestsRepo):
     old_questions: Sequence[Question] = await repo.questions.get_old_questions()
+    old_connections: Sequence[
+        QuestionConnection
+    ] = await repo.questions_connections.get_old_connections()
 
     for question in old_questions:
         await bot.delete_forum_topic(
             chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
         )
 
-    result = await repo.questions.delete_question(dialogs=old_questions)
-    logger.info(
-        f"[Старые топики] Успешно удалено {result['deleted_count']} из {result['total_count']} старых вопросов"
+    questions_result = await repo.questions.delete_question(dialogs=old_questions)
+    connections_result = await repo.questions_connections.delete_connections(
+        connections=old_connections
     )
-    if result["errors"]:
+    logger.info(
+        f"[Старые топики] Успешно удалено {questions_result['deleted_count']} из {questions_result['total_count']} старых вопросов"
+    )
+    logger.info(
+        f"[Старые пары] Успешно удалено {connections_result['deleted_count']} из {connections_result['total_count']} старых пар сообщений"
+    )
+
+    if questions_result["errors"]:
         logger.info(
-            f"[Старые топики] Произошла ошибка при удалении части вопросов: {result['errors']}"
+            f"[Старые топики] Произошла ошибка при удалении части вопросов: {questions_result['errors']}"
+        )
+    if connections_result["errors"]:
+        logger.info(
+            f"[Старые пары] Произошла ошибка при удалении части пар: {questions_result['errors']}"
         )
 
 
