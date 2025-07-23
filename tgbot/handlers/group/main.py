@@ -211,6 +211,7 @@ async def handle_edited_message(message: Message, repo: RequestsRepo, user: User
         )
         return
 
+    # Проверяем, что вопрос все еще активен
     if question.Status == "closed":
         logger.warning(
             f"[Редактирование] Дежурный {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}"

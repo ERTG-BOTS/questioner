@@ -146,13 +146,16 @@ async def active_question_end(
 
 @user_q_router.message(ActiveQuestion())
 async def active_question(
-    message: Message, active_dialog_token: str, repo: RequestsRepo
+    message: Message, active_dialog_token: str, repo: RequestsRepo, user: User
 ) -> None:
     question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if message.text == "✅️ Закрыть вопрос":
         await active_question_end(
-            message=message, repo=repo, active_dialog_token=active_dialog_token
+            message=message,
+            repo=repo,
+            user=user,
+            active_dialog_token=active_dialog_token,
         )
         return
 
