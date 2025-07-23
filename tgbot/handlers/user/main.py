@@ -362,13 +362,11 @@ async def clever_link_handler(
 @user_router.callback_query(CancelQuestion.filter(F.action == "cancel"))
 async def cancel_question(
     callback: CallbackQuery,
-    callback_data: CancelQuestion,
     state: FSMContext,
     repo: RequestsRepo,
     user: User,
+    question: Question,
 ):
-    question: Question = await repo.questions.get_question(token=callback_data.token)
-
     if (
         question
         and question.Status == "open"
@@ -407,11 +405,10 @@ async def toggle_activity_status(
     callback: CallbackQuery,
     callback_data: ActivityStatusToggle,
     repo: RequestsRepo,
+    question: Question,
 ):
     """Обработчик переключения статуса активности для топика"""
     try:
-        # Получаем вопрос из базы данных
-        question = await repo.questions.get_question(token=callback_data.token)
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)
             return

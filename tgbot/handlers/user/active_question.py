@@ -5,25 +5,26 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
     CallbackQuery,
-    Message,
-    ReplyKeyboardRemove,
     InputMediaAnimation,
     InputMediaAudio,
     InputMediaDocument,
     InputMediaPhoto,
     InputMediaVideo,
+    Message,
+    ReplyKeyboardRemove,
 )
 
-from infrastructure.database.models import Question, User, QuestionConnection
+from infrastructure.database.models import Question, QuestionConnection, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
 from tgbot.keyboards.group.main import dialog_quality_duty_kb
 from tgbot.keyboards.user.main import (
     QuestionQualitySpecialist,
-    dialog_quality_specialist_kb,
     closed_dialog_specialist_kb,
+    dialog_quality_specialist_kb,
 )
+from tgbot.middlewares.message_pairing import store_message_connection
 from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
@@ -32,7 +33,6 @@ from tgbot.services.scheduler import (
     run_delete_timer,
     stop_inactivity_timer,
 )
-from tgbot.middlewares.message_pairing import store_message_connection
 
 user_q_router = Router()
 
@@ -44,10 +44,12 @@ logger = logging.getLogger(__name__)
 
 @user_q_router.message(ActiveQuestionWithCommand("end"))
 async def active_question_end(
-    message: Message, repo: RequestsRepo, user: User, active_dialog_token: str = None
+    message: Message,
+    repo: RequestsRepo,
+    user: User,
+    question: Question,
+    active_dialog_token: str = None,
 ):
-    question: Question = await repo.questions.get_question(token=active_dialog_token)
-
     if question is not None:
         if question.Status != "closed":
             # Останавливаем таймер неактивности
@@ -146,15 +148,18 @@ async def active_question_end(
 
 @user_q_router.message(ActiveQuestion())
 async def active_question(
-    message: Message, active_dialog_token: str, repo: RequestsRepo, user: User
+    message: Message,
+    active_dialog_token: str,
+    repo: RequestsRepo,
+    user: User,
+    question: Question,
 ) -> None:
-    question: Question = await repo.questions.get_question(token=active_dialog_token)
-
     if message.text == "✅️ Закрыть вопрос":
         await active_question_end(
             message=message,
             repo=repo,
             user=user,
+            question=question,
             active_dialog_token=active_dialog_token,
         )
         return
@@ -216,12 +221,13 @@ async def active_question(
 
 @user_q_router.edited_message(ActiveQuestion())
 async def handle_edited_message(
-    message: Message, active_dialog_token: str, repo: RequestsRepo, user: User
+    message: Message,
+    active_dialog_token: str,
+    repo: RequestsRepo,
+    user: User,
+    question: Question,
 ) -> None:
     """Универсальный хендлер для редактируемых сообщений пользователей в активных вопросах"""
-
-    question: Question = await repo.questions.get_question(token=active_dialog_token)
-
     if not question:
         logger.error(
             f"[Редактирование] Не найден вопрос с токеном {active_dialog_token}"
@@ -350,8 +356,8 @@ async def dialog_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
     repo: RequestsRepo,
+    question: Question,
 ):
-    question: Question = await repo.questions.get_question(token=callback_data.token)
     await repo.questions.update_question_quality(
         token=callback_data.token, quality=callback_data.answer, is_duty=False
     )

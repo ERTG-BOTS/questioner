@@ -25,11 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 @topic_cmds_router.message(IsTopicMessageWithCommand("end"))
-async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
-    question: Question = await repo.questions.get_question(
-        topic_id=message.message_thread_id
-    )
-
+async def end_q_cmd(
+    message: Message, user: User, repo: RequestsRepo, question: Question
+):
     if question is not None:
         if question.Status != "closed" and question.TopicDutyFullname == user.FIO:
             # Останавливаем таймер неактивности
@@ -144,11 +142,9 @@ async def end_q_cmd(message: Message, user: User, repo: RequestsRepo):
 
 
 @topic_cmds_router.message(IsTopicMessageWithCommand("release"))
-async def release_q_cmd(message: Message, user: User, repo: RequestsRepo):
-    question: Question = await repo.questions.get_question(
-        topic_id=message.message_thread_id
-    )
-
+async def release_q_cmd(
+    message: Message, user: User, repo: RequestsRepo, question: Question
+):
     if question is not None:
         if (
             question.TopicDutyFullname is not None
@@ -216,11 +212,7 @@ async def release_q_cmd(message: Message, user: User, repo: RequestsRepo):
 
 
 @topic_cmds_router.callback_query(FinishedQuestion.filter(F.action == "release"))
-async def release_q_cb(callback: CallbackQuery, repo: RequestsRepo):
-    question: Question = await repo.questions.get_question(
-        topic_id=callback.message.message_thread_id
-    )
-
+async def release_q_cb(callback: CallbackQuery, repo: RequestsRepo, question: Question):
     if question is not None:
         await repo.questions.update_question_duty(token=question.Token, topic_duty=None)
         await repo.questions.update_question_status(token=question.Token, status="open")

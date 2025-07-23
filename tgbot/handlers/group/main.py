@@ -47,11 +47,9 @@ logger = logging.getLogger(__name__)
 
 
 @topic_router.message(IsTopicMessage())
-async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
-    question: Question = await repo.questions.get_question(
-        topic_id=message.message_thread_id
-    )
-
+async def handle_q_message(
+    message: Message, user: User, repo: RequestsRepo, question: Question
+):
     if message.text == "✅️ Закрыть вопрос":
         await end_q_cmd(message=message, repo=repo)
         return
@@ -199,12 +197,10 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
 
 
 @topic_router.edited_message(IsTopicMessage())
-async def handle_edited_message(message: Message, repo: RequestsRepo, user: User):
+async def handle_edited_message(
+    message: Message, repo: RequestsRepo, user: User, question: Question
+):
     """Универсальных хендлер для редактируемых сообщений в топиках"""
-    question: Question = await repo.questions.get_question(
-        topic_id=message.message_thread_id
-    )
-
     if not question:
         logger.error(
             f"[Редактирование] Не найдено вопроса для топика: {message.message_thread_id}"
@@ -339,11 +335,10 @@ async def handle_edited_message(message: Message, repo: RequestsRepo, user: User
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))
 async def return_q_duty(
     callback: CallbackQuery,
-    callback_data: QuestionQualityDuty,
     user: User,
     repo: RequestsRepo,
+    question: Question,
 ):
-    question: Question = await repo.questions.get_question(token=callback_data.token)
     available_to_return_questions: Sequence[
         Question
     ] = await repo.questions.get_available_to_return_questions()
@@ -412,13 +407,8 @@ async def return_q_duty(
 
 @topic_router.callback_query(IsTopicMessage() and QuestionAllowReturn.filter())
 async def change_q_return_status(
-    callback: CallbackQuery,
-    callback_data: QuestionQualityDuty,
-    repo: RequestsRepo,
+    callback: CallbackQuery, callback_data: QuestionQualityDuty, question: Question
 ):
-    question = await repo.questions.update_question_return_status(
-        token=callback_data.token, status=callback_data.allow_return
-    )
     if callback_data.allow_return:
         await callback.answer("🟢 Возврат текущего вопроса был разрешен")
     else:
@@ -439,9 +429,8 @@ async def quality_q_duty(
     callback_data: QuestionQualityDuty,
     user: User,
     repo: RequestsRepo,
+    question: Question,
 ):
-    question: Question = await repo.questions.get_question(token=callback_data.token)
-
     if question.TopicDutyFullname == user.FIO:
         await repo.questions.update_question_quality(
             token=callback_data.token, quality=callback_data.answer, is_duty=True

@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, Dict, Union
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import User
+from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import Config
 from tgbot.services.logger import setup_logging
@@ -133,9 +133,51 @@ class DatabaseMiddleware(BaseMiddleware):
                     )
                     return
 
+            question: Question = None
+            active_dialog_token: str = None
+
+            # Сперва пробуем получить вопрос из топика (для сообщений в топиках)
+            if message_thread_id and message_thread_id != 1:
+                try:
+                    question = await repo.questions.get_question(
+                        topic_id=message_thread_id
+                    )
+                    if question:
+                        logger.debug(
+                            f"[Вопрос] Загружен вопрос {question.Token} для топика {message_thread_id}"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"[Вопрос] Ошибка при загрузке вопроса для топика {message_thread_id}: {e}"
+                    )
+
+            # Если нет вопроса для топика, пытаемся получить активные вопросы специалиста (для личных сообщений)
+            elif user and not message_thread_id and not is_bot:
+                try:
+                    from sqlalchemy import Sequence
+
+                    current_dialogs: Sequence[
+                        Question
+                    ] = await repo.questions.get_active_questions()
+
+                    for dialog in current_dialogs:
+                        if dialog.EmployeeChatId == event.from_user.id:
+                            question = dialog
+                            active_dialog_token = dialog.Token
+                            logger.debug(
+                                f"[Вопрос] Автоматически загружен активный вопрос {question.Token} для пользователя {event.from_user.id}"
+                            )
+                            break
+                except Exception as e:
+                    logger.error(
+                        f"[Вопрос] Ошибка при загрузке активного вопроса пользователя {event.from_user.id}: {e}"
+                    )
+
             data["session"] = session
             data["repo"] = repo
             data["user"] = user
+            data["question"] = question
+            data["active_dialog_token"] = active_dialog_token
 
             result = await handler(event, data)
         return result

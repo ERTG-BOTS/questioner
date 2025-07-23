@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 @employee_return_q.callback_query(QuestionQualitySpecialist.filter(F.return_question))
 async def return_finished_q(
     callback: CallbackQuery,
-    callback_data: QuestionQualitySpecialist,
     state: FSMContext,
     repo: RequestsRepo,
     user: User,
+    question: Question,
 ):
     """
     Возврат вопроса специалистом по клику на клавиатуру после закрытия вопроса.
@@ -44,7 +44,6 @@ async def return_finished_q(
     await state.clear()
 
     active_dialogs = await repo.questions.get_active_questions()
-    question: Question = await repo.questions.get_question(token=callback_data.token)
     available_to_return_questions: Sequence[
         Question
     ] = await repo.questions.get_available_to_return_questions()
@@ -152,13 +151,12 @@ async def q_list(
 @employee_return_q.callback_query(ReturnQuestion.filter(F.action == "show"))
 async def q_info(
     callback: CallbackQuery,
-    callback_data: ReturnQuestion,
     state: FSMContext,
     user: User,
     repo: RequestsRepo,
+    question: Question,
 ):
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
-    question: Question = await repo.questions.get_question(token=callback_data.token)
     duty: User = await repo.users.get_user(fullname=question.TopicDutyFullname)
 
     if not question:
@@ -202,15 +200,13 @@ async def q_info(
 @employee_return_q.callback_query(ReturnQuestion.filter(F.action == "confirm"))
 async def return_q_confirm(
     callback: CallbackQuery,
-    callback_data: ReturnQuestion,
     state: FSMContext,
     user: User,
     repo: RequestsRepo,
+    question: Question,
 ):
     """Возврат выбранного специалистом вопроса в работу"""
     await state.clear()
-
-    question = await repo.questions.get_question(token=callback_data.token)
 
     if not question:
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
