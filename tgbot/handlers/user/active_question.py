@@ -2,7 +2,17 @@ import datetime
 import logging
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.exceptions import TelegramAPIError
+from aiogram.types import (
+    CallbackQuery,
+    Message,
+    ReplyKeyboardRemove,
+    InputMediaAnimation,
+    InputMediaAudio,
+    InputMediaDocument,
+    InputMediaPhoto,
+    InputMediaVideo,
+)
 
 from infrastructure.database.models import Question, User, QuestionConnection
 from infrastructure.database.repo.requests import RequestsRepo
@@ -202,36 +212,132 @@ async def active_question(
 
 
 @user_q_router.edited_message(ActiveQuestion())
-async def active_question_edited(
+async def handle_edited_message(
     message: Message, active_dialog_token: str, repo: RequestsRepo, user: User
 ) -> None:
+    """Универсальный хендлер для редактируемых сообщений пользователей в активных вопросах"""
+
     question: Question = await repo.questions.get_question(token=active_dialog_token)
 
     if not question:
         logger.error(
-            f"[Редактирование] Не найдена вопроса с токеном {active_dialog_token}"
+            f"[Редактирование] Не найден вопрос с токеном {active_dialog_token}"
         )
         return
 
-    # Check if the question is still active
+    # Проверяем, что вопрос все еще активен
     if question.Status == "closed":
         logger.warning(
             f"[Редактирование] Специалист {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}"
         )
         return
 
+    # Находим сообщение-пару для редактирования
     pair_to_edit: QuestionConnection = (
         await repo.questions_connections.find_pair_for_edit(
             chat_id=message.chat.id, message_id=message.message_id
         )
     )
 
-    await message.bot.edit_message_text(
-        chat_id=pair_to_edit.topic_chat_id,
-        message_id=pair_to_edit.topic_message_id,
-        text=message.text
-        + f"\n\n<i>Сообщение изменено специалистом — {datetime.datetime.now().strftime('%H:%M %d.%m.%Y')}</i>",
-    )
+    if not pair_to_edit:
+        logger.warning(
+            f"[Редактирование] Не найдена пара сообщений для редактирования: {message.chat.id}:{message.message_id}"
+        )
+        return
+
+    edit_timestamp = f"\n\n<i>Сообщение изменено специалистом — {datetime.datetime.now().strftime('%H:%M %d.%m.%Y')}</i>"
+
+    try:
+        # Проверяем сообщение на содержание медиа
+        if any(
+            [
+                message.photo,
+                message.video,
+                message.document,
+                message.audio,
+                message.animation,
+            ]
+        ):
+            new_media = None
+
+            if message.animation:
+                new_media = InputMediaAnimation(media=message.animation.file_id)
+            elif message.audio:
+                new_media = InputMediaAudio(media=message.audio.file_id)
+            elif message.document:
+                new_media = InputMediaDocument(media=message.document.file_id)
+            elif message.photo:
+                new_media = InputMediaPhoto(media=message.photo[-1].file_id)
+            elif message.video:
+                new_media = InputMediaVideo(media=message.video.file_id)
+
+            if not new_media:
+                logger.warning(
+                    "[Редактирование] Неподдерживаемый тип медиа для редактирования"
+                )
+                return
+
+            # Устанавливаем caption с меткой времени редактирования
+            if message.caption:
+                new_media.caption = message.caption + edit_timestamp
+                new_media.caption_entities = message.caption_entities
+            else:
+                new_media.caption = edit_timestamp.strip()
+
+            # Редактирование медиа в чате со специалистом
+            await message.bot.edit_message_media(
+                chat_id=pair_to_edit.topic_chat_id,
+                message_id=pair_to_edit.topic_message_id,
+                media=new_media,
+            )
+
+            # Уведомление дежурного об изменении сообщения специалистом
+            await message.bot.send_message(
+                chat_id=pair_to_edit.topic_chat_id,
+                message_thread_id=pair_to_edit.topic_thread_id,
+                text=f"""<b>♻️ Изменение сообщения</b>
+
+Специалист {user.FIO} отредактировал <a href='https://t.me/c/{config.tg_bot.forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+            )
+
+            logger.info(
+                f"[Редактирование] Медиа сообщение специалиста отредактировано в вопросе {question.Token}"
+            )
+
+        elif message.text:
+            # Обрабатываем текстовые сообщения
+            await message.bot.edit_message_text(
+                chat_id=pair_to_edit.topic_chat_id,
+                message_id=pair_to_edit.topic_message_id,
+                text=message.text + edit_timestamp,
+            )
+
+            # Уведомление дежурного об изменении сообщения специалистом
+            await message.bot.send_message(
+                chat_id=pair_to_edit.topic_chat_id,
+                message_thread_id=pair_to_edit.topic_thread_id,
+                text=f"""<b>♻️ Изменение сообщения</b>
+
+Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{config.tg_bot.forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+            )
+
+            logger.info(
+                f"[Редактирование] Текстовое сообщение специалиста отредактировано в вопросе {question.Token}"
+            )
+
+        else:
+            logger.warning(
+                "[Редактирование] Сообщение не содержит ни текста, ни медиа для редактирования"
+            )
+
+    except TelegramAPIError as e:
+        logger.error(
+            f"[Редактирование] Ошибка при редактировании сообщения специалиста в вопросе {question.Token}: {e}"
+        )
+    except Exception as e:
+        logger.error(
+            f"[Редактирование] Неожиданная ошибка при редактировании сообщения специалиста: {e}"
+        )
 
 
 @user_q_router.callback_query(

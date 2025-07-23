@@ -118,9 +118,9 @@ async def store_message_connection(
             direction=direction,
         )
         logger.info(
-            f"Stored message connection: {direction} - "
-            f"user:{user_chat_id}:{user_message_id} <-> "
-            f"topic:{topic_chat_id}:{topic_message_id}"
+            f"[Редактирование] Сохраняем пару из сообщений: {direction} - "
+            f"юзер:{user_chat_id}:{user_message_id} <-> "
+            f"топик:{topic_chat_id}:{topic_message_id}"
         )
         return connection
     except Exception as e:

@@ -3,12 +3,18 @@ from datetime import datetime
 from typing import Sequence
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
     CallbackQuery,
+    InputMediaAnimation,
+    InputMediaAudio,
+    InputMediaDocument,
+    InputMediaPhoto,
+    InputMediaVideo,
     Message,
 )
 
-from infrastructure.database.models import Question, User, QuestionConnection
+from infrastructure.database.models import Question, QuestionConnection, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
@@ -194,12 +200,15 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
 
 @topic_router.edited_message(IsTopicMessage())
 async def handle_edited_message(message: Message, repo: RequestsRepo, user: User):
+    """Универсальных хендлер для редактируемых сообщений в топиках"""
     question: Question = await repo.questions.get_question(
         topic_id=message.message_thread_id
     )
 
     if not question:
-        logger.error(f"No question found for topic_id: {message.message_thread_id}")
+        logger.error(
+            f"[Редактирование] Не найдено вопроса для топика: {message.message_thread_id}"
+        )
         return
 
     if question.Status == "closed":
@@ -208,18 +217,122 @@ async def handle_edited_message(message: Message, repo: RequestsRepo, user: User
         )
         return
 
+    # Находим сообщение-пару для редактирования
     pair_to_edit: QuestionConnection = (
         await repo.questions_connections.find_pair_for_edit(
             chat_id=message.chat.id, message_id=message.message_id
         )
     )
 
-    await message.bot.edit_message_text(
-        chat_id=pair_to_edit.user_chat_id,
-        message_id=pair_to_edit.user_message_id,
-        text=message.text
-        + f"\n\n<i>Сообщение изменено дежурным — {datetime.now().strftime('%H:%M %d.%m.%Y')}</i>",
-    )
+    if not pair_to_edit:
+        logger.warning(
+            f"[Редактирование] Не найдена пара сообщений для редактирования: {message.chat.id}:{message.message_id}"
+        )
+        return
+
+    edit_timestamp = f"\n\n<i>Сообщение изменено дежурным — {datetime.now().strftime('%H:%M %d.%m.%Y')}</i>"
+    bot_info = await message.bot.get_me()
+
+    try:
+        # Проверяем сообщение на содержание медиа
+        if any(
+            [
+                message.photo,
+                message.video,
+                message.document,
+                message.audio,
+                message.animation,
+            ]
+        ):
+            new_media = None
+
+            if message.animation:
+                new_media = InputMediaAnimation(media=message.animation.file_id)
+            elif message.audio:
+                new_media = InputMediaAudio(media=message.audio.file_id)
+            elif message.document:
+                new_media = InputMediaDocument(media=message.document.file_id)
+            elif message.photo:
+                new_media = InputMediaPhoto(media=message.photo[-1].file_id)
+            elif message.video:
+                new_media = InputMediaVideo(media=message.video.file_id)
+
+            if not new_media:
+                logger.warning(
+                    "[Редактирование] Неподдерживаемый тип медиа для редактирования"
+                )
+                return
+
+            if message.caption:
+                new_media.caption = message.caption + edit_timestamp
+                new_media.caption_entities = message.caption_entities
+            else:
+                new_media.caption = edit_timestamp.strip()
+
+            # Редактирование медиа в чате со специалистом
+            await message.bot.edit_message_media(
+                chat_id=pair_to_edit.user_chat_id,
+                message_id=pair_to_edit.user_message_id,
+                media=new_media,
+            )
+
+            # Уведомление специалиста об изменении сообщения дежурным
+            await message.bot.send_message(
+                chat_id=pair_to_edit.user_chat_id,
+                text=f"""<b>♻️ Изменение сообщения</b>
+
+Дежурный <b>{user.FIO}</b> отредактировал сообщение:""",
+            )
+
+            await message.bot.forward_message(
+                chat_id=pair_to_edit.user_chat_id,
+                from_chat_id=pair_to_edit.user_chat_id,
+                message_id=pair_to_edit.user_message_id,
+            )
+
+            logger.info(
+                f"[Редактирование] Медиа сообщение отредактировано в вопросе {question.Token}"
+            )
+
+        elif message.text:
+            # Обрабатываем сообщения без медиа
+            await message.bot.edit_message_text(
+                chat_id=pair_to_edit.user_chat_id,
+                message_id=pair_to_edit.user_message_id,
+                text=message.text + edit_timestamp,
+            )
+
+            # Уведомление специалиста об изменении сообщения дежурным
+            await message.bot.send_message(
+                chat_id=pair_to_edit.user_chat_id,
+                text=f"""<b>♻️ Изменение сообщения</b>
+
+Дежурный <b>{user.FIO}</b> отредактировал сообщение:""",
+            )
+
+            await message.bot.forward_message(
+                chat_id=pair_to_edit.user_chat_id,
+                from_chat_id=pair_to_edit.user_chat_id,
+                message_id=pair_to_edit.user_message_id,
+            )
+
+            logger.info(
+                f"[Редактирование] Текстовое сообщение отредактировано в вопросе {question.Token}"
+            )
+
+        else:
+            logger.warning(
+                "[Редактирование] Сообщение не содержит ни текста, ни медиа для редактирования"
+            )
+
+    except TelegramAPIError as e:
+        logger.error(
+            f"[Редактирование] Ошибка при редактировании сообщения в вопросе {question.Token}: {e}"
+        )
+    except Exception as e:
+        logger.error(
+            f"[Редактирование] Неожиданная ошибка при редактировании сообщения: {e}"
+        )
 
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))

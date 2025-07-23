@@ -43,8 +43,8 @@ class DatabaseMiddleware(BaseMiddleware):
                 # Log if this is an edited message
                 if hasattr(event, "edit_date") and event.edit_date:
                     logger.info(
-                        f"[Edited Message] User {event.from_user.username} ({event.from_user.id}) "
-                        f"edited message in thread {message_thread_id}"
+                        f"[Редактирование] Пользователь {event.from_user.username} ({event.from_user.id}) "
+                        f"отредактировал сообщение в топике {message_thread_id}"
                     )
 
             elif isinstance(event, CallbackQuery) and event.message:
