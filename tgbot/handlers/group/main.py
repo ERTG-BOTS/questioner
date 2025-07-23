@@ -1,10 +1,14 @@
 import logging
+from datetime import datetime
 from typing import Sequence
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import (
+    CallbackQuery,
+    Message,
+)
 
-from infrastructure.database.models import Question, User
+from infrastructure.database.models import Question, User, QuestionConnection
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
@@ -18,6 +22,7 @@ from tgbot.keyboards.group.main import (
 from tgbot.keyboards.user.main import (
     finish_question_kb,
 )
+from tgbot.middlewares.message_pairing import store_message_connection
 from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
@@ -107,11 +112,26 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
                     question_token=question.Token, bot=message.bot, repo=repo
                 )
 
-                await message.bot.copy_message(
+                copied_message = await message.bot.copy_message(
                     from_chat_id=config.tg_bot.forum_id,
                     message_id=message.message_id,
                     chat_id=question.EmployeeChatId,
                 )
+
+                # Сохраняем коннект сообщений
+                try:
+                    await store_message_connection(
+                        repo=repo,
+                        user_chat_id=question.EmployeeChatId,
+                        user_message_id=copied_message.message_id,
+                        topic_chat_id=int(config.tg_bot.forum_id),
+                        topic_message_id=message.message_id,
+                        topic_thread_id=question.TopicId,
+                        question_token=question.Token,
+                        direction="topic_to_user",
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to store message connection: {e}")
 
                 # Уведомление о премиум эмодзи
                 have_premium_emoji, emoji_ids = await check_premium_emoji(message)
@@ -170,6 +190,32 @@ async def handle_q_message(message: Message, user: User, repo: RequestsRepo):
         logger.error(
             f"[Вопрос] - [Общение] Не удалось найти вопрос в базе с TopicId = {message.message_thread_id}. Закрыли тему"  # Fixed: should be message_thread_id
         )
+
+
+@topic_router.edited_message(IsTopicMessage())
+async def handle_edited_message(message: Message, repo: RequestsRepo, user: User):
+    question: Question = await repo.questions.get_question(
+        topic_id=message.message_thread_id
+    )
+
+    if not question:
+        logger.error(f"No question found for topic_id: {message.message_thread_id}")
+        return
+
+    if question.Status == "closed":
+        logger.warning(f"[Редактирование] Дежурный {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}")
+        return
+
+    pair_to_edit: QuestionConnection = await repo.questions_connections.find_pair_for_edit(
+        chat_id=message.chat.id, message_id=message.message_id
+    )
+
+    await message.bot.edit_message_text(
+        chat_id=pair_to_edit.user_chat_id,
+        message_id=pair_to_edit.user_message_id,
+        text=message.text
+        + f"\n\n<i>Сообщение изменено дежурным — {datetime.now().strftime('%H:%M %d.%m.%Y')}</i>",
+    )
 
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))

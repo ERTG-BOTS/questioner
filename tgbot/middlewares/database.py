@@ -36,9 +36,17 @@ class DatabaseMiddleware(BaseMiddleware):
             is_bot = False
 
             if isinstance(event, Message):
-                # Обычное текстовое сообщение
+                # Handle both regular messages and edited messages
                 message_thread_id = event.message_thread_id
                 is_bot = event.from_user.is_bot
+
+                # Log if this is an edited message
+                if hasattr(event, "edit_date") and event.edit_date:
+                    logger.info(
+                        f"[Edited Message] User {event.from_user.username} ({event.from_user.id}) "
+                        f"edited message in thread {message_thread_id}"
+                    )
+
             elif isinstance(event, CallbackQuery) and event.message:
                 # CallbackQuery - проверяем оригинальное сообщение
                 message_thread_id = getattr(event.message, "message_thread_id", None)

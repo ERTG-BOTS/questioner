@@ -4,7 +4,7 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from infrastructure.database.models import Question, User
+from infrastructure.database.models import Question, User, QuestionConnection
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
@@ -22,6 +22,7 @@ from tgbot.services.scheduler import (
     run_delete_timer,
     stop_inactivity_timer,
 )
+from tgbot.middlewares.message_pairing import store_message_connection
 
 user_q_router = Router()
 
@@ -150,12 +151,27 @@ async def active_question(
         question_token=question.Token, bot=message.bot, repo=repo
     )
 
-    await message.bot.copy_message(
+    copied_message = await message.bot.copy_message(
         from_chat_id=message.chat.id,
         message_id=message.message_id,
         chat_id=config.tg_bot.forum_id,
         message_thread_id=question.TopicId,
     )
+
+    # Сохраняем коннект сообщений
+    try:
+        await store_message_connection(
+            repo=repo,
+            user_chat_id=message.chat.id,
+            user_message_id=message.message_id,
+            topic_chat_id=int(config.tg_bot.forum_id),
+            topic_message_id=copied_message.message_id,
+            topic_thread_id=question.TopicId,
+            question_token=question.Token,
+            direction="user_to_topic",
+        )
+    except Exception as e:
+        logger.error(f"Failed to store message connection: {e}")
 
     # Уведомление о премиум эмодзи
     have_premium_emoji, emoji_ids = await check_premium_emoji(message)
@@ -182,6 +198,33 @@ async def active_question(
 
     logger.info(
         f"[Вопрос] - [Общение] Токен: {question.Token} | Специалист: {question.EmployeeFullname} | Сообщение: {message.text}"
+    )
+
+
+@user_q_router.edited_message(ActiveQuestion())
+async def active_question_edited(
+    message: Message, active_dialog_token: str, repo: RequestsRepo, user: User
+) -> None:
+    question: Question = await repo.questions.get_question(token=active_dialog_token)
+
+    if not question:
+        logger.error(f"[Редактирование] Не найдена вопроса с токеном {active_dialog_token}")
+        return
+
+    # Check if the question is still active
+    if question.Status == "closed":
+        logger.warning(f"[Редактирование] Специалист {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.Token}")
+        return
+
+    pair_to_edit: QuestionConnection = await repo.questions_connections.find_pair_for_edit(
+        chat_id=message.chat.id, message_id=message.message_id
+    )
+
+    await message.bot.edit_message_text(
+        chat_id=pair_to_edit.topic_chat_id,
+        message_id=pair_to_edit.topic_message_id,
+        text=message.text
+        + f"\n\n<i>Сообщение изменено специалистом — {datetime.datetime.now().strftime('%H:%M %d.%m.%Y')}</i>",
     )
 
 

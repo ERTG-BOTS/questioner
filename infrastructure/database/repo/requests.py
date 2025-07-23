@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.repo.questions import QuestionsRepo
 from infrastructure.database.repo.users import UserRepo
+from infrastructure.database.repo.connections import QuestionsConnectionsRepo
 
 
 @dataclass
@@ -29,3 +30,10 @@ class RequestsRepo:
         The QuestionsRepo repository sessions are required to manage dialog questions operations.
         """
         return QuestionsRepo(self.session)
+
+    @property
+    def questions_connections(self) -> QuestionsConnectionsRepo:
+        """
+        The MessageConnectionRepo repository sessions are required to manage message connections.
+        """
+        return QuestionsConnectionsRepo(self.session)

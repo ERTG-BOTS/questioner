@@ -12,6 +12,7 @@ from tgbot.config import Config, load_config
 from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.middlewares.database import DatabaseMiddleware
+from tgbot.middlewares.message_pairing import MessagePairingMiddleware
 from tgbot.services import broadcaster
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import remove_old_topics, scheduler
@@ -65,6 +66,10 @@ def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, sessio
     for middleware_type in middleware_types:
         dp.message.outer_middleware(middleware_type)
         dp.callback_query.outer_middleware(middleware_type)
+        dp.edited_message.outer_middleware(middleware_type)
+    
+    # Register message pairing middleware specifically for edited messages
+    dp.edited_message.outer_middleware(MessagePairingMiddleware())
 
 
 def get_storage(config):
