@@ -15,7 +15,14 @@ logger = logging.getLogger(__name__)
 class ActiveQuestion(BaseFilter):
     async def __call__(
         self, obj: Message, questions_repo: RequestsRepo, **kwargs
-    ) -> dict[str, str] | bool:
+    ) -> bool:
+        """
+        asd
+        :param obj: Объект обрабатываемого фильтром сообщения
+        :param questions_repo: БД репозиторий вопросов
+        :param kwargs: Дополнительные аргументы
+        :return: Статус, есть ли у пользователя активный вопрос
+        """
         active_questions: Sequence[
             Question
         ] = await questions_repo.questions.get_active_questions()

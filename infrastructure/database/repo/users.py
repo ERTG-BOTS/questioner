@@ -88,3 +88,13 @@ class UserRepo(BaseRepo):
         except SQLAlchemyError as e:
             logger.error(f"[БД] Ошибка получения пользователей по ФИО: {e}")
             return []
+
+    async def get_admins(self) -> Sequence[User]:
+        query = select(User).where(User.Role == 10)
+
+        try:
+            result = await self.session.execute(query)
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"[БД] Ошибка получения администраторов: {e}")
+            return []

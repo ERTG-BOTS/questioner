@@ -8,16 +8,16 @@ from sqlalchemy import URL
 @dataclass
 class TgBot:
     """
-    Creates the TgBot object from environment variables.
+    Создает объект TgBot из переменных окружения.
 
     Attributes
     ----------
     token : str
-        The bot token.
+        Токен бота.
     use_redis : str
-        If we need to use redis.
+        Нужно ли использовать Redis.
     division : str
-        Division where bot will run.
+        Направление, для которого запускается текущий экземпляр бота.
     """
 
     token: str
@@ -37,12 +37,9 @@ class TgBot:
     @staticmethod
     def from_env(env: Env):
         """
-        Creates the TgBot object from environment variables.
+        Создает объект TgBot из переменных окружения.
         """
         token = env.str("BOT_TOKEN")
-
-        # @TODO Replace admin_ids with db users which have role 10
-        # admin_ids = env.list("ADMINS", subcast=int)
 
         use_redis = env.bool("USE_REDIS")
         division = env.str("DIVISION")
@@ -75,23 +72,21 @@ class TgBot:
 @dataclass
 class DbConfig:
     """
-    Database configuration class.
-    This class holds the settings for the database, such as host, password, port, etc.
+    Класс конфигурации подключения к базе данных.
+    Класс хранит в себе настройки базы
 
     Attributes
     ----------
     host : str
-        The host where the database server is located.
+        Хост, на котором находится база данных
     password : str
-        The password used to authenticate with the database.
+        Пароль для авторизации в базе данных.
     user : str
-        The username used to authenticate with the database.
+        Логин для авторизации в базе данных.
     main_db : str
-        The name of the main database.
-    ntp_achievements_db : str
-        The name of the ntp achievements database.
-    nck_achievements_db : str
-        The name of the nck achievements database.
+        Имя основной базы данных.
+    questioner_db : str
+        Имя базы данных вопросника.
     """
 
     host: str
@@ -107,12 +102,12 @@ class DbConfig:
         driver="aioodbc",
     ) -> URL:
         """
-        Constructs and returns a SQLAlchemy URL for SQL Server database configuration.
+        Конструирует и возвращает SQLAlchemy-ссылку для подключения к базе данных
         """
         connection_string = (
             f"DRIVER={{ODBC Driver 18 for SQL Server}};"
             f"SERVER={self.host};"
-            f"DATABASE={db_name if db_name else self.questioner_db};"  # Default to questioner_db
+            f"DATABASE={db_name if db_name else self.questioner_db};"
             f"UID={self.user};"
             f"PWD={self.password};"
             f"TrustServerCertificate=yes;"
@@ -132,7 +127,7 @@ class DbConfig:
     @staticmethod
     def from_env(env: Env):
         """
-        Creates the DbConfig object from environment variables.
+        Создает объект DbConfig из переменных окружения.
         """
         host = env.str("DB_HOST")
         user = env.str("DB_USER")
@@ -153,16 +148,16 @@ class DbConfig:
 @dataclass
 class RedisConfig:
     """
-    Redis configuration class.
+    Класс конфигурации Redis.
 
     Attributes
     ----------
     redis_pass : Optional(str)
-        The password used to authenticate with Redis.
+        Пароль для авторизации в Redis.
     redis_port : Optional(int)
-        The port where Redis server is listening.
+        Порт, на котором слушает сервер Redis.
     redis_host : Optional(str)
-        The host where Redis server is located.
+        Хост, где запущен сервер Redis.
     """
 
     redis_pass: Optional[str]
@@ -171,7 +166,7 @@ class RedisConfig:
 
     def dsn(self) -> str:
         """
-        Constructs and returns a Redis DSN (Data Source Name) for this database configuration.
+        Конструирует и возвращает Redis DSN (Data Source Name).
         """
         if self.redis_pass:
             return f"redis://:{self.redis_pass}@{self.redis_host}:{self.redis_port}/0"
@@ -181,7 +176,7 @@ class RedisConfig:
     @staticmethod
     def from_env(env: Env):
         """
-        Creates the RedisConfig object from environment variables.
+        Создает объект RedisConfig из переменных окружения.
         """
         redis_pass = env.str("REDIS_PASSWORD")
         redis_port = env.int("REDIS_PORT")
@@ -195,20 +190,18 @@ class RedisConfig:
 @dataclass
 class Config:
     """
-    The main configuration class that integrates all the other configuration classes.
+    Основной конфигурационный класс, интегрирующий в себя другие классы.
 
-    This class holds the other configuration classes, providing a centralized point of access for all settings.
+    Этот класс содержит все настройки, и используется для доступа к переменным окружения.
 
     Attributes
     ----------
     tg_bot : TgBot
-        Holds the settings related to the Telegram Bot.
-    misc : Miscellaneous
-        Holds the values for miscellaneous settings.
+        Хранит специфичные для бота настройки.
     db : Optional[DbConfig]
-        Holds the settings specific to the database (default is None).
+        Хранит специфичные для базы данных настройки (стандартно None).
     redis : Optional[RedisConfig]
-        Holds the settings specific to Redis (default is None).
+        Хранит специфичные для Redis настройки (стандартно None).
     """
 
     tg_bot: TgBot
@@ -218,14 +211,14 @@ class Config:
 
 def load_config(path: str = None) -> Config:
     """
-    This function takes an optional file path as input and returns a Config object.
-    :param path: The path of env file from where to load the configuration variables.
-    It reads environment variables from a .env file if provided, else from the process environment.
-    :return: Config object with attributes set as per environment variables.
+    Эта функция принимает в качестве входных данных опциональный путь к файлу и возвращает объект Config.
+    :param path: Путь к файлу env, из которого загружаются переменные конфигурации.
+    Она считывает переменные окружения из файла .env, если он указан, в противном случае — из окружения процесса.
+    :return: Объект Config с атрибутами, установленными в соответствии с переменными окружения.
     """
 
-    # Create an Env object.
-    # The Env object will be used to read environment variables.
+    # Создает объект Env.
+    # Объект используется для чтения файла переменных окружения.
     env = Env()
     env.read_env(path)
 

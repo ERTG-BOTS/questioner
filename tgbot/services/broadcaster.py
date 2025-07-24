@@ -14,14 +14,14 @@ async def send_message(
     reply_markup: InlineKeyboardMarkup = None,
 ) -> bool:
     """
-    Safe messages sender
+    Безопасная рассылки сообщений
 
-    :param bot: Bot instance.
-    :param user_id: user id. If str - must contain only digits.
-    :param text: text of the message.
-    :param disable_notification: disable notification or not.
-    :param reply_markup: reply markup.
-    :return: success.
+    :param bot: Экземпляр бота.
+    :param user_id: Идентификатор пользователя Telegram. Если строка - должен содержать только цифры.
+    :param text: Текст рассылки.
+    :param disable_notification: Выключить или включить уведомление.
+    :param reply_markup: Клавиатура.
+    :return: Статус успешности.
     """
     try:
         await bot.send_message(
