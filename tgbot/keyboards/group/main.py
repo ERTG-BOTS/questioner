@@ -81,7 +81,7 @@ def dialog_quality_duty_kb(
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text="🟢 Запретить возврат",
+                    text="🟢 Возврат разрешен",
                     callback_data=QuestionAllowReturn(
                         token=token, allow_return=False
                     ).pack(),
@@ -92,7 +92,7 @@ def dialog_quality_duty_kb(
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text="⛔ Разрешить возврат",
+                    text="🟠 Возврат отключен",
                     callback_data=QuestionAllowReturn(
                         token=token, allow_return=True
                     ).pack(),
@@ -134,7 +134,7 @@ def closed_dialog_duty_kb(
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text="🟢 Запретить возврат",
+                    text="🟢 Возврат разрешен",
                     callback_data=QuestionAllowReturn(
                         token=token, allow_return=False
                     ).pack(),
@@ -145,7 +145,7 @@ def closed_dialog_duty_kb(
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text="⛔ Разрешить возврат",
+                    text="🟠 Возврат отключен",
                     callback_data=QuestionAllowReturn(
                         token=token, allow_return=True
                     ).pack(),
