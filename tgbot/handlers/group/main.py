@@ -411,6 +411,8 @@ async def return_q_duty(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.token} не закрыт"
         )
 
+    await callback.answer()
+
 
 @topic_router.callback_query(IsTopicMessage() and QuestionAllowReturn.filter())
 async def change_q_return_status(
@@ -476,3 +478,4 @@ async def quality_q_duty(
         logger.warning(
             f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.token}. Вопрос принадлежит другому старшему"
         )
+    await callback.answer()
