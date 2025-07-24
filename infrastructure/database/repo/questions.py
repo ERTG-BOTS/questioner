@@ -185,7 +185,6 @@ class QuestionsRepo(BaseRepo):
             await self.session.refresh(question)
         return question
 
-    # TODO Добавить фильтр по направлению специалиста
     async def get_questions_by_month(
         self, month: int, year: int, division: str = None, main_repo=None
     ) -> Sequence[Row[tuple[Question]]]:
