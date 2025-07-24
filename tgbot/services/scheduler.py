@@ -137,6 +137,14 @@ async def auto_close_question(bot: Bot, question_token: str, repo: RequestsRepo)
                 token=question_token, end_time=datetime.datetime.now()
             )
 
+            # Уведомляем о закрытии
+            await bot.send_message(
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.TopicId,
+                text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                reply_markup=closed_dialog_duty_kb(token=question_token),
+            )
+
             # Обновляем топик
             await bot.edit_forum_topic(
                 chat_id=config.tg_bot.forum_id,
@@ -146,14 +154,6 @@ async def auto_close_question(bot: Bot, question_token: str, repo: RequestsRepo)
             )
             await bot.close_forum_topic(
                 chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
-            )
-
-            # Уведомляем о закрытии
-            await bot.send_message(
-                chat_id=config.tg_bot.forum_id,
-                message_thread_id=question.TopicId,
-                text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
-                reply_markup=closed_dialog_duty_kb(token=question_token),
             )
 
             await bot.send_message(
