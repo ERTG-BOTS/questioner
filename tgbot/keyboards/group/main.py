@@ -57,11 +57,11 @@ def dialog_quality_duty_kb(
             [
                 InlineKeyboardButton(
                     text="👎 Да",
-                    callback_data=QuestionQualityDuty(answer=True, token=token).pack(),
+                    callback_data=QuestionQualityDuty(answer=False, token=token).pack(),
                 ),
                 InlineKeyboardButton(
                     text="👍 Нет",
-                    callback_data=QuestionQualityDuty(answer=False, token=token).pack(),
+                    callback_data=QuestionQualityDuty(answer=True, token=token).pack(),
                 ),
             ],
         )

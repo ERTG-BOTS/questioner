@@ -356,9 +356,8 @@ async def dialog_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
     repo: RequestsRepo,
-    question: Question,
 ):
-    await repo.questions.update_question_quality(
+    question: Question = await repo.questions.update_question_quality(
         token=callback_data.token, quality=callback_data.answer, is_duty=False
     )
 

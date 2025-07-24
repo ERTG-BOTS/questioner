@@ -407,8 +407,14 @@ async def return_q_duty(
 
 @topic_router.callback_query(IsTopicMessage() and QuestionAllowReturn.filter())
 async def change_q_return_status(
-    callback: CallbackQuery, callback_data: QuestionQualityDuty, question: Question
+    callback: CallbackQuery,
+    callback_data: QuestionQualityDuty,
+    question: Question,
+    repo: RequestsRepo,
 ):
+    await repo.questions.update_question_return_status(
+        token=callback_data.token, status=callback_data.allow_return
+    )
     if callback_data.allow_return:
         await callback.answer("🟢 Возврат текущего вопроса был разрешен")
     else:
