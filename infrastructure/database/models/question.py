@@ -37,7 +37,7 @@ class Question(Base, TableNameMixin):
         Inherits methods from Base and TableNameMixin classes, which provide additional functionality.
     """
 
-    __tablename__ = "Questions"
+    __tablename__ = "questions"
 
     Token: Mapped[str] = mapped_column(String(255), primary_key=True)
     TopicId: Mapped[int] = mapped_column(Integer, nullable=False)

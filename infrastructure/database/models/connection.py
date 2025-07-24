@@ -10,7 +10,7 @@ from .base import Base
 class QuestionConnection(Base):
     """Model for tracking message pairs between user chats and forum topics"""
 
-    __tablename__ = "QuestionsConnections"
+    __tablename__ = "messages_pairs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
