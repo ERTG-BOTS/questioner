@@ -3,16 +3,16 @@ from typing import Optional, Sequence
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.models import QuestionConnection
+from infrastructure.database.models import MessagesPair
 
 
-class QuestionsConnectionsRepo:
+class MessagesPairsRepo:
     """Repository for managing message connections between user chats and forum topics"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add_connection(
+    async def add_pair(
         self,
         user_chat_id: int,
         user_message_id: int,
@@ -21,7 +21,7 @@ class QuestionsConnectionsRepo:
         topic_thread_id: Optional[int],
         question_token: str,
         direction: str,
-    ) -> QuestionConnection:
+    ) -> MessagesPair:
         """
         Add a new message connection between user chat and forum topic
 
@@ -35,9 +35,9 @@ class QuestionsConnectionsRepo:
             direction: 'user_to_topic' or 'topic_to_user'
 
         Returns:
-            Created MessageConnection instance
+            Created MessagesPair instance
         """
-        connection = QuestionConnection(
+        connection = MessagesPair(
             user_chat_id=user_chat_id,
             user_message_id=user_message_id,
             topic_chat_id=topic_chat_id,
@@ -55,12 +55,12 @@ class QuestionsConnectionsRepo:
 
     async def find_by_user_message(
         self, user_chat_id: int, user_message_id: int
-    ) -> Optional[QuestionConnection]:
+    ) -> Optional[MessagesPair]:
         """Find connection by user chat message"""
-        stmt = select(QuestionConnection).where(
+        stmt = select(MessagesPair).where(
             and_(
-                QuestionConnection.user_chat_id == user_chat_id,
-                QuestionConnection.user_message_id == user_message_id,
+                MessagesPair.user_chat_id == user_chat_id,
+                MessagesPair.user_message_id == user_message_id,
             )
         )
         result = await self.session.execute(stmt)
@@ -68,12 +68,12 @@ class QuestionsConnectionsRepo:
 
     async def find_by_topic_message(
         self, topic_chat_id: int, topic_message_id: int
-    ) -> Optional[QuestionConnection]:
+    ) -> Optional[MessagesPair]:
         """Find connection by topic message"""
-        stmt = select(QuestionConnection).where(
+        stmt = select(MessagesPair).where(
             and_(
-                QuestionConnection.topic_chat_id == topic_chat_id,
-                QuestionConnection.topic_message_id == topic_message_id,
+                MessagesPair.topic_chat_id == topic_chat_id,
+                MessagesPair.topic_message_id == topic_message_id,
             )
         )
         result = await self.session.execute(stmt)
@@ -81,7 +81,7 @@ class QuestionsConnectionsRepo:
 
     async def find_pair_for_edit(
         self, chat_id: int, message_id: int
-    ) -> Optional[QuestionConnection]:
+    ) -> Optional[MessagesPair]:
         """
         Find the corresponding message pair for editing
 
@@ -98,27 +98,21 @@ class QuestionsConnectionsRepo:
             return connection
 
         # Try to find by topic message
-        connection: QuestionConnection = await self.find_by_topic_message(
-            chat_id, message_id
-        )
+        connection: MessagesPair = await self.find_by_topic_message(chat_id, message_id)
         return connection
 
-    async def get_connections_by_question(
-        self, question_token: str
-    ) -> list[QuestionConnection]:
+    async def get_pairs_by_question(self, question_token: str) -> list[MessagesPair]:
         """Get all message connections for a specific question"""
-        stmt = select(QuestionConnection).where(
-            QuestionConnection.question_token == question_token
-        )
+        stmt = select(MessagesPair).where(MessagesPair.question_token == question_token)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_old_connections(self) -> Sequence[QuestionConnection]:
+    async def get_old_pairs(self) -> Sequence[MessagesPair]:
         """
         Получает пары сообщений старше 2 дней.
 
         Returns:
-            Sequence[QuestionConnection]: Список пар сообщений старше 2 ней
+            Sequence[MessagesPair]: Список пар сообщений старше 2 ней
         """
         from datetime import datetime, timedelta
 
@@ -126,20 +120,16 @@ class QuestionsConnectionsRepo:
         today = datetime.now()
         two_days_ago = today - timedelta(days=2)
 
-        stmt = select(QuestionConnection).where(
-            QuestionConnection.created_at < two_days_ago
-        )
+        stmt = select(MessagesPair).where(MessagesPair.created_at < two_days_ago)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def delete_connections(
-        self, connections: Sequence[QuestionConnection] = None
-    ) -> dict:
+    async def delete_pairs(self, pairs: Sequence[MessagesPair] = None) -> dict:
         """
         Удаляет старые пары сообщений из базы данных.
 
         Args:
-            connections (Sequence[QuestionConnection], optional): Последовательность связей для удаления.
+            pairs (Sequence[QuestionConnection], optional): Последовательность связей для удаления.
                                                                 Если не указано, получает их автоматически.
 
         Returns:
@@ -153,7 +143,7 @@ class QuestionsConnectionsRepo:
         errors = []
 
         try:
-            total_count = len(connections)
+            total_count = len(pairs)
 
             if total_count == 0:
                 return {
@@ -164,7 +154,7 @@ class QuestionsConnectionsRepo:
                 }
 
             # Удаляем каждую связь
-            for connection in connections:
+            for connection in pairs:
                 try:
                     # Обновляем объект в текущей сессии
                     await self.session.refresh(connection)

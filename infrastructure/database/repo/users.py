@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Sequence
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from infrastructure.database.models.user import User

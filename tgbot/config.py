@@ -99,6 +99,7 @@ class DbConfig:
     password: str
 
     main_db: str
+    questioner_db: str
 
     def construct_sqlalchemy_url(
         self,
@@ -111,7 +112,7 @@ class DbConfig:
         connection_string = (
             f"DRIVER={{ODBC Driver 18 for SQL Server}};"
             f"SERVER={self.host};"
-            f"DATABASE={db_name if db_name else self.main_db};"
+            f"DATABASE={db_name if db_name else self.questioner_db};"  # Default to questioner_db
             f"UID={self.user};"
             f"PWD={self.password};"
             f"TrustServerCertificate=yes;"
@@ -138,8 +139,15 @@ class DbConfig:
         password = env.str("DB_PASS")
 
         main_db = env.str("DB_MAIN_NAME")
+        questioner_db = env.str("DB_QUESTIONER_NAME")
 
-        return DbConfig(host=host, user=user, password=password, main_db=main_db)
+        return DbConfig(
+            host=host,
+            user=user,
+            password=password,
+            main_db=main_db,
+            questioner_db=questioner_db,
+        )
 
 
 @dataclass

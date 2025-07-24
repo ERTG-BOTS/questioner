@@ -4,8 +4,7 @@ from typing import Optional, Sequence
 
 from sqlalchemy import Row, and_, extract, func, or_, select
 
-from infrastructure.database.models import Question, User
-from infrastructure.database.models.question import Question
+from infrastructure.database.models import Question
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.config import load_config
 
@@ -23,88 +22,64 @@ class QuestionsRepo(BaseRepo):
         clever_link: str,
         activity_status_enabled: Optional[bool] = None,
     ) -> Question:
-        """
-        Добавляет новый вопрос в базу данных.
-
-        Args:
-            employee_chat_id (int): Chat ID сотрудника, задающего вопрос
-            employee_fullname (str): ФИО сотрудника, задающего вопрос
-            topic_id (int): ID топика
-            question_text (str): Текст вопроса
-            start_time (date): Дата начала вопроса
-            clever_link (str): Ссылка на clever
-            activity_status_enabled (Optional[bool]): Персональная настройка статуса активности для топика
-
-        Returns:
-            Question: Созданный объект вопроса
-        """
-        # Генерируем уникальный токен для вопроса
+        """Add new question to database"""
         token = str(uuid.uuid4())
 
-        # Создаем новый объект Question
         question = Question(
-            Token=token,
-            TopicId=topic_id,
-            EmployeeFullname=employee_fullname,
-            EmployeeChatId=employee_chat_id,
-            QuestionText=question_text,
-            StartTime=start_time,
-            CleverLink=clever_link,
-            Status="open",
-            AllowReturn=True,
-            ActivityStatusEnabled=activity_status_enabled,
+            token=token,
+            topic_id=topic_id,
+            employee_fullname=employee_fullname,
+            employee_chat_id=employee_chat_id,
+            question_text=question_text,
+            start_time=start_time,
+            clever_link=clever_link,
+            status="open",
+            allow_return=True,
+            activity_status_enabled=activity_status_enabled,
         )
 
         self.session.add(question)
         await self.session.commit()
         await self.session.refresh(question)
-
         return question
 
-    async def get_questions(
-        self,
-    ) -> Sequence[Row[tuple[Question]]]:
-        stmt = select(Question)
+    async def get_question(
+        self, token: str = None, topic_id: int = None
+    ) -> Optional[Question]:
+        """Get question by token or topic_id"""
+        if token:
+            stmt = select(Question).where(Question.token == token)
+        else:
+            stmt = select(Question).where(Question.topic_id == topic_id)
         result = await self.session.execute(stmt)
-        return result.fetchall()
+        return result.scalar_one_or_none()
 
-    async def get_questions_by_month(
-        self, month: int, year: int, division: str = None
-    ) -> Sequence[Row[tuple[Question]]]:
+    async def get_active_questions(self) -> Sequence[Question]:
+        """Get all active questions (open or in_progress status)"""
         stmt = select(Question).where(
-            extract("month", Question.StartTime) == month,
-            extract("year", Question.StartTime) == year,
+            or_(Question.status == "open", Question.status == "in_progress")
         )
-
-        if division:
-            if division == "НТП":
-                stmt = stmt.join(User, Question.EmployeeChatId == User.ChatId).where(
-                    User.Division.contains("НТП")
-                )
-            else:
-                stmt = stmt.join(User, Question.EmployeeChatId == User.ChatId).where(
-                    User.Division.contains("НЦК")
-                )
-
         result = await self.session.execute(stmt)
-        return result.fetchall()
+        return result.scalars().all()
+
+    async def update_question_status(
+        self, token: str, status: str
+    ) -> Optional[Question]:
+        """Update question status"""
+        question = await self.session.get(Question, token)
+        if question:
+            question.status = status
+            await self.session.commit()
+            await self.session.refresh(question)
+        return question
 
     async def update_question_end(
         self, token: str, end_time: date
     ) -> Optional[Question]:
-        """
-        Обновляет дату окончания вопроса.
-
-        Args:
-            token (str): Токен вопроса
-            end_time (date): Дата окончания вопроса
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
+        """Update question end time"""
         question = await self.session.get(Question, token)
         if question:
-            question.EndTime = end_time
+            question.end_time = end_time
             await self.session.commit()
             await self.session.refresh(question)
         return question
@@ -112,83 +87,13 @@ class QuestionsRepo(BaseRepo):
     async def update_question_quality(
         self, token: str, quality: bool, is_duty: bool = False
     ) -> Optional[Question]:
-        """
-        Обновляет качество вопроса.
-
-        Args:
-            token (str): Токен вопроса
-            quality (bool): Оценка качества
-            is_duty (bool): Флаг, указывающий на оценку дежурного
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
+        """Update question quality rating"""
         question = await self.session.get(Question, token)
         if question:
             if is_duty:
-                question.QualityDuty = quality
+                question.quality_duty = quality
             else:
-                question.QualityEmployee = quality
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_status(
-        self, token: str, status: str
-    ) -> Optional[Question]:
-        """
-        Обновляет качество вопроса.
-
-        Args:
-            token (str): Токен вопроса
-            status (str): Статус вопроса
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.Status = status
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_return_status(
-        self, token: str, status: bool
-    ) -> Optional[Question]:
-        """
-        Обновляет возможность возврата вопроса.
-
-        Args:
-            token (str): Токен вопроса
-            status (str): Статус вопроса
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.AllowReturn = status
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_activity_status(
-        self, token: str, activity_status_enabled: Optional[bool]
-    ) -> Optional[Question]:
-        """
-        Обновляет персональную настройку статуса активности для топика.
-
-        Args:
-            token (str): Токен вопроса
-            activity_status_enabled (Optional[bool]): Статус активности (True/False/None)
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.ActivityStatusEnabled = activity_status_enabled
+                question.quality_employee = quality
             await self.session.commit()
             await self.session.refresh(question)
         return question
@@ -196,95 +101,73 @@ class QuestionsRepo(BaseRepo):
     async def update_question_duty(
         self, token: str, topic_duty: Optional[str]
     ) -> Optional[Question]:
-        """
-        Обновляет ответственного по вопросу.
-
-        Args:
-            token (str): Токен вопроса
-            topic_duty (str): Старший
-
-        Returns:
-            Question: Обновленный объект вопроса или None если не найден
-        """
+        """Update question duty assignee"""
         question = await self.session.get(Question, token)
         if question:
-            question.TopicDutyFullname = topic_duty
+            question.topic_duty_fullname = topic_duty
             await self.session.commit()
             await self.session.refresh(question)
         return question
 
-    async def get_question(
-        self, token: str = None, topic_id: int = None
+    async def update_question_return_status(
+        self, token: str, status: bool
     ) -> Optional[Question]:
-        """
-        Получает вопрос по токену или идентификатору топика.
+        """Update question return permission status"""
+        question = await self.session.get(Question, token)
+        if question:
+            question.allow_return = status
+            await self.session.commit()
+            await self.session.refresh(question)
+        return question
 
-        Args:
-            token (str): Токен вопроса
-            topic_id (int): ID топика
+    async def update_question_activity_status(
+        self, token: str, activity_status_enabled: Optional[bool]
+    ) -> Optional[Question]:
+        """Update question activity status setting"""
+        question = await self.session.get(Question, token)
+        if question:
+            question.activity_status_enabled = activity_status_enabled
+            await self.session.commit()
+            await self.session.refresh(question)
+        return question
 
-        Returns:
-            Question: Вопрос или None если не найден
-        """
-        if token:
-            stmt = select(Question).where(Question.Token == token)
-        else:
-            stmt = select(Question).where(Question.TopicId == topic_id)
+    async def get_questions_by_month(
+        self, month: int, year: int, division: str = None
+    ) -> Sequence[Row[tuple[Question]]]:
+        """Get questions for specific month/year with optional division filter"""
+        stmt = select(Question).where(
+            extract("month", Question.start_time) == month,
+            extract("year", Question.start_time) == year,
+        )
+
+        # Note: Division filtering would need to be handled differently
+        # since User table is in different database
+        # You might need to pass division filter from the handler level
+
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    async def get_questions_by_fullname(
-        self, employee_fullname: str = None, duty_fullname: str = None
-    ) -> Sequence[Question]:
-        """
-        Получает все вопросы сотрудника или старшего по ФИО.
-
-        Args:
-            employee_fullname (str): ФИО сотрудника
-            duty_fullname (str): ФИО старшего
-
-        Returns:
-            Sequence[Question]: Список вопросов сотрудника
-        """
-        if employee_fullname:
-            stmt = select(Question).where(
-                Question.EmployeeFullname == employee_fullname
-            )
-        else:
-            stmt = select(Question).where(Question.TopicDutyFullname == duty_fullname)
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
+        return result.fetchall()
 
     async def get_questions_count_today(
         self, employee_fullname: str = None, duty_fullname: str = None
     ) -> int:
-        """
-        Получает количество вопросов специалиста или старшего за сегодня.
-
-        Args:
-            employee_fullname (str): ФИО специалиста
-            duty_fullname (str): ФИО старшего
-
-        Returns:
-            int: Количество вопросов за сегодня
-        """
+        """Get count of questions for today"""
         today = datetime.now().date()
         tomorrow = today + timedelta(days=1)
 
         if employee_fullname:
-            stmt = select(func.count(Question.Token)).where(
+            stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.EmployeeFullname == employee_fullname,
-                    Question.StartTime >= today,
-                    Question.StartTime < tomorrow,
+                    Question.employee_fullname == employee_fullname,
+                    Question.start_time >= today,
+                    Question.start_time < tomorrow,
                 )
             )
         else:
-            stmt = select(func.count(Question.Token)).where(
+            stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.TopicDutyFullname == duty_fullname,
-                    Question.StartTime >= today,
-                    Question.StartTime < tomorrow,
+                    Question.topic_duty_fullname == duty_fullname,
+                    Question.start_time >= today,
+                    Question.start_time < tomorrow,
                 )
             )
         result = await self.session.execute(stmt)
@@ -293,21 +176,10 @@ class QuestionsRepo(BaseRepo):
     async def get_questions_count_last_month(
         self, employee_fullname: str = None, duty_fullname: str = None
     ) -> int:
-        """
-        Получает количество вопросов специалиста или старшего за текущий месяц.
-
-        Args:
-            employee_fullname (str): ФИО специалиста
-            duty_fullname (str): ФИО старшего
-
-        Returns:
-            int: Количество вопросов за текущий месяц
-        """
+        """Get count of questions for current month"""
         today = datetime.now()
-        # Получаем первый день текущего месяца
         first_day_current_month = datetime(today.year, today.month, 1).date()
 
-        # Получаем первый день следующего месяца
         if today.month == 12:
             next_month = 1
             next_year = today.year + 1
@@ -318,163 +190,87 @@ class QuestionsRepo(BaseRepo):
         first_day_next_month = datetime(next_year, next_month, 1).date()
 
         if employee_fullname:
-            stmt = select(func.count(Question.Token)).where(
+            stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.EmployeeFullname == employee_fullname,
-                    Question.StartTime >= first_day_current_month,
-                    Question.StartTime < first_day_next_month,
+                    Question.employee_fullname == employee_fullname,
+                    Question.start_time >= first_day_current_month,
+                    Question.start_time < first_day_next_month,
                 )
             )
         else:
-            stmt = select(func.count(Question.Token)).where(
+            stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.TopicDutyFullname == duty_fullname,
-                    Question.StartTime >= first_day_current_month,
-                    Question.StartTime < first_day_next_month,
+                    Question.topic_duty_fullname == duty_fullname,
+                    Question.start_time >= first_day_current_month,
+                    Question.start_time < first_day_next_month,
                 )
             )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
 
-    async def get_questions_by_employee_chat_id(
-        self, employee_chat_id: int
-    ) -> Sequence[Question]:
-        """
-        Получает все вопросы сотрудника по Chat ID.
-
-        Args:
-            employee_chat_id (int): Chat ID сотрудника
-
-        Returns:
-            Sequence[Question]: Список вопросов сотрудника
-        """
-        stmt = select(Question).where(Question.EmployeeChatId == employee_chat_id)
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
-    async def get_active_questions(self) -> Sequence[Question]:
-        """
-        Получает все активные вопросы (со статусов open или in_progress).
-
-        Returns:
-            Sequence[Question]: Список активных вопросов
-        """
-        stmt = select(Question).where(
-            or_(Question.Status == "open", Question.Status == "in_progress")
-        )
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
-    async def get_old_questions(self) -> Sequence[Question]:
-        """
-        Получает вопросы старше 2 месяцев.
-
-        Returns:
-            Sequence[Dialog]: Список вопросов старше 2 месяцев
-        """
-        from datetime import datetime, timedelta
-
-        # Считаем дату два месяца назад
-        today = datetime.now()
-        two_months_ago = today - timedelta(
-            days=config.tg_bot.remove_old_questions_days
-        )  # Примерно 2 месяца
-
-        stmt = select(Question).where(Question.StartTime < two_months_ago)
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-
     async def get_last_questions_by_chat_id(
         self, employee_chat_id: int, limit: int = 5
     ) -> Sequence[Question]:
-        """
-        Получает последние N закрытых вопросов пользователя за последние 24 часа по Chat ID, отсортированные по дате окончания.
-
-        Args:
-            employee_chat_id (int): Chat ID сотрудника
-            limit (int): Количество вопросов для получения (по умолчанию 5)
-
-        Returns:
-            Sequence[Question]: Список последних закрытых вопросов пользователя за 24 часа
-        """
-        # Вычисляем время 24 часа назад
+        """Get last N closed questions for user in last 24 hours"""
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
         stmt = (
             select(Question)
             .where(
                 and_(
-                    Question.EmployeeChatId == employee_chat_id,
-                    Question.QuestionText != None,
-                    Question.Status == "closed",
-                    Question.EndTime.is_not(None),
-                    Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn,
+                    Question.employee_chat_id == employee_chat_id,
+                    Question.question_text.is_not(None),
+                    Question.status == "closed",
+                    Question.end_time.is_not(None),
+                    Question.end_time >= twenty_four_hours_ago,
+                    Question.allow_return,
                 )
             )
-            .order_by(Question.EndTime.desc())
+            .order_by(Question.end_time.desc())
             .limit(limit)
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
     async def get_available_to_return_questions(self) -> Sequence[Question]:
-        """
-        Получает последние N закрытых вопросов пользователя за последние 24 часа по Chat ID, отсортированные по дате окончания.
-
-        Returns:
-            Sequence[Question]: Список последних закрытых вопросов пользователя за 24 часа
-        """
-        # Вычисляем время 24 часа назад
+        """Get all questions available for return"""
         twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
 
         stmt = (
             select(Question)
             .where(
                 and_(
-                    Question.QuestionText != None,
-                    Question.Status == "closed",
-                    Question.EndTime.is_not(None),
-                    Question.EndTime >= twenty_four_hours_ago,
-                    Question.AllowReturn,
+                    Question.question_text.is_not(None),
+                    Question.status == "closed",
+                    Question.end_time.is_not(None),
+                    Question.end_time >= twenty_four_hours_ago,
+                    Question.allow_return,
                 )
             )
-            .order_by(Question.EndTime.desc())
+            .order_by(Question.end_time.desc())
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
+    async def get_old_questions(self) -> Sequence[Question]:
+        """Get questions older than configured days"""
+        today = datetime.now()
+        old_date = today - timedelta(days=config.tg_bot.remove_old_questions_days)
+
+        stmt = select(Question).where(Question.start_time < old_date)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
     async def delete_question(
-        self, token: str = None, dialogs: Sequence[Question] = None
+        self, token: str = None, questions: Sequence[Question] = None
     ) -> dict:
-        """
-        Удаляет вопрос(ы) из базы данных по токену или последовательности вопросов.
-
-        Args:
-            token (str, optional): Токен вопроса для удаления
-            dialogs (Sequence[Dialog], optional): Последовательность вопросов для удаления
-
-        Returns:
-            dict: Результат операции с ключами:
-                - success (bool): True если операция выполнена успешно
-                - deleted_count (int): Количество удаленных вопросов
-                - total_count (int): Общее количество вопросов для удаления
-                - errors (list): Список ошибок, если они возникли
-        """
-        if token is None and dialogs is None:
+        """Delete question(s) from database"""
+        if token is None and questions is None:
             return {
                 "success": False,
                 "deleted_count": 0,
                 "total_count": 0,
-                "errors": ["Either token or dialogs must be provided"],
-            }
-
-        if token is not None and dialogs is not None:
-            return {
-                "success": False,
-                "deleted_count": 0,
-                "total_count": 0,
-                "errors": ["Cannot specify both token and dialogs"],
+                "errors": ["Either token or questions must be provided"],
             }
 
         deleted_count = 0
@@ -482,9 +278,7 @@ class QuestionsRepo(BaseRepo):
 
         try:
             if token:
-                # Single dialog deletion by token
                 question = await self.session.get(Question, token)
-
                 if question is None:
                     return {
                         "success": False,
@@ -492,27 +286,21 @@ class QuestionsRepo(BaseRepo):
                         "total_count": 1,
                         "errors": [f"Question with token {token} not found"],
                     }
-
                 await self.session.delete(question)
                 deleted_count = 1
                 total_count = 1
-
             else:
-                # Multiple dialogs deletion
-                total_count = len(dialogs)
-
-                for question in dialogs:
+                total_count = len(questions)
+                for question in questions:
                     try:
-                        # Refresh the dialog object to ensure it's attached to the current session
                         await self.session.refresh(question)
                         await self.session.delete(question)
                         deleted_count += 1
                     except Exception as e:
                         errors.append(
-                            f"Error deleting question {question.Token}: {str(e)}"
+                            f"Error deleting question {question.token}: {str(e)}"
                         )
 
-            # Commit all deletions
             await self.session.commit()
 
             return {
@@ -523,10 +311,8 @@ class QuestionsRepo(BaseRepo):
             }
 
         except Exception as e:
-            # Rollback in case of error
             await self.session.rollback()
             errors.append(f"Database error: {str(e)}")
-
             return {
                 "success": False,
                 "deleted_count": deleted_count,

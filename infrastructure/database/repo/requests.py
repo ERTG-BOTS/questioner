@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.database.repo.pairs import MessagesPairsRepo
 from infrastructure.database.repo.questions import QuestionsRepo
 from infrastructure.database.repo.users import UserRepo
-from infrastructure.database.repo.connections import QuestionsConnectionsRepo
 
 
 @dataclass
@@ -27,13 +27,13 @@ class RequestsRepo:
     @property
     def questions(self) -> QuestionsRepo:
         """
-        The QuestionsRepo repository sessions are required to manage dialog questions operations.
+        The QuestionsRepo repository sessions are required to manage question questions operations.
         """
         return QuestionsRepo(self.session)
 
     @property
-    def questions_connections(self) -> QuestionsConnectionsRepo:
+    def messages_pairs(self) -> MessagesPairsRepo:
         """
         The MessageConnectionRepo repository sessions are required to manage message connections.
         """
-        return QuestionsConnectionsRepo(self.session)
+        return MessagesPairsRepo(self.session)

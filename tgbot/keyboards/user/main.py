@@ -127,7 +127,7 @@ def finish_question_kb() -> ReplyKeyboardMarkup:
     return keyboard
 
 
-def dialog_quality_specialist_kb(
+def question_quality_specialist_kb(
     token: str,
 ) -> InlineKeyboardMarkup:
     """
@@ -177,7 +177,7 @@ def dialog_quality_specialist_kb(
     return keyboard
 
 
-def closed_dialog_specialist_kb(token: str) -> InlineKeyboardMarkup:
+def closed_question_specialist_kb(token: str) -> InlineKeyboardMarkup:
     """
     Клавиатура закрытого диалога для специалиста.
 
@@ -220,16 +220,16 @@ def questions_list_kb(questions: Sequence[Question]) -> InlineKeyboardMarkup:
 
     for question in questions:
         date_str = (
-            question.EndTime.strftime("%d.%m.%Y %H:%M")
-            if question.EndTime
-            else question.StartTime.strftime("%d.%m.%Y")
+            question.end_time.strftime("%d.%m.%Y %H:%M")
+            if question.end_time
+            else question.start_time.strftime("%d.%m.%Y")
         )
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text=f"📅 {date_str} | {question.QuestionText}",
+                    text=f"📅 {date_str} | {question.question_text}",
                     callback_data=ReturnQuestion(
-                        action="show", token=question.Token
+                        action="show", token=question.token
                     ).pack(),
                 )
             ]

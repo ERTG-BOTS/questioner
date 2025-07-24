@@ -14,16 +14,16 @@ logger = logging.getLogger(__name__)
 
 class ActiveQuestion(BaseFilter):
     async def __call__(
-        self, obj: Message, repo: RequestsRepo, **kwargs
+        self, obj: Message, questions_repo: RequestsRepo, **kwargs
     ) -> dict[str, str] | bool:
-        current_dialogs: Sequence[
+        active_questions: Sequence[
             Question
-        ] = await repo.questions.get_active_questions()
+        ] = await questions_repo.questions.get_active_questions()
 
-        for dialog in current_dialogs:
-            if dialog.EmployeeChatId == obj.from_user.id:
-                active_dialog_token = dialog.Token
-                return {"active_dialog_token": active_dialog_token}
+        for question in active_questions:
+            if question.employee_chat_id == obj.from_user.id:
+                active_question_token = question.token
+                return {"active_question_token": active_question_token}
 
         return False
 
@@ -33,19 +33,19 @@ class ActiveQuestionWithCommand(BaseFilter):
         self.command = command
 
     async def __call__(
-        self, obj: Message, repo: RequestsRepo, **kwargs
+        self, obj: Message, questions_repo: RequestsRepo, **kwargs
     ) -> None | bool | dict[str, str]:
         if self.command:
             if not obj.text or not obj.text.startswith(f"/{self.command}"):
                 return False
 
-            current_dialogs: Sequence[
+            current_questions: Sequence[
                 Question
-            ] = await repo.questions.get_active_questions()
+            ] = await questions_repo.questions.get_active_questions()
 
-            for dialog in current_dialogs:
-                if dialog.EmployeeChatId == obj.from_user.id:
-                    return {"active_dialog_token": dialog.Token}
+            for question in current_questions:
+                if question.employee_chat_id == obj.from_user.id:
+                    return {"active_question_token": question.token}
 
             return False
         return None

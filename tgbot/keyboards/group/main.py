@@ -37,7 +37,7 @@ def reopened_question_kb() -> InlineKeyboardMarkup:
     return keyboard
 
 
-def dialog_quality_duty_kb(
+def question_quality_duty_kb(
     token: str,
     allow_return: bool = True,
     show_quality: bool = None,
@@ -106,7 +106,7 @@ def dialog_quality_duty_kb(
     return keyboard
 
 
-def closed_dialog_duty_kb(
+def closed_question_duty_kb(
     token: str, allow_return: bool = True
 ) -> InlineKeyboardMarkup:
     """

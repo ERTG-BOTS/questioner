@@ -4,7 +4,9 @@ from io import BytesIO
 import pandas as pd
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
+from numpy.random.mtrand import Sequence
 
+from infrastructure.database.models import Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
@@ -37,12 +39,16 @@ async def extract_stats(callback: CallbackQuery) -> None:
 
 @stats_router.callback_query(MonthStatsExtract.filter(F.menu == "month"))
 async def admin_extract_month(
-    callback: CallbackQuery, callback_data: MonthStatsExtract, repo: RequestsRepo
+    callback: CallbackQuery,
+    callback_data: MonthStatsExtract,
+    questions_repo: RequestsRepo,
 ) -> None:
     month = callback_data.month
     year = callback_data.year
 
-    questions = await repo.questions.get_questions_by_month(
+    questions: Sequence[
+        Question
+    ] = await questions_repo.questions.get_questions_by_month(
         month, year, division=config.tg_bot.division
     )
 
@@ -60,7 +66,7 @@ async def admin_extract_month(
             case _:
                 quality_employee = "Неизвестно"
 
-        match question.QualityDuty:
+        match question.quality_duty:
             case None:
                 quality_duty = "Нет оценки"
             case True:
@@ -70,7 +76,7 @@ async def admin_extract_month(
             case _:
                 quality_duty = "Неизвестно"
 
-        match question.Status:
+        match question.status:
             case "open":
                 status = "Открыт"
             case "in_progress":
@@ -84,19 +90,19 @@ async def admin_extract_month(
             case _:
                 status = "Закрыт"
 
-        match question.AllowReturn:
+        match question.allow_return:
             case True:
-                AllowReturn = "Доступен"
+                allow_return = "Доступен"
             case False:
-                AllowReturn = "Запрещен"
+                allow_return = "Запрещен"
             case _:
-                AllowReturn = "Неизвестно"
+                allow_return = "Неизвестно"
 
         data.append(
             {
-                "Токен": question.Token,
-                "Специалист": question.EmployeeFullname,
-                "Старший": question.TopicDutyFullname,
+                "Токен": question.token,
+                "Специалист": question.employee_fullname,
+                "Старший": question.topic_duty_fullname,
                 "Текст вопроса": question.QuestionText,
                 "Время вопроса": question.StartTime,
                 "Время завершения": question.EndTime,
@@ -104,7 +110,7 @@ async def admin_extract_month(
                 "Оценка специалиста": quality_employee,
                 "Оценка дежурного": quality_duty,
                 "Статус чата": status,
-                "Возможность возврата": AllowReturn,
+                "Возможность возврата": allow_return,
             }
         )
 

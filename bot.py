@@ -13,7 +13,6 @@ from tgbot.handlers import routers_list
 from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.middlewares.database import DatabaseMiddleware
 from tgbot.middlewares.message_pairing import MessagePairingMiddleware
-from tgbot.services import broadcaster
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import remove_old_topics, scheduler
 
@@ -29,7 +28,9 @@ async def on_startup(bot: Bot):
         timeout_msg = "Нет"
 
     if bot_config.tg_bot.remove_old_questions:
-        remove_topics_msg = f"Да (старше {bot_config.tg_bot.remove_old_questions_days} дней)"
+        remove_topics_msg = (
+            f"Да (старше {bot_config.tg_bot.remove_old_questions_days} дней)"
+        )
     else:
         remove_topics_msg = "Нет"
 
@@ -43,10 +44,17 @@ async def on_startup(bot: Bot):
 <b>- Закрывать по таймауту:</b> {timeout_msg}
 <b>- Удалять старые вопросы:</b> {remove_topics_msg}
 
-<blockquote>База данных: {'Основная' if bot_config.db.main_db == 'STPMain' else 'Запасная'}</blockquote>""",
+<blockquote>База данных: {"Основная" if bot_config.db.main_db == "STPMain" else "Запасная"}</blockquote>""",
     )
 
-def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, session_pool=None):
+
+def register_global_middlewares(
+    dp: Dispatcher,
+    config: Config,
+    bot: Bot,
+    main_session_pool=None,
+    questioner_session_pool=None,
+):
     """
     Register global middlewares for the given dispatcher.
     Global middlewares here are the ones that are applied to all the handlers (you specify the type of update)
@@ -60,15 +68,19 @@ def register_global_middlewares(dp: Dispatcher, config: Config, bot: Bot, sessio
     """
     middleware_types = [
         ConfigMiddleware(config),
-        DatabaseMiddleware(config=config, bot=bot, session_pool=session_pool),
+        DatabaseMiddleware(
+            config=config,
+            bot=bot,
+            main_session_pool=main_session_pool,
+            questioner_session_pool=questioner_session_pool,
+        ),
     ]
 
     for middleware_type in middleware_types:
         dp.message.outer_middleware(middleware_type)
         dp.callback_query.outer_middleware(middleware_type)
         dp.edited_message.outer_middleware(middleware_type)
-    
-    # Register message pairing middleware specifically for edited messages
+
     dp.edited_message.outer_middleware(MessagePairingMiddleware())
 
 
@@ -95,7 +107,6 @@ def get_storage(config):
 async def main():
     setup_logging()
 
-
     storage = get_storage(bot_config)
 
     bot = Bot(
@@ -114,16 +125,20 @@ async def main():
 
     # Create engines for different databases
     stp_db_engine = create_engine(bot_config.db, db_name=bot_config.db.main_db)
+    questioner_db_engine = create_engine(
+        bot_config.db, db_name=bot_config.db.questioner_db
+    )
 
     stp_db = create_session_pool(stp_db_engine)
+    questioner_db = create_session_pool(questioner_db_engine)
 
     # Store session pools in dispatcher
     dp["stp_db"] = stp_db
+    dp["questioner_db"] = questioner_db
 
     dp.include_routers(*routers_list)
 
-    register_global_middlewares(dp, bot_config, bot, stp_db)
-
+    register_global_middlewares(dp, bot_config, bot, stp_db, questioner_db)
 
     if bot_config.tg_bot.remove_old_questions:
         scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])

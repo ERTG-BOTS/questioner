@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import Message
 
-from infrastructure.database.models import QuestionConnection
+from infrastructure.database.models import MessagesPair
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.services.logger import setup_logging
 
@@ -26,20 +26,20 @@ class MessagePairingMiddleware(BaseMiddleware):
         event: Message,
         data: Dict[str, Any],
     ) -> Any:
-        # Only process edited messages
+        # Процессим только измененные сообщения
         if not (hasattr(event, "edit_date") and event.edit_date):
             return await handler(event, data)
 
-        # Get repo from data (should be provided by DatabaseMiddleware)
-        repo: RequestsRepo = data.get("repo")
-        if not repo:
+        # Получаем репозиторий из данных (должно быть предоставлено DatabaseMiddleware)
+        questions_repo: RequestsRepo = data.get("questions_repo")
+        if not questions_repo:
             logger.error("MessagePairingMiddleware: No repository found in data")
             return await handler(event, data)
 
         try:
             # Find the corresponding message pair for editing
-            connection: QuestionConnection = (
-                await repo.questions_connections.find_pair_for_edit(
+            connection: MessagesPair = (
+                await questions_repo.messages_pairs.find_pair_for_edit(
                     chat_id=event.chat.id, message_id=event.message_id
                 )
             )
@@ -65,7 +65,7 @@ class MessagePairingMiddleware(BaseMiddleware):
                     f"{data['edit_target_chat_id']}:{data['edit_target_message_id']}"
                 )
             else:
-                # No pair found - this might be a message not tracked in our system
+                # Пара не найдена - скорее всего сообщение не было записано в БД
                 logger.warning(
                     f"[Редактирование]: Не найдена пара для редактирования: {event.chat.id}:{event.message_id}"
                 )
@@ -74,7 +74,6 @@ class MessagePairingMiddleware(BaseMiddleware):
 
         except Exception as e:
             logger.error(f"Error in MessagePairingMiddleware: {e}")
-            # Continue without edit pairing if there's an error
             data["edit_target_chat_id"] = None
             data["edit_target_message_id"] = None
 
@@ -82,7 +81,7 @@ class MessagePairingMiddleware(BaseMiddleware):
 
 
 async def store_message_connection(
-    repo: RequestsRepo,
+    questions_repo: RequestsRepo,
     user_chat_id: int,
     user_message_id: int,
     topic_chat_id: int,
@@ -90,12 +89,12 @@ async def store_message_connection(
     topic_thread_id: int,
     question_token: str,
     direction: str,
-) -> QuestionConnection:
+) -> MessagesPair:
     """
     Helper function to store message connection in database.
 
     Args:
-        repo: Repository instance
+        questions_repo: Repository instance
         user_chat_id: User chat ID
         user_message_id: Message ID in user chat
         topic_chat_id: Forum chat ID
@@ -108,7 +107,7 @@ async def store_message_connection(
         Created MessageConnection instance
     """
     try:
-        connection = await repo.questions_connections.add_connection(
+        connection = await questions_repo.messages_pairs.add_pair(
             user_chat_id=user_chat_id,
             user_message_id=user_message_id,
             topic_chat_id=topic_chat_id,

@@ -37,12 +37,16 @@ logger = logging.getLogger(__name__)
 
 
 @user_router.message(CommandStart())
-async def main_cmd(message: Message, state: FSMContext, user: User, repo: RequestsRepo):
-    employee_topics_today = await repo.questions.get_questions_count_today(
+async def main_cmd(
+    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+):
+    employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
-    employee_topics_month = await repo.questions.get_questions_count_last_month(
-        employee_fullname=user.FIO
+    employee_topics_month = (
+        await questions_repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
     )
 
     division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
@@ -84,13 +88,15 @@ async def main_cb(
     callback: CallbackQuery,
     state: FSMContext,
     user: User,
-    repo: RequestsRepo,
+    questions_repo: RequestsRepo,
 ):
-    employee_topics_today = await repo.questions.get_questions_count_today(
+    employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
-    employee_topics_month = await repo.questions.get_questions_count_last_month(
-        employee_fullname=user.FIO
+    employee_topics_month = (
+        await questions_repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
     )
 
     division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
@@ -117,10 +123,10 @@ async def main_cb(
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
 async def ask_question(
-    callback: CallbackQuery, state: FSMContext, user: User, repo: RequestsRepo
+    callback: CallbackQuery, state: FSMContext, user: User, questions_repo: RequestsRepo
 ):
-    active_dialogs = await repo.questions.get_active_questions()
-    if user.FIO in [d.EmployeeFullname for d in active_dialogs]:
+    active_questions = await questions_repo.questions.get_active_questions()
+    if user.FIO in [d.employee_fullname for d in active_questions]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
         return
 
@@ -142,7 +148,7 @@ async def ask_question(
 
 @user_router.message(AskQuestion.question)
 async def question_text(
-    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
 ):
     if message.caption:
         await state.update_data(question=message.caption)
@@ -165,11 +171,15 @@ async def question_text(
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
 
-        employee_topics_today = await repo.questions.get_questions_count_today(
-            employee_fullname=user.FIO
+        employee_topics_today = (
+            await questions_repo.questions.get_questions_count_today(
+                employee_fullname=user.FIO
+            )
         )
-        employee_topics_month = await repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+        employee_topics_month = (
+            await questions_repo.questions.get_questions_count_last_month(
+                employee_fullname=user.FIO
+            )
         )
 
         new_topic = await message.bot.create_forum_topic(
@@ -180,7 +190,7 @@ async def question_text(
             icon_custom_emoji_id=dicts.topicEmojis["open"],
         )  # Создание темы
 
-        new_question = await repo.questions.add_question(
+        new_question = await questions_repo.questions.add_question(
             employee_chat_id=message.chat.id,
             employee_fullname=user.FIO,
             topic_id=new_topic.message_thread_id,
@@ -193,12 +203,14 @@ async def question_text(
             """<b>✅ Успешно</b>
 
 Вопрос передан на рассмотрение, в скором времени тебе ответят""",
-            reply_markup=cancel_question_kb(token=new_question.Token),
+            reply_markup=cancel_question_kb(token=new_question.token),
         )
 
-        # Запускаем таймер неактивности для нового вопроса (только если статус "open")
-        if new_question.Status == "open":
-            await start_inactivity_timer(new_question.Token, message.bot, repo)
+        # Запускаем таймер бездействия для нового вопроса (только если статус "open")
+        if new_question.status == "open":
+            await start_inactivity_timer(
+                new_question.token, message.bot, questions_repo
+            )
 
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
@@ -224,8 +236,8 @@ async def question_text(
             text=topic_text,
             disable_web_page_preview=True,
             reply_markup=activity_status_toggle_kb(
-                token=new_question.Token,
-                current_status=new_question.ActivityStatusEnabled,
+                token=new_question.token,
+                current_status=new_question.activity_status_enabled,
                 global_status=config.tg_bot.activity_status,
             ),
         )
@@ -245,7 +257,7 @@ async def question_text(
 
         await state.clear()
         logging.info(
-            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.Token}"
+            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
         )
         return
 
@@ -269,7 +281,7 @@ async def question_text(
 
 @user_router.message(AskQuestion.clever_link)
 async def clever_link_handler(
-    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
 ):
     clever_link = message.text
     state_data = await state.get_data()
@@ -286,11 +298,13 @@ async def clever_link_handler(
         )
         return
 
-    employee_topics_today = await repo.questions.get_questions_count_today(
+    employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
-    employee_topics_month = await repo.questions.get_questions_count_last_month(
-        employee_fullname=user.FIO
+    employee_topics_month = (
+        await questions_repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
     )
 
     # Выключаем все предыдущие кнопки
@@ -304,7 +318,7 @@ async def clever_link_handler(
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
 
-    new_question = await repo.questions.add_question(
+    new_question = await questions_repo.questions.add_question(
         employee_chat_id=message.chat.id,
         employee_fullname=user.FIO,
         topic_id=new_topic.message_thread_id,
@@ -317,12 +331,12 @@ async def clever_link_handler(
         """<b>✅ Успешно</b>
 
 Вопрос передан на рассмотрение, в скором времени тебе ответят""",
-        reply_markup=cancel_question_kb(token=new_question.Token),
+        reply_markup=cancel_question_kb(token=new_question.token),
     )
 
-    # Запускаем таймер неактивности для нового вопроса (только если статус "open")
-    if new_question.Status == "open":
-        await start_inactivity_timer(new_question.Token, message.bot, repo)
+    # Запускаем таймер бездействия для нового вопроса (только если статус "open")
+    if new_question.status == "open":
+        await start_inactivity_timer(new_question.token, message.bot, questions_repo)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=config.tg_bot.forum_id,
@@ -337,8 +351,8 @@ async def clever_link_handler(
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
         disable_web_page_preview=True,
         reply_markup=activity_status_toggle_kb(
-            token=new_question.Token,
-            current_status=new_question.ActivityStatusEnabled,
+            token=new_question.token,
+            current_status=new_question.activity_status_enabled,
             global_status=config.tg_bot.activity_status,
         ),
     )
@@ -358,7 +372,7 @@ async def clever_link_handler(
 
     await state.clear()
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.Token}"
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
     )
 
 
@@ -366,28 +380,30 @@ async def clever_link_handler(
 async def cancel_question(
     callback: CallbackQuery,
     state: FSMContext,
-    repo: RequestsRepo,
+    questions_repo: RequestsRepo,
     user: User,
     question: Question,
 ):
     if (
         question
-        and question.Status == "open"
-        and not question.TopicDutyFullname
-        and not question.EndTime
+        and question.status == "open"
+        and not question.topic_duty_fullname
+        and not question.end_time
     ):
         await callback.bot.edit_forum_topic(
             chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
+            message_thread_id=question.topic_id,
             icon_custom_emoji_id=dicts.topicEmojis["fired"],
         )
         await callback.bot.close_forum_topic(
-            chat_id=config.tg_bot.forum_id, message_thread_id=question.TopicId
+            chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
         )
-        await remove_question_timer(bot=callback.bot, question=question, repo=repo)
+        await remove_question_timer(
+            bot=callback.bot, question=question, questions_repo=questions_repo
+        )
         await callback.bot.send_message(
             chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
+            message_thread_id=question.topic_id,
             text="""<b>🔥 Отмена вопроса</b>
         
 Специалист отменил вопрос
@@ -395,10 +411,12 @@ async def cancel_question(
 <i>Вопрос будет удален через 30 секунд</i>""",
         )
         await callback.answer("Вопрос успешно удален")
-        await main_cb(callback=callback, state=state, user=user, repo=repo)
+        await main_cb(
+            callback=callback, state=state, user=user, questions_repo=questions_repo
+        )
     elif not question:
         await callback.answer("Не удалось найти отменяемый вопрос")
-        await main_cb(callback=callback, state=state, repo=repo)
+        await main_cb(callback=callback, state=state, questions_repo=questions_repo)
     else:
         await callback.answer("Вопрос не может быть отменен. Он уже в работе")
 
@@ -407,7 +425,7 @@ async def cancel_question(
 async def toggle_activity_status(
     callback: CallbackQuery,
     callback_data: ActivityStatusToggle,
-    repo: RequestsRepo,
+    questions_repo: RequestsRepo,
     question: Question,
 ):
     """Обработчик переключения статуса активности для топика"""
@@ -415,7 +433,7 @@ async def toggle_activity_status(
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)
             return
-        elif question.Status not in ["open", "in_progress"]:
+        elif question.status not in ["open", "in_progress"]:
             await callback.answer("Вопрос уже закрыт")
             return
 
@@ -428,19 +446,23 @@ async def toggle_activity_status(
             action_text = "отключен"
             from tgbot.services.scheduler import stop_inactivity_timer
 
-            stop_inactivity_timer(question.Token)
+            stop_inactivity_timer(question.token)
 
         # Обновляем статус в базе данных
-        await repo.questions.update_question_activity_status(
+        await questions_repo.questions.update_question_activity_status(
             token=callback_data.token, activity_status_enabled=new_status
         )
 
         # Теперь запускаем таймер если включили активность
-        if callback_data.action == "enable" and question.Status in [
+        if callback_data.action == "enable" and question.status in [
             "open",
             "in_progress",
         ]:
-            await start_inactivity_timer(question.Token, callback.bot, repo)
+            await start_inactivity_timer(
+                question_token=question.token,
+                bot=callback.bot,
+                questions_repo=questions_repo,
+            )
 
         # Обновляем клавиатуру
         await callback.message.edit_reply_markup(
@@ -469,7 +491,7 @@ async def toggle_activity_status(
 
         topic_msg = await callback.bot.send_message(
             chat_id=config.tg_bot.forum_id,
-            message_thread_id=question.TopicId,
+            message_thread_id=question.topic_id,
             text=topic_message_text,
         )
 
@@ -480,28 +502,28 @@ async def toggle_activity_status(
             user_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nДежурный выключил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
 
         user_msg = await callback.bot.send_message(
-            chat_id=question.EmployeeChatId,
+            chat_id=question.employee_chat_id,
             text=user_message_text,
         )
 
         # Запускаем таймеры удаления для обоих сообщений
         await run_delete_timer(
             bot=callback.bot,
-            chat_id=config.tg_bot.forum_id,
+            chat_id=int(config.tg_bot.forum_id),
             message_ids=[topic_msg.message_id],
             seconds=10,
         )
 
         await run_delete_timer(
             bot=callback.bot,
-            chat_id=question.EmployeeChatId,
+            chat_id=question.employee_chat_id,
             message_ids=[user_msg.message_id],
             seconds=10,
         )
 
         logger.info(
             f"[Активность] Пользователь {callback.from_user.username} ({callback.from_user.id}): "
-            f"Статус активности {action_text} для вопроса {question.Token}"
+            f"Статус активности {action_text} для вопроса {question.token}"
         )
 
     except Exception as e:

@@ -1,6 +1,4 @@
-
-from sqlalchemy import BIGINT
-from sqlalchemy import Unicode
+from sqlalchemy import BIGINT, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TableNameMixin

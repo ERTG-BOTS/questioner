@@ -27,13 +27,15 @@ logger = logging.getLogger(__name__)
 
 @admin_router.message(CommandStart(), ~IsTopicMessage())
 async def admin_start(
-    message: Message, state: FSMContext, user: User, repo: RequestsRepo
+    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
 ) -> None:
-    employee_topics_today = await repo.questions.get_questions_count_today(
+    employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
-    employee_topics_month = await repo.questions.get_questions_count_last_month(
-        employee_fullname=user.FIO
+    employee_topics_month = (
+        await questions_repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
     )
 
     division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
@@ -79,7 +81,7 @@ async def change_role(
     callback: CallbackQuery,
     callback_data: ChangeRole,
     state: FSMContext,
-    repo: RequestsRepo,
+    questions_repo: RequestsRepo,
     user: User,
 ) -> None:
     await callback.answer("")
@@ -91,7 +93,9 @@ async def change_role(
                 f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 1"
             )
 
-    await main_cb(callback=callback, state=state, repo=repo, user=user)
+    await main_cb(
+        callback=callback, state=state, questions_repo=questions_repo, user=user
+    )
 
 
 @admin_router.callback_query(AdminMenu.filter(F.menu == "reset"))
