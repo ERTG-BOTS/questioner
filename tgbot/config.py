@@ -115,6 +115,12 @@ class DbConfig:
             f"UID={self.user};"
             f"PWD={self.password};"
             f"TrustServerCertificate=yes;"
+            f"MultipleActiveResultSets=yes;"
+            f"Connection Timeout=30;"
+            f"Command Timeout=60;"
+            f"Pooling=yes;"
+            f"Max Pool Size=100;"
+            f"Min Pool Size=5;"
         )
         connection_url = URL.create(
             f"mssql+{driver}", query={"odbc_connect": connection_string}

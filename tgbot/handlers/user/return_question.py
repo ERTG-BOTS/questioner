@@ -282,3 +282,4 @@ async def return_q_confirm(
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия вопроса {question.Token}"
         )
+    await callback.answer()
