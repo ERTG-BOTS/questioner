@@ -134,11 +134,43 @@ async def handle_q_message(
                     questions_repo=questions_repo,
                 )
 
-                copied_message = await message.bot.copy_message(
-                    from_chat_id=config.tg_bot.forum_id,
-                    message_id=message.message_id,
-                    chat_id=question.employee_chat_id,
-                )
+                # Если реплай - пробуем отправить ответом
+                if message.reply_to_message:
+                    # Находим связь с отвеченным сообщением
+                    message_pair = (
+                        await questions_repo.messages_pairs.find_by_topic_message(
+                            topic_chat_id=int(config.tg_bot.forum_id),
+                            topic_message_id=message.reply_to_message.message_id,
+                        )
+                    )
+
+                    if message_pair:
+                        # Копируем с ответом если нашли связь
+                        copied_message = await message.bot.copy_message(
+                            from_chat_id=config.tg_bot.forum_id,
+                            message_id=message.message_id,
+                            chat_id=question.employee_chat_id,
+                            reply_to_message_id=message_pair.user_message_id,
+                        )
+                        logger.info(
+                            f"[Вопрос] - [Ответ] Найдена связь для ответа дежурного: {config.tg_bot.forum_id}:{message.reply_to_message.message_id} -> {message_pair.user_chat_id}:{message_pair.user_message_id}"
+                        )
+                    else:
+                        # Не найдено связи, просто копируем
+                        copied_message = await message.bot.copy_message(
+                            from_chat_id=config.tg_bot.forum_id,
+                            message_id=message.message_id,
+                            chat_id=question.employee_chat_id,
+                        )
+                        logger.warning(
+                            f"[Вопрос] - [Ответ] Не найдена связь для сообщения дежурного {config.tg_bot.forum_id}:{message.reply_to_message.message_id}"
+                        )
+                else:
+                    copied_message = await message.bot.copy_message(
+                        from_chat_id=config.tg_bot.forum_id,
+                        message_id=message.message_id,
+                        chat_id=question.employee_chat_id,
+                    )
 
                 # Сохраняем коннект сообщений
                 try:
@@ -207,10 +239,10 @@ async def handle_q_message(
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(
             chat_id=config.tg_bot.forum_id,
-            message_thread_id=message.message_thread_id,  # Fixed: should be message_thread_id
+            message_thread_id=message.message_thread_id,
         )
         logger.error(
-            f"[Вопрос] - [Общение] Не удалось найти вопрос в базе с TopicId = {message.message_thread_id}. Закрыли тему"  # Fixed: should be message_thread_id
+            f"[Вопрос] - [Общение] Не удалось найти вопрос в базе с TopicId = {message.message_thread_id}. Закрыли тему"
         )
 
 

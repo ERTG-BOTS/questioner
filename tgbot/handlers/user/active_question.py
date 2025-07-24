@@ -166,12 +166,44 @@ async def active_question(
         question_token=question.token, bot=message.bot, questions_repo=questions_repo
     )
 
-    copied_message = await message.bot.copy_message(
-        from_chat_id=message.chat.id,
-        message_id=message.message_id,
-        chat_id=config.tg_bot.forum_id,
-        message_thread_id=question.topic_id,
-    )
+    # Если реплай - пробуем отправить ответом
+    if message.reply_to_message:
+        # Находим связь с отвеченным сообщением
+        message_pair = await questions_repo.messages_pairs.find_by_user_message(
+            user_chat_id=message.chat.id,
+            user_message_id=message.reply_to_message.message_id,
+        )
+
+        if message_pair:
+            # Копируем с ответом если нашли связь
+            copied_message = await message.bot.copy_message(
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.topic_id,
+                reply_to_message_id=message_pair.topic_message_id,
+            )
+            logger.info(
+                f"[Вопрос] - [Ответ] Найдена связь для ответа: {message.chat.id}:{message.reply_to_message.message_id} -> {message_pair.topic_chat_id}:{message_pair.topic_message_id}"
+            )
+        else:
+            # Не найдено связи, просто копируем
+            copied_message = await message.bot.copy_message(
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+                chat_id=config.tg_bot.forum_id,
+                message_thread_id=question.topic_id,
+            )
+            logger.warning(
+                f"[Вопрос] - [Ответ] Не найдена связь для сообщения {message.chat.id}:{message.reply_to_message.message_id}"
+            )
+    else:
+        copied_message = await message.bot.copy_message(
+            from_chat_id=message.chat.id,
+            message_id=message.message_id,
+            chat_id=config.tg_bot.forum_id,
+            message_thread_id=question.topic_id,
+        )
 
     # Сохраняем коннект сообщений
     try:
