@@ -194,9 +194,6 @@ async def active_question(
                 chat_id=config.tg_bot.forum_id,
                 message_thread_id=question.topic_id,
             )
-            logger.warning(
-                f"[Вопрос] - [Ответ] Не найдена связь для сообщения {message.chat.id}:{message.reply_to_message.message_id}"
-            )
     else:
         copied_message = await message.bot.copy_message(
             from_chat_id=message.chat.id,

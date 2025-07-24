@@ -162,9 +162,6 @@ async def handle_q_message(
                             message_id=message.message_id,
                             chat_id=question.employee_chat_id,
                         )
-                        logger.warning(
-                            f"[Вопрос] - [Ответ] Не найдена связь для сообщения дежурного {config.tg_bot.forum_id}:{message.reply_to_message.message_id}"
-                        )
                 else:
                     copied_message = await message.bot.copy_message(
                         from_chat_id=config.tg_bot.forum_id,

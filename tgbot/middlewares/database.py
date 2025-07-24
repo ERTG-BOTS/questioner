@@ -39,11 +39,11 @@ class DatabaseMiddleware(BaseMiddleware):
                 # Use separate sessions for different databases
                 async with self.main_session_pool() as main_session:
                     async with self.questioner_session_pool() as questioner_session:
-                        # Create repos for different databases
-                        main_repo = RequestsRepo(main_session)  # For users
+                        # Создаем репозитории для разных БД
+                        main_repo = RequestsRepo(main_session)  # Для БД STPMain
                         questioner_repo = RequestsRepo(
                             questioner_session
-                        )  # For questions
+                        )  # Для БД QuestionerBot
 
                         user: User = await main_repo.users.get_user(
                             user_id=event.from_user.id
@@ -100,7 +100,7 @@ class DatabaseMiddleware(BaseMiddleware):
                             )
                             return
 
-                        if user and not is_bot:
+                        if user and not is_bot and user.Role != 10:
                             if self.config.tg_bot.division not in user.Division:
                                 if "НТП" in user.Division:
                                     bot_link = "https://t.me/ntp2question_bot"

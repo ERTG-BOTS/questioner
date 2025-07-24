@@ -22,8 +22,7 @@ class ActiveQuestion(BaseFilter):
 
         for question in active_questions:
             if question.employee_chat_id == obj.from_user.id:
-                active_question_token = question.token
-                return {"active_question_token": active_question_token}
+                return True
 
         return False
 
@@ -45,7 +44,7 @@ class ActiveQuestionWithCommand(BaseFilter):
 
             for question in current_questions:
                 if question.employee_chat_id == obj.from_user.id:
-                    return {"active_question_token": question.token}
+                    return True
 
             return False
         return None

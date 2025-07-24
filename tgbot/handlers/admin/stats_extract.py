@@ -42,6 +42,7 @@ async def admin_extract_month(
     callback: CallbackQuery,
     callback_data: MonthStatsExtract,
     questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
 ) -> None:
     month = callback_data.month
     year = callback_data.year
@@ -49,14 +50,14 @@ async def admin_extract_month(
     questions: Sequence[
         Question
     ] = await questions_repo.questions.get_questions_by_month(
-        month, year, division=config.tg_bot.division
+        month, year, division=config.tg_bot.division, main_repo=main_repo
     )
 
     data = []
     for question_row in questions:
-        question = question_row[0]
+        question: Question = question_row[0]
 
-        match question.QualityEmployee:
+        match question.quality_duty:
             case None:
                 quality_employee = "Нет оценки"
             case True:
@@ -88,7 +89,7 @@ async def admin_extract_month(
             case "fired":
                 status = "Удален"
             case _:
-                status = "Закрыт"
+                status = "Неизвестно"
 
         match question.allow_return:
             case True:
@@ -103,19 +104,22 @@ async def admin_extract_month(
                 "Токен": question.token,
                 "Специалист": question.employee_fullname,
                 "Старший": question.topic_duty_fullname,
-                "Текст вопроса": question.QuestionText,
-                "Время вопроса": question.StartTime,
-                "Время завершения": question.EndTime,
-                "Ссылка на БЗ": question.CleverLink,
+                "Текст вопроса": question.question_text,
+                "Время вопроса": question.start_time,
+                "Время завершения": question.end_time,
+                "Ссылка на БЗ": question.clever_link,
                 "Оценка специалиста": quality_employee,
                 "Оценка дежурного": quality_duty,
                 "Статус чата": status,
-                "Возможность возврата": allow_return,
+                "Возврат": allow_return,
             }
         )
 
     if not data:
-        await callback.message.answer("Не найдено данных для указанного месяца.")
+        await callback.message.edit_text(f"""<b>📥 Выгрузка статистики</b>
+        
+Не найдено вопросов для указанного месяца и направления {config.tg_bot.division}, попробуй другой месяц""")
+        await callback.answer()
         return
 
     # Создаем файл excel в памяти

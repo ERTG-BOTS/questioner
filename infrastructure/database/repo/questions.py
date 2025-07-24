@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Optional, Sequence
@@ -7,8 +8,12 @@ from sqlalchemy import Row, and_, extract, func, or_, select
 from infrastructure.database.models import Question
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.config import load_config
+from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 class QuestionsRepo(BaseRepo):
@@ -182,22 +187,46 @@ class QuestionsRepo(BaseRepo):
 
     # TODO Добавить фильтр по направлению специалиста
     async def get_questions_by_month(
-        self, month: int, year: int, division: str = None
+        self, month: int, year: int, division: str = None, main_repo=None
     ) -> Sequence[Row[tuple[Question]]]:
         """
-        Получение вопросов за конкретный месяц
+        Получение вопросов за конкретный месяц с фильтрацией по направлению
         :param month: Фильтр по месяцу
         :param year: Фильтр по году
         :param division: Фильтр по направлению
+        :param main_repo: Репозиторий для работы с основной БД (RegisteredUsers)
         :return: Последовательность вопросов, подходящих под фильтры
         """
+        # Базовый запрос
         stmt = select(Question).where(
             extract("month", Question.start_time) == month,
             extract("year", Question.start_time) == year,
         )
 
         result = await self.session.execute(stmt)
-        return result.fetchall()
+        questions = result.fetchall()
+
+        # Если не использован фильтр - возвращаем вопросы
+        if not division or not main_repo:
+            return questions
+
+        # Фильтр по направлению
+        filtered_questions = []
+        for question_row in questions:
+            question = question_row[0]
+            try:
+                # Получаем пользователя из основной базы
+                user = await main_repo.users.get_user(user_id=question.employee_chat_id)
+                logger.warning(user.Division)
+                if user and division.upper() in user.Division.upper():
+                    filtered_questions.append(question_row)
+            except Exception as e:
+                logger.warning(
+                    f"Error filtering question {question.token} by division: {e}"
+                )
+                continue
+
+        return filtered_questions
 
     async def get_questions_count_today(
         self, employee_fullname: str = None, duty_fullname: str = None
