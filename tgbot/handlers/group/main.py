@@ -228,7 +228,6 @@ async def handle_edited_message(
         return
 
     edit_timestamp = f"\n\n<i>Сообщение изменено дежурным — {datetime.now().strftime('%H:%M %d.%m.%Y')}</i>"
-    bot_info = await message.bot.get_me()
 
     try:
         # Проверяем сообщение на содержание медиа
@@ -278,13 +277,8 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{user.FIO}</b> отредактировал сообщение:""",
-            )
-
-            await message.bot.forward_message(
-                chat_id=pair_to_edit.user_chat_id,
-                from_chat_id=pair_to_edit.user_chat_id,
-                message_id=pair_to_edit.user_message_id,
+Дежурный <b>{user.FIO}</b> отредактировал сообщение""",
+                reply_to_message_id=pair_to_edit.user_message_id,
             )
 
             logger.info(
@@ -304,13 +298,8 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{user.FIO}</b> отредактировал сообщение:""",
-            )
-
-            await message.bot.forward_message(
-                chat_id=pair_to_edit.user_chat_id,
-                from_chat_id=pair_to_edit.user_chat_id,
-                message_id=pair_to_edit.user_message_id,
+Дежурный <b>{user.FIO}</b> отредактировал сообщение""",
+                reply_to_message_id=pair_to_edit.user_message_id,
             )
 
             logger.info(
