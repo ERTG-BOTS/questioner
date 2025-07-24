@@ -9,7 +9,7 @@ from .base import Base, TableNameMixin
 
 class Question(Base, TableNameMixin):
     """
-    Класс, представляющий сущность вопросов.
+    Модель, представляющая сущность вопроса в БД
 
     Attributes:
         token (Mapped[str]): Уникальный идентификатор токена (первичный ключ).

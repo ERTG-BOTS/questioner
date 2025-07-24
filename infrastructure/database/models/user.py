@@ -6,7 +6,7 @@ from .base import Base, TableNameMixin
 
 class User(Base, TableNameMixin):
     """
-    Класс, представляющий сущность пользователя в БД.
+    Модель, представляющая сущность пользователя в БД
 
     Attributes:
         id (Mapped[int]): Уникальный идентификатор пользователя.
