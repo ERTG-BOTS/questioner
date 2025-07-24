@@ -117,10 +117,13 @@ async def main_cb(
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
 async def ask_question(
-    callback: CallbackQuery,
-    state: FSMContext,
-    user: User,
+    callback: CallbackQuery, state: FSMContext, user: User, repo: RequestsRepo
 ):
+    active_dialogs = await repo.questions.get_active_questions()
+    if user.FIO in [d.EmployeeFullname for d in active_dialogs]:
+        await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
+        return
+
     state_data = await state.get_data()
 
     msg = await callback.message.edit_text(
