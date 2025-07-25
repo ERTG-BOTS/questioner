@@ -3,7 +3,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from infrastructure.database.models import Base
 from tgbot.config import load_config
@@ -32,10 +31,8 @@ target_metadata = Base.metadata
 
 db_config = load_config(".env").db
 
-config.set_main_option(
-    "sqlalchemy.url",
-    db_config.construct_sqlalchemy_url(),
-)
+# Store the URL for later use - don't set it in config to avoid interpolation issues
+database_url = db_config.construct_sqlalchemy_url()
 
 
 def run_migrations_offline() -> None:
@@ -50,9 +47,9 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Use our database URL directly instead of from config
     context.configure(
-        url=url,
+        url=str(database_url),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -74,10 +71,11 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
+    # Create engine directly from our URL instead of from config
+    from sqlalchemy.ext.asyncio import create_async_engine
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    connectable = create_async_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 
