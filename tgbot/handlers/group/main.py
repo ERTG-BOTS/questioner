@@ -116,11 +116,27 @@ async def handle_q_message(
 Старший <b>{user.FIO}</b> взял вопрос в работу""",
                 reply_markup=finish_question_kb(),
             )
-            await message.bot.copy_message(
+
+            copied_message = await message.bot.copy_message(
                 from_chat_id=config.tg_bot.forum_id,
                 message_id=message.message_id,
                 chat_id=employee.ChatId,
             )
+
+            # Сохраняем коннект сообщений
+            try:
+                await store_message_connection(
+                    questions_repo=questions_repo,
+                    user_chat_id=question.employee_chat_id,
+                    user_message_id=copied_message.message_id,
+                    topic_chat_id=int(config.tg_bot.forum_id),
+                    topic_message_id=message.message_id,
+                    topic_thread_id=question.topic_id,
+                    question_token=question.token,
+                    direction="topic_to_user",
+                )
+            except Exception as e:
+                logger.error(f"Failed to store message connection: {e}")
 
             logger.info(
                 f"[Вопрос] - [В работе] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} взят в работу"
@@ -380,7 +396,8 @@ async def return_q_duty(
 
     if (
         question.status == "closed"
-        and user.FIO not in [u.employee_fullname for u in active_questions]
+        and question.employee_fullname
+        not in [u.employee_fullname for u in active_questions]
         and question.token in [d.token for d in available_to_return_questions]
         and question.topic_duty_fullname == user.FIO
     ):
@@ -419,7 +436,7 @@ async def return_q_duty(
         logger.warning(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.token} принадлежит другому старшему"
         )
-    elif user.FIO in [d.employee_fullname for d in active_questions]:
+    elif question.employee_fullname in [d.employee_fullname for d in active_questions]:
         await callback.answer(
             "У специалиста есть другой открытый вопрос", show_alert=True
         )
