@@ -237,9 +237,11 @@ async def return_q_confirm(
 
     active_questions = await questions_repo.questions.get_active_questions()
 
-    if question.status == "closed" and user.FIO not in [
-        d.employee_fullname for d in active_questions
-    ]:
+    if (
+        question.status == "closed"
+        and user.FIO not in [d.employee_fullname for d in active_questions]
+        and question.allow_return
+    ):
         duty: User = await main_repo.users.get_user(
             fullname=question.topic_duty_fullname
         )
@@ -297,6 +299,12 @@ async def return_q_confirm(
         await callback.answer("Этот вопрос не закрыт", show_alert=True)
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.token} не закрыт"
+        )
+    elif not question.allow_return:
+        # Проверка на доступность возврата вопроса
+        await callback.answer("Возврат вопроса заблокирован", show_alert=True)
+        logger.error(
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.token} заблокирован для возврата"
         )
     else:
         await callback.answer("Не удалось переоткрыть вопрос", show_alert=True)
