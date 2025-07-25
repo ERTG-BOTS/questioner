@@ -3,6 +3,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from infrastructure.database.models import Base
 from tgbot.config import load_config
@@ -18,21 +19,27 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# Use the full metadata but filter out tables from other databases
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
+# Load database config
 db_config = load_config(".env").db
 
 # Store the URL for later use - don't set it in config to avoid interpolation issues
 database_url = db_config.construct_sqlalchemy_url()
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Filter out tables that don't belong to this database.
+    Only include 'questions' and 'messages_pairs' tables.
+    """
+    if type_ == "table":
+        # Only include tables that belong to this database
+        return name in ["questions", "messages_pairs"]
+
+    # Include all other objects (indexes, constraints, etc.) for included tables
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -53,6 +60,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -60,7 +68,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -72,8 +84,6 @@ async def run_async_migrations() -> None:
 
     """
     # Create engine directly from our URL instead of from config
-    from sqlalchemy.ext.asyncio import create_async_engine
-
     connectable = create_async_engine(
         database_url,
         poolclass=pool.NullPool,
