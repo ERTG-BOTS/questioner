@@ -271,7 +271,10 @@ def question_confirm_kb(token: str) -> InlineKeyboardMarkup:
 
 
 def activity_status_toggle_kb(
-    token: str, current_status: bool = None, global_status: bool = True
+    token: str,
+    user_id: str | int,
+    current_status: bool = None,
+    global_status: bool = True,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура переключения статуса активности для топика
@@ -296,10 +299,16 @@ def activity_status_toggle_kb(
     buttons = [
         [
             InlineKeyboardButton(
+                text="💬 Написать в ЛС",
+                url=f"tg://user?id={user_id}",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
                 text=button_text,
                 callback_data=ActivityStatusToggle(action=action, token=token).pack(),
-            )
-        ]
+            ),
+        ],
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)

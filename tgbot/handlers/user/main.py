@@ -214,7 +214,7 @@ async def question_text(
 
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
-            topic_text = f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" and user.Username != "Скрыто/не определено") else ""}
+            topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
@@ -223,7 +223,7 @@ async def question_text(
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
         else:
-            topic_text = f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" and user.Username != "Скрыто/не определено") else ""}
+            topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
@@ -237,6 +237,7 @@ async def question_text(
             disable_web_page_preview=True,
             reply_markup=activity_status_toggle_kb(
                 token=new_question.token,
+                user_id=new_question.employee_chat_id,
                 current_status=new_question.activity_status_enabled,
                 global_status=config.tg_bot.activity_status,
             ),
@@ -341,7 +342,7 @@ async def clever_link_handler(
     topic_info_msg = await message.bot.send_message(
         chat_id=config.tg_bot.forum_id,
         message_thread_id=new_topic.message_thread_id,
-        text=f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+        text=f"""Вопрос задает <b>{user.FIO}</b>
 
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
@@ -352,6 +353,7 @@ async def clever_link_handler(
         disable_web_page_preview=True,
         reply_markup=activity_status_toggle_kb(
             token=new_question.token,
+            user_id=new_question.employee_chat_id,
             current_status=new_question.activity_status_enabled,
             global_status=config.tg_bot.activity_status,
         ),
@@ -468,6 +470,7 @@ async def toggle_activity_status(
         await callback.message.edit_reply_markup(
             reply_markup=activity_status_toggle_kb(
                 token=callback_data.token,
+                user_id=question.employee_chat_id,
                 current_status=new_status,
                 global_status=config.tg_bot.activity_status,
             )
