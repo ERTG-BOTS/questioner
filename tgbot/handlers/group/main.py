@@ -106,7 +106,7 @@ async def handle_q_message(
             await message.answer(
                 f"""<b>👮‍♂️ Вопрос в работе</b>
 
-На вопрос отвечает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" or user.Username != "Скрыто/не определено") else ""}
+На вопрос отвечает <b>{user.FIO}</b>
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
                 disable_web_page_preview=True,
