@@ -130,13 +130,13 @@ async def send_inactivity_warning(
                 if "НТП" in question.employee_division
                 else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
-                text="⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через 5 минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через {config.tg_bot.activity_warn_minutes} минут при отсутствии активности",
             )
 
             # Отправляем предупреждение пользователю
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text="⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через 5 минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {config.tg_bot.activity_warn_minutes} минут при отсутствии активности",
             )
 
     except Exception as e:
@@ -169,7 +169,7 @@ async def auto_close_question(
                 if "НТП" in question.employee_division
                 else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
-                text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                text=f"🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение {config.tg_bot.activity_close_minutes} минут",
                 reply_markup=closed_question_duty_kb(token=question_token),
             )
 
@@ -196,7 +196,7 @@ async def auto_close_question(
             )
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text="Твой вопрос был закрыт из-за отсутствия активности в течение 10 минут",
+                text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {config.tg_bot.activity_close_minutes} минут",
                 reply_markup=closed_question_specialist_kb(token=question_token),
             )
 
