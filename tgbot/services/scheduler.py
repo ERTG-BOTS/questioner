@@ -47,22 +47,18 @@ async def run_delete_timer(
         print(f"Ошибка при планировании удаления сообщений: {e}")
 
 
-async def remove_question_timer(
-    bot: Bot, question: Question, questions_repo: RequestsRepo
-):
+async def remove_question_timer(bot: Bot, question: Question):
     warning_job_id = f"remove_{question.token}"
     scheduler.add_job(
         remove_question,
         "date",
         run_date=datetime.datetime.now(tz=pytz.utc) + datetime.timedelta(seconds=30),
-        args=[bot, question, questions_repo],
+        args=[bot, question],
         id=warning_job_id,
     )
 
 
-async def remove_question(bot: Bot, question: Question, questions_repo: RequestsRepo):
-    await questions_repo.questions.delete_question(token=question.token)
-
+async def remove_question(bot: Bot, question: Question):
     await bot.delete_forum_topic(
         chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
     )

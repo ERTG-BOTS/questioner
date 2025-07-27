@@ -521,9 +521,8 @@ async def cancel_question(
         await callback.bot.close_forum_topic(
             chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
         )
-        await remove_question_timer(
-            bot=callback.bot, question=question, questions_repo=questions_repo
-        )
+        await questions_repo.questions.delete_question(token=question.token)
+        await remove_question_timer(bot=callback.bot, question=question)
         await callback.bot.send_message(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.topic_id,
@@ -539,7 +538,9 @@ async def cancel_question(
         )
     elif not question:
         await callback.answer("Не удалось найти отменяемый вопрос")
-        await main_cb(callback=callback, state=state, questions_repo=questions_repo)
+        await main_cb(
+            callback=callback, state=state, user=user, questions_repo=questions_repo
+        )
     else:
         await callback.answer("Вопрос не может быть отменен. Он уже в работе")
 
