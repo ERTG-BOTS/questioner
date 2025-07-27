@@ -228,7 +228,7 @@ async def question_text(
         if clever_link:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
-<b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
+Специалист не предоставил ссылку на регламент
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
@@ -252,6 +252,7 @@ async def question_text(
             reply_markup=activity_status_toggle_kb(
                 token=new_question.token,
                 user_id=new_question.employee_chat_id,
+                clever_link=clever_link if clever_link else None,
                 current_status=new_question.activity_status_enabled,
                 global_status=config.tg_bot.activity_status,
             ),
@@ -382,8 +383,6 @@ async def clever_link_handler(
         message_thread_id=new_topic.message_thread_id,
         text=f"""Вопрос задает <b>{user.FIO}</b>
 
-<b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
-
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
 
@@ -392,6 +391,7 @@ async def clever_link_handler(
         reply_markup=activity_status_toggle_kb(
             token=new_question.token,
             user_id=new_question.employee_chat_id,
+            clever_link=clever_link if clever_link else None,
             current_status=new_question.activity_status_enabled,
             global_status=config.tg_bot.activity_status,
         ),
@@ -485,7 +485,7 @@ async def regulation_not_found_handler(
     # Формируем текст сообщения с указанием "не нашел" в регламенте
     topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
-<b>🗃️ Регламент:</b> не нашел
+Специалист не нашел регламент
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
@@ -637,6 +637,7 @@ async def toggle_activity_status(
             reply_markup=activity_status_toggle_kb(
                 token=callback_data.token,
                 user_id=question.employee_chat_id,
+                clever_link=question.clever_link if question.clever_link else None,
                 current_status=new_status,
                 global_status=config.tg_bot.activity_status,
             )

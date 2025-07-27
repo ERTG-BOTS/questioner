@@ -219,7 +219,7 @@ async def q_info(
 ❓ <b>Вопрос:</b>
 <blockquote expandable>{question_text}</blockquote>
 
-🗃️ <b>Регламент:</b> <a href='{question.clever_link}'>тык</a>{duty_info}
+🗃️ <b>Регламент:</b> {"<a href=" + question.clever_link + ">тык</a>" if question.clever_link else "Не указан"} {duty_info}
 🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 

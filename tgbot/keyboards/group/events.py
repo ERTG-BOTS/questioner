@@ -8,27 +8,6 @@ class RemovedUser(CallbackData, prefix="removed_user"):
     role: int = None
 
 
-def on_user_join_kb(user_link: str = None) -> InlineKeyboardMarkup:
-    """
-    Клавиатура для использования после добавления в группу
-
-    :param user_link: Ссылка на пользователя в Telegram
-    :return: Объект встроенной клавиатуры для возврата главного меню
-    """
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text="💬 Написать в ЛС",
-                url=user_link,
-            ),
-        ]
-    ]
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-
-    return keyboard
-
-
 def on_user_leave_kb(
     user_id: int | str,
     unban: bool = True,

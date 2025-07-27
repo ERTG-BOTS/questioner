@@ -310,6 +310,7 @@ def question_confirm_kb(token: str) -> InlineKeyboardMarkup:
 def activity_status_toggle_kb(
     token: str,
     user_id: str | int,
+    clever_link: str = None,
     current_status: bool = None,
     global_status: bool = True,
 ) -> InlineKeyboardMarkup:
@@ -333,19 +334,36 @@ def activity_status_toggle_kb(
         button_text = "🟠 Автозакрытие выключено"
         action = "enable"
 
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text="💬 Написать в ЛС",
-                url=f"tg://user?id={user_id}",
-            ),
-        ],
+    if clever_link:
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text="💬 ЛС",
+                    url=f"tg://user?id={user_id}",
+                ),
+                InlineKeyboardButton(
+                    text="🗃️ Регламент",
+                    url=clever_link,
+                ),
+            ],
+        ]
+    else:
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text="💬 ЛС",
+                    url=f"tg://user?id={user_id}",
+                ),
+            ]
+        ]
+
+    buttons.append(
         [
             InlineKeyboardButton(
                 text=button_text,
                 callback_data=ActivityStatusToggle(action=action, token=token).pack(),
             ),
-        ],
-    ]
+        ]
+    )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
