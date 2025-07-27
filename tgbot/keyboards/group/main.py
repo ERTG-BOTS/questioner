@@ -23,7 +23,7 @@ def duty_start(
     buttons = [
         [
             InlineKeyboardButton(
-                text="💬 ЛС",
+                text="💬 ЛС дежурного",
                 url=f"tg://user?id={user_id}",
             ),
         ]
@@ -43,7 +43,7 @@ def reopened_question_kb(user_id: int | str) -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(
-                text="💬 ЛС",
+                text="💬 ЛС дежурного",
                 url=f"tg://user?id={user_id}",
             ),
         ],

@@ -338,7 +338,7 @@ def activity_status_toggle_kb(
         buttons = [
             [
                 InlineKeyboardButton(
-                    text="💬 ЛС",
+                    text="💬 ЛС спеца",
                     url=f"tg://user?id={user_id}",
                 ),
                 InlineKeyboardButton(
@@ -351,7 +351,7 @@ def activity_status_toggle_kb(
         buttons = [
             [
                 InlineKeyboardButton(
-                    text="💬 ЛС",
+                    text="💬 ЛС спеца",
                     url=f"tg://user?id={user_id}",
                 ),
             ]
