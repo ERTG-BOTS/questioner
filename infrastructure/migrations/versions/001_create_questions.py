@@ -24,10 +24,12 @@ def upgrade() -> None:
     op.create_table(
         "questions",
         sa.Column("token", sa.String(length=255), nullable=False),
+        sa.Column("group_id", sa.BIGINT(), nullable=False),
         sa.Column("topic_id", sa.Integer(), nullable=False),
         sa.Column("topic_duty_fullname", sa.Unicode(), nullable=True),
         sa.Column("employee_fullname", sa.Unicode(), nullable=False),
         sa.Column("employee_chat_id", sa.BIGINT(), nullable=False),
+        sa.Column("employee_division", sa.Unicode(), nullable=True),
         sa.Column("question_text", sa.Unicode(), nullable=False),
         sa.Column("start_time", sa.DateTime(), nullable=True),
         sa.Column("end_time", sa.DateTime(), nullable=True),

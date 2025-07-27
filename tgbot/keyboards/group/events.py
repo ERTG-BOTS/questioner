@@ -33,7 +33,6 @@ def on_user_leave_kb(
     user_id: int | str,
     unban: bool = True,
     change_role: bool = False,
-    new_role: int = None,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура для использования после удаления из группы

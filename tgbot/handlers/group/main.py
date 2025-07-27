@@ -96,7 +96,9 @@ async def handle_q_message(
             )
 
             await message.bot.edit_forum_topic(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
             )
@@ -118,7 +120,9 @@ async def handle_q_message(
             )
 
             copied_message = await message.bot.copy_message(
-                from_chat_id=config.tg_bot.forum_id,
+                from_chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_id=message.message_id,
                 chat_id=employee.ChatId,
             )
@@ -129,7 +133,11 @@ async def handle_q_message(
                     questions_repo=questions_repo,
                     user_chat_id=question.employee_chat_id,
                     user_message_id=copied_message.message_id,
-                    topic_chat_id=int(config.tg_bot.forum_id),
+                    topic_chat_id=int(
+                        config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id
+                    ),
                     topic_message_id=message.message_id,
                     topic_thread_id=question.topic_id,
                     question_token=question.token,
@@ -155,7 +163,11 @@ async def handle_q_message(
                     # Находим связь с отвеченным сообщением
                     message_pair = (
                         await questions_repo.messages_pairs.find_by_topic_message(
-                            topic_chat_id=int(config.tg_bot.forum_id),
+                            topic_chat_id=int(
+                                config.tg_bot.ntp_forum_id
+                                if "НТП" in user.Division
+                                else config.tg_bot.nck_forum_id
+                            ),
                             topic_message_id=message.reply_to_message.message_id,
                         )
                     )
@@ -163,24 +175,30 @@ async def handle_q_message(
                     if message_pair:
                         # Копируем с ответом если нашли связь
                         copied_message = await message.bot.copy_message(
-                            from_chat_id=config.tg_bot.forum_id,
+                            from_chat_id=config.tg_bot.ntp_forum_id
+                            if "НТП" in user.Division
+                            else config.tg_bot.nck_forum_id,
                             message_id=message.message_id,
                             chat_id=question.employee_chat_id,
                             reply_to_message_id=message_pair.user_message_id,
                         )
                         logger.info(
-                            f"[Вопрос] - [Ответ] Найдена связь для ответа дежурного: {config.tg_bot.forum_id}:{message.reply_to_message.message_id} -> {message_pair.user_chat_id}:{message_pair.user_message_id}"
+                            f"[Вопрос] - [Ответ] Найдена связь для ответа дежурного: {config.tg_bot.ntp_forum_id if 'НТП' in user.Division else 'НЦК'}:{message.reply_to_message.message_id} -> {message_pair.user_chat_id}:{message_pair.user_message_id}"
                         )
                     else:
                         # Не найдено связи, просто копируем
                         copied_message = await message.bot.copy_message(
-                            from_chat_id=config.tg_bot.forum_id,
+                            from_chat_id=config.tg_bot.ntp_forum_id
+                            if "НТП" in user.Division
+                            else config.tg_bot.nck_forum_id,
                             message_id=message.message_id,
                             chat_id=question.employee_chat_id,
                         )
                 else:
                     copied_message = await message.bot.copy_message(
-                        from_chat_id=config.tg_bot.forum_id,
+                        from_chat_id=config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id,
                         message_id=message.message_id,
                         chat_id=question.employee_chat_id,
                     )
@@ -191,7 +209,11 @@ async def handle_q_message(
                         questions_repo=questions_repo,
                         user_chat_id=question.employee_chat_id,
                         user_message_id=copied_message.message_id,
-                        topic_chat_id=int(config.tg_bot.forum_id),
+                        topic_chat_id=int(
+                            config.tg_bot.ntp_forum_id
+                            if "НТП" in user.Division
+                            else config.tg_bot.nck_forum_id
+                        ),
                         topic_message_id=message.message_id,
                         topic_thread_id=question.topic_id,
                         question_token=question.token,
@@ -220,7 +242,11 @@ async def handle_q_message(
 <i>Предупреждение удалится через 30 секунд</i>""")
                     await run_delete_timer(
                         bot=message.bot,
-                        chat_id=int(config.tg_bot.forum_id),
+                        chat_id=int(
+                            config.tg_bot.ntp_forum_id
+                            if "НТП" in user.Division
+                            else config.tg_bot.nck_forum_id
+                        ),
                         message_ids=[emoji_message.message_id],
                         seconds=30,
                     )
@@ -251,7 +277,9 @@ async def handle_q_message(
 
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(
-            chat_id=config.tg_bot.forum_id,
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
             message_thread_id=message.message_thread_id,
         )
         logger.error(
@@ -406,15 +434,20 @@ async def return_q_duty(
         )
 
         await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.forum_id,
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
             message_thread_id=question.topic_id,
-            name=user.FIO
-            if config.tg_bot.division == "НЦК"
-            else f"{user.Division} | {user.FIO}",
+            name=f"{user.Division} | {user.FIO}"
+            if "НТП" in user.Division
+            else user.FIO,
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
         await callback.bot.reopen_forum_topic(
-            chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
+            message_thread_id=question.topic_id,
         )
 
         await callback.message.answer("""<b>🔓 Вопрос переоткрыт</b>

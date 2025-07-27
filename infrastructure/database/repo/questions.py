@@ -19,9 +19,11 @@ logger = logging.getLogger(__name__)
 class QuestionsRepo(BaseRepo):
     async def add_question(
         self,
-        employee_chat_id: int,
-        employee_fullname: str,
+        group_id: int,
         topic_id: int,
+        employee_fullname: str,
+        employee_chat_id: int,
+        employee_division: str,
         question_text: str,
         start_time: date,
         clever_link: str,
@@ -29,9 +31,11 @@ class QuestionsRepo(BaseRepo):
     ) -> Question:
         """
         Добавление нового вопроса
-        :param employee_chat_id: Идентификатор Telegram специалиста, задавшего вопроса
-        :param employee_fullname: ФИО специалиста, задавшего вопроса
+        :param group_id: Идентификатор группы Telegram, в которой вопрос решается
         :param topic_id: Идентификатор топика Telegram, в котором вопрос решается
+        :param employee_chat_id: Идентификатор Telegram специалиста, задавшего вопрос
+        :param employee_fullname: ФИО специалиста, задавшего вопрос
+        :param employee_division: Направление специалиста, задавшего вопрос
         :param question_text: Текст заданного вопроса
         :param start_time: Время открытия вопроса
         :param clever_link: Ссылка на базу знаний от специалиста
@@ -42,9 +46,11 @@ class QuestionsRepo(BaseRepo):
 
         question = Question(
             token=token,
+            group_id=group_id,
             topic_id=topic_id,
             employee_fullname=employee_fullname,
             employee_chat_id=employee_chat_id,
+            employee_division=employee_division,
             question_text=question_text,
             start_time=start_time,
             clever_link=clever_link,
@@ -59,7 +65,7 @@ class QuestionsRepo(BaseRepo):
         return question
 
     async def get_question(
-        self, token: str = None, topic_id: int = None
+        self, token: str = None, group_id: str | int = None, topic_id: int = None
     ) -> Optional[Question]:
         """
         Получение вопроса по токену или идентификатору топика
@@ -70,7 +76,9 @@ class QuestionsRepo(BaseRepo):
         if token:
             stmt = select(Question).where(Question.token == token)
         else:
-            stmt = select(Question).where(Question.topic_id == topic_id)
+            stmt = select(Question).where(
+                Question.topic_id == topic_id, Question.group_id == group_id
+            )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -216,7 +224,6 @@ class QuestionsRepo(BaseRepo):
             try:
                 # Получаем пользователя из основной базы
                 user = await main_repo.users.get_user(user_id=question.employee_chat_id)
-                logger.warning(user.Division)
                 if user and division.upper() in user.Division.upper():
                     filtered_questions.append(question_row)
             except Exception as e:

@@ -22,9 +22,9 @@ class TgBot:
 
     token: str
     use_redis: bool
-    division: str
 
-    forum_id: str
+    ntp_forum_id: str
+    nck_forum_id: str
     ask_clever_link: bool
 
     remove_old_questions: bool
@@ -42,24 +42,23 @@ class TgBot:
         token = env.str("BOT_TOKEN")
 
         use_redis = env.bool("USE_REDIS")
-        division = env.str("DIVISION")
 
-        forum_id = env.str("FORUM_ID")
+        ntp_forum_id = env.str("NTP_FORUM_ID")
+        nck_forum_id = env.str("NCK_FORUM_ID")
+        ask_clever_link = env.bool("ASK_CLEVER_LINK")
+
         remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
         remove_old_questions_days = env.int("REMOVE_OLD_QUESTIONS_DAYS")
-        ask_clever_link = env.bool("ASK_CLEVER_LINK")
 
         activity_status = env.bool("ACTIVITY_STATUS")
         activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
         activity_close_minutes = env.int("ACTIVITY_CLOSE_MINUTES")
 
-        if division != "НТП" and division != "НЦК":
-            raise ValueError("[CONFIG] DIVISION должен быть НТП или НЦК")
         return TgBot(
             token=token,
             use_redis=use_redis,
-            division=division,
-            forum_id=forum_id,
+            ntp_forum_id=ntp_forum_id,
+            nck_forum_id=nck_forum_id,
             remove_old_questions=remove_old_questions,
             remove_old_questions_days=remove_old_questions_days,
             ask_clever_link=ask_clever_link,

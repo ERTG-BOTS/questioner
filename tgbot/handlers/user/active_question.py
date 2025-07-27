@@ -64,7 +64,9 @@ async def active_question_end(
             if question.quality_duty is not None:
                 if question.quality_duty:
                     await message.bot.send_message(
-                        chat_id=config.tg_bot.forum_id,
+                        chat_id=config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id,
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
     
@@ -78,7 +80,9 @@ async def active_question_end(
                     )
                 else:
                     await message.bot.send_message(
-                        chat_id=config.tg_bot.forum_id,
+                        chat_id=config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id,
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
@@ -92,7 +96,9 @@ async def active_question_end(
                     )
             else:
                 await message.bot.send_message(
-                    chat_id=config.tg_bot.forum_id,
+                    chat_id=config.tg_bot.ntp_forum_id
+                    if "НТП" in user.Division
+                    else config.tg_bot.nck_forum_id,
                     message_thread_id=question.topic_id,
                     text=f"""<b>🔒 Вопрос закрыт</b>
 
@@ -106,13 +112,18 @@ async def active_question_end(
                 )
 
             await message.bot.edit_forum_topic(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
                 icon_custom_emoji_id=dicts.topicEmojis["closed"],
             )
             await message.bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
             )
 
             await message.reply(
@@ -128,9 +139,20 @@ async def active_question_end(
                 f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.token} со старшим {question.topic_duty_fullname}"
             )
         elif question.status == "closed":
+            await message.bot.edit_forum_topic(
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
+                name=question.token,
+                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+            )
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
             )
             logger.info(
                 f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.token} со старшим {question.topic_duty_fullname}. Вопрос уже закрыт"
@@ -179,7 +201,9 @@ async def active_question(
             copied_message = await message.bot.copy_message(
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 reply_to_message_id=message_pair.topic_message_id,
             )
@@ -191,14 +215,18 @@ async def active_question(
             copied_message = await message.bot.copy_message(
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
             )
     else:
         copied_message = await message.bot.copy_message(
             from_chat_id=message.chat.id,
             message_id=message.message_id,
-            chat_id=config.tg_bot.forum_id,
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
             message_thread_id=question.topic_id,
         )
 
@@ -208,7 +236,11 @@ async def active_question(
             questions_repo=questions_repo,
             user_chat_id=message.chat.id,
             user_message_id=message.message_id,
-            topic_chat_id=int(config.tg_bot.forum_id),
+            topic_chat_id=int(
+                config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id
+            ),
             topic_message_id=copied_message.message_id,
             topic_thread_id=question.topic_id,
             question_token=question.token,
@@ -330,7 +362,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист {user.FIO} отредактировал <a href='https://t.me/c/{config.tg_bot.forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+Специалист {user.FIO} отредактировал <a href='https://t.me/c/{config.tg_bot.ntp_forum_id if "НТП" in user.Division else config.tg_bot.nck_forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
             )
 
@@ -352,7 +384,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{config.tg_bot.forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{config.tg_bot.ntp_forum_id if "НТП" in user.Division else config.tg_bot.nck_forum_id[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
             )
 

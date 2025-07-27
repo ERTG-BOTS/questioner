@@ -7,9 +7,11 @@ from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import Config
+from tgbot.config import Config, load_config
 from tgbot.keyboards.group.events import on_user_leave_kb
 from tgbot.services.logger import setup_logging
+
+config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -72,7 +74,9 @@ class DatabaseMiddleware(BaseMiddleware):
                         # User validation logic remains the same...
                         if not user and not is_bot:
                             await self.bot.ban_chat_member(
-                                chat_id=self.config.tg_bot.forum_id,
+                                chat_id=self.config.tg_bot.ntp_forum_id
+                                if "НТП" in user.Division
+                                else config.tg_bot.nck_forum_id,
                                 user_id=event.from_user.id,
                             )
                             await event.answer(
@@ -93,7 +97,9 @@ class DatabaseMiddleware(BaseMiddleware):
                             and not is_bot
                         ):
                             await self.bot.ban_chat_member(
-                                chat_id=self.config.tg_bot.forum_id,
+                                chat_id=self.config.tg_bot.ntp_forum_id
+                                if "НТП" in user.Division
+                                else config.tg_bot.nck_forum_id,
                                 user_id=event.from_user.id,
                             )
                             await event.answer(
@@ -107,41 +113,30 @@ class DatabaseMiddleware(BaseMiddleware):
                             )
                             return
 
-                        if user and not is_bot and user.Role != 10:
-                            if self.config.tg_bot.division not in user.Division:
-                                if "НТП" in user.Division:
-                                    bot_link = "https://t.me/ntp2question_bot"
-                                else:
-                                    bot_link = "https://t.me/NCKQuestionBot"
-
-                                try:
-                                    await self.bot.send_message(
-                                        chat_id=event.from_user.id,
-                                        text=f"Текущий бот работает только для <b>{self.config.tg_bot.division}</b>. Перейди в <a href='{bot_link}'>своего бота</a>",
-                                        disable_web_page_preview=True,
-                                    )
-                                except Exception as e:
-                                    logger.error(
-                                        f"[Доступ] Не удалось отправить сообщение пользователю {event.from_user.id}: {e}"
-                                    )
-
-                                logger.warning(
-                                    f"[Доступ] Пользователь {event.from_user.username} ({event.from_user.id}) из {user.Division} попытался использовать бот для {self.config.tg_bot.division}"
-                                )
-                                return
-
                         question: Question = None
                         active_question_token: str = None
 
                         # Get question from questioner database
-                        if message_thread_id and message_thread_id != 1:
+                        if message_thread_id and message_thread_id != 1 and user:
                             try:
                                 question = await questioner_repo.questions.get_question(
-                                    topic_id=message_thread_id
+                                    topic_id=message_thread_id,
+                                    group_id=config.tg_bot.ntp_forum_id
+                                    if "НТП" in user.Division
+                                    else config.tg_bot.nck_forum_id,
                                 )
                                 if question:
                                     logger.debug(
                                         f"[Вопрос] Загружен вопрос {question.token} для топика {message_thread_id}"
+                                    )
+                                else:
+                                    await event.reply(
+                                        text="""<b>🙅‍♂️ Ошибка</b>
+
+Запрещено отвечать на вопросы чужого направления""",
+                                    )
+                                    logger.error(
+                                        f"[Вопрос] Не удалось загрузить вопрос в топике {message_thread_id} и группе {'НТП' if config.tg_bot.ntp_forum_id == event.chat.id else 'НЦК'}"
                                     )
                             except (
                                 OperationalError,
@@ -171,9 +166,7 @@ class DatabaseMiddleware(BaseMiddleware):
                                 active_questions = await questioner_repo.questions.get_active_questions()
 
                                 for question in active_questions:
-                                    if (
-                                        question.employee_chat_id == event.from_user.id
-                                    ):  # Updated to snake_case
+                                    if question.employee_chat_id == event.from_user.id:
                                         question = question
                                         active_question_token = question.token
                                         logger.debug(
