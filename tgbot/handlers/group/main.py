@@ -508,7 +508,7 @@ async def change_q_return_status(
     if callback_data.allow_return:
         await callback.answer("🟢 Возврат текущего вопроса был разрешен")
     else:
-        await callback.answer("⛔ Возврат текущего вопроса был разрешен")
+        await callback.answer("⛔ Возврат текущего вопроса был запрещен")
 
     await callback.message.edit_reply_markup(
         reply_markup=question_quality_duty_kb(
