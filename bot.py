@@ -142,7 +142,9 @@ async def main():
     register_global_middlewares(dp, bot_config, bot, stp_db, questioner_db)
 
     if bot_config.tg_bot.remove_old_questions:
-        scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])
+        scheduler.add_job(
+            remove_old_topics, "interval", seconds=12, args=[bot, questioner_db]
+        )
     scheduler.start()
 
     # await on_startup(bot)

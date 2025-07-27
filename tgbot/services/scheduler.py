@@ -67,41 +67,46 @@ async def remove_question(bot: Bot, question: Question):
     )
 
 
-async def remove_old_topics(bot: Bot, questions_repo: RequestsRepo):
-    old_questions: Sequence[
-        Question
-    ] = await questions_repo.questions.get_old_questions()
-    old_pairs: Sequence[
-        MessagesPair
-    ] = await questions_repo.messages_pairs.get_old_pairs()
+async def remove_old_topics(bot: Bot, session_pool):
+    # Create a session and RequestsRepo instance
+    async with session_pool() as session:
+        questions_repo = RequestsRepo(session)
 
-    for question in old_questions:
-        await bot.delete_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in question.employee_division
-            else config.tg_bot.nck_forum_id,
-            message_thread_id=question.topic_id,
+        old_questions: Sequence[
+            Question
+        ] = await questions_repo.questions.get_old_questions()
+        old_pairs: Sequence[
+            MessagesPair
+        ] = await questions_repo.messages_pairs.get_old_pairs()
+
+        questions_result = await questions_repo.questions.delete_question(
+            questions=old_questions
         )
 
-    questions_result = await questions_repo.questions.delete_question(
-        questions=old_questions
-    )
-    pairs_result = await questions_repo.messages_pairs.delete_pairs(pairs=old_pairs)
-    logger.info(
-        f"[Старые топики] Успешно удалено {questions_result['deleted_count']} из {questions_result['total_count']} старых вопросов"
-    )
-    logger.info(
-        f"[Старые пары] Успешно удалено {pairs_result['deleted_count']} из {pairs_result['total_count']} старых пар сообщений"
-    )
+        for question in old_questions:
+            await bot.delete_forum_topic(
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in question.employee_division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
+            )
 
-    if questions_result["errors"]:
+        pairs_result = await questions_repo.messages_pairs.delete_pairs(pairs=old_pairs)
         logger.info(
-            f"[Старые топики] Произошла ошибка при удалении части вопросов: {questions_result['errors']}"
+            f"[Старые топики] Успешно удалено {questions_result['deleted_count']} из {questions_result['total_count']} старых вопросов"
         )
-    if pairs_result["errors"]:
         logger.info(
-            f"[Старые пары] Произошла ошибка при удалении части пар: {questions_result['errors']}"
+            f"[Старые пары] Успешно удалено {pairs_result['deleted_count']} из {pairs_result['total_count']} старых пар сообщений"
         )
+
+        if questions_result["errors"]:
+            logger.info(
+                f"[Старые топики] Произошла ошибка при удалении части вопросов: {questions_result['errors']}"
+            )
+        if pairs_result["errors"]:
+            logger.info(
+                f"[Старые пары] Произошла ошибка при удалении части пар: {pairs_result['errors']}"
+            )
 
 
 async def send_inactivity_warning(
