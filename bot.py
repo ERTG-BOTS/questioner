@@ -143,7 +143,7 @@ async def main():
 
     if bot_config.tg_bot.remove_old_questions:
         scheduler.add_job(
-            remove_old_topics, "interval", seconds=12, args=[bot, questioner_db]
+            remove_old_topics, "interval", hours=12, args=[bot, questioner_db]
         )
     scheduler.start()
 
