@@ -49,12 +49,14 @@ logger = logging.getLogger(__name__)
 
 @topic_router.message(IsTopicMessage())
 async def handle_q_message(
-    message: Message,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
-    question: Question,
+    message: Message, user: User, questions_repo: RequestsRepo, main_repo: RequestsRepo
 ):
+    question = await questions_repo.questions.get_question(
+        group_id=message.chat.id, topic_id=message.message_thread_id
+    )
+    if message.message_thread_id != question.topic_id:
+        return
+
     if message.text == "✅️ Закрыть вопрос":
         await end_q_cmd(
             message=message,
@@ -291,9 +293,12 @@ async def handle_q_message(
 
 @topic_router.edited_message(IsTopicMessage())
 async def handle_edited_message(
-    message: Message, questions_repo: RequestsRepo, user: User, question: Question
+    message: Message, questions_repo: RequestsRepo, user: User
 ):
     """Универсальных хендлер для редактируемых сообщений в топиках"""
+    question: Question = await questions_repo.questions.get_question(
+        group_id=message.chat.id, topic_id=message.message_thread_id
+    )
     if not question:
         logger.error(
             f"[Редактирование] Не найдено вопроса для топика: {message.message_thread_id}"
@@ -414,11 +419,11 @@ async def handle_edited_message(
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))
 async def return_q_duty(
-    callback: CallbackQuery,
-    user: User,
-    questions_repo: RequestsRepo,
-    question: Question,
+    callback: CallbackQuery, user: User, questions_repo: RequestsRepo
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
+    )
     available_to_return_questions: Sequence[
         Question
     ] = await questions_repo.questions.get_available_to_return_questions()
@@ -499,9 +504,11 @@ async def return_q_duty(
 async def change_q_return_status(
     callback: CallbackQuery,
     callback_data: QuestionQualityDuty,
-    question: Question,
     questions_repo: RequestsRepo,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
+    )
     await questions_repo.questions.update_question_return_status(
         token=callback_data.token, status=callback_data.allow_return
     )
@@ -526,8 +533,10 @@ async def quality_q_duty(
     callback_data: QuestionQualityDuty,
     user: User,
     questions_repo: RequestsRepo,
-    question: Question,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
+    )
     if question.topic_duty_fullname == user.FIO:
         await questions_repo.questions.update_question_quality(
             token=callback_data.token, quality=callback_data.answer, is_duty=True

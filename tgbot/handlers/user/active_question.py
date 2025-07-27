@@ -47,8 +47,11 @@ async def active_question_end(
     message: Message,
     questions_repo: RequestsRepo,
     user: User,
-    question: Question,
+    active_question_token: str,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        token=active_question_token
+    )
     if question is not None:
         if question.status != "closed":
             # Останавливаем таймер бездействия
@@ -172,8 +175,19 @@ async def active_question(
     message: Message,
     questions_repo: RequestsRepo,
     user: User,
-    question: Question,
+    active_question_token: str,
 ) -> None:
+    if message.message_thread_id:
+        return
+
+    question: Question = await questions_repo.questions.get_question(
+        token=active_question_token
+    )
+
+    logger.info(
+        f"question: {question}. Сообщение: {message.message_thread_id}. Тема вопроса: {question.topic_id}"
+    )
+
     if message.text == "✅️ Закрыть вопрос":
         await active_question_end(
             message=message,
@@ -283,9 +297,11 @@ async def handle_edited_message(
     active_question_token: str,
     questions_repo: RequestsRepo,
     user: User,
-    question: Question,
 ) -> None:
     """Универсальный хендлер для редактируемых сообщений пользователей в активных вопросах"""
+    question: Question = await questions_repo.questions.get_question(
+        token=active_question_token
+    )
     if not question:
         logger.error(
             f"[Редактирование] Не найден вопрос с токеном {active_question_token}"

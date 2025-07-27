@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware, Bot
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 
-from infrastructure.database.models import Question, User
+from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import Config, load_config
 from tgbot.keyboards.group.events import on_user_leave_kb
@@ -113,89 +113,11 @@ class DatabaseMiddleware(BaseMiddleware):
                             )
                             return
 
-                        question: Question = None
-                        active_question_token: str = None
-
-                        # Get question from questioner database
-                        if message_thread_id and message_thread_id != 1 and user:
-                            try:
-                                question = await questioner_repo.questions.get_question(
-                                    topic_id=message_thread_id,
-                                    group_id=config.tg_bot.ntp_forum_id
-                                    if "НТП" in user.Division
-                                    else config.tg_bot.nck_forum_id,
-                                )
-                                if question:
-                                    logger.debug(
-                                        f"[Вопрос] Загружен вопрос {question.token} для топика {message_thread_id}"
-                                    )
-                                else:
-                                    await event.reply(
-                                        text="""<b>🙅‍♂️ Ошибка</b>
-
-Запрещено отвечать на вопросы чужого направления""",
-                                    )
-                                    logger.error(
-                                        f"[Вопрос] Не удалось загрузить вопрос в топике {message_thread_id} и группе {'НТП' if config.tg_bot.ntp_forum_id == event.chat.id else 'НЦК'}"
-                                    )
-                            except (
-                                OperationalError,
-                                DBAPIError,
-                                DisconnectionError,
-                            ) as e:
-                                if "Connection is busy" in str(e) or "HY000" in str(e):
-                                    logger.warning(
-                                        f"[Вопрос] Connection busy для топика {message_thread_id}, повтор {retry_count + 1}/{max_retries}: {e}"
-                                    )
-                                    retry_count += 1
-                                    if retry_count < max_retries:
-                                        continue
-                                    else:
-                                        logger.error(
-                                            f"[Вопрос] Все попытки исчерпаны для топика {message_thread_id}: {e}"
-                                        )
-                                        question = None
-                                else:
-                                    logger.error(
-                                        f"[Вопрос] Ошибка БД при загрузке вопроса для топика {message_thread_id}: {e}"
-                                    )
-                                    question = None
-
-                        elif user and not message_thread_id and not is_bot:
-                            try:
-                                active_questions = await questioner_repo.questions.get_active_questions()
-
-                                for question in active_questions:
-                                    if question.employee_chat_id == event.from_user.id:
-                                        question = question
-                                        active_question_token = question.token
-                                        logger.debug(
-                                            f"[Вопрос] Автоматически загружен активный вопрос {question.token} для пользователя {event.from_user.id}"
-                                        )
-                                        break
-                            except (
-                                OperationalError,
-                                DBAPIError,
-                                DisconnectionError,
-                            ) as e:
-                                if "Connection is busy" in str(e) or "HY000" in str(e):
-                                    retry_count += 1
-                                    if retry_count < max_retries:
-                                        continue
-                                    else:
-                                        question = None
-                                        active_question_token = None
-                                else:
-                                    question = None
-                                    active_question_token = None
-
                         data["main_session"] = main_session
                         data["questioner_session"] = questioner_session
                         data["questions_repo"] = questioner_repo
                         data["main_repo"] = main_repo
                         data["user"] = user
-                        data["question"] = question
-                        data["active_question_token"] = active_question_token
 
                         result = await handler(event, data)
                         return result

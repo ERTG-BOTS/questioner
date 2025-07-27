@@ -15,21 +15,30 @@ logger = logging.getLogger(__name__)
 class ActiveQuestion(BaseFilter):
     async def __call__(
         self, obj: Message, questions_repo: RequestsRepo, **kwargs
-    ) -> bool:
+    ) -> dict[str, str] | bool:
         """
-        asd
-        :param obj: Объект обрабатываемого фильтром сообщения
-        :param questions_repo: БД репозиторий вопросов
-        :param kwargs: Дополнительные аргументы
-        :return: Статус, есть ли у пользователя активный вопрос
+        Filter to check if user has an active question
+        ONLY works in private chats, not in groups
+        :param obj: Message object being filtered
+        :param questions_repo: Database repository for questions
+        :param kwargs: Additional arguments
+        :return: Status whether user has an active question
         """
+        if obj.chat.type != "private":
+            return False
+
+        logger.info(
+            f"Checking active question for user {obj.from_user.id} in private chat"
+        )
+
         active_questions: Sequence[
             Question
         ] = await questions_repo.questions.get_active_questions()
 
         for question in active_questions:
             if question.employee_chat_id == obj.from_user.id:
-                return True
+                active_question_token = question.token
+                return {"active_question_token": active_question_token}
 
         return False
 
@@ -42,6 +51,9 @@ class ActiveQuestionWithCommand(BaseFilter):
         self, obj: Message, questions_repo: RequestsRepo, **kwargs
     ) -> None | bool | dict[str, str]:
         if self.command:
+            if obj.chat.type != "private":
+                return False
+
             if not obj.text or not obj.text.startswith(f"/{self.command}"):
                 return False
 
@@ -51,7 +63,8 @@ class ActiveQuestionWithCommand(BaseFilter):
 
             for question in current_questions:
                 if question.employee_chat_id == obj.from_user.id:
-                    return True
+                    active_question_token = question.token
+                    return {"active_question_token": active_question_token}
 
             return False
         return None

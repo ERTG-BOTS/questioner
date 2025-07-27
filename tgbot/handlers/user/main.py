@@ -544,8 +544,11 @@ async def cancel_question(
     state: FSMContext,
     questions_repo: RequestsRepo,
     user: User,
-    question: Question,
+    active_question_token: str,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        token=active_question_token
+    )
     if (
         question
         and question.status == "open"
@@ -597,9 +600,12 @@ async def toggle_activity_status(
     callback: CallbackQuery,
     callback_data: ActivityStatusToggle,
     questions_repo: RequestsRepo,
-    question: Question,
+    active_question_token: str,
 ):
     """Обработчик переключения статуса активности для топика"""
+    question: Question = await questions_repo.questions.get_question(
+        token=active_question_token
+    )
     try:
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)

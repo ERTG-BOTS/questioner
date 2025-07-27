@@ -30,8 +30,11 @@ async def end_q_cmd(
     user: User,
     questions_repo: RequestsRepo,
     main_repo: RequestsRepo,
-    question: Question,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=message.chat.id, topic_id=message.message_thread_id
+    )
+
     if question is not None:
         if question.status != "closed" and question.topic_duty_fullname == user.FIO:
             # Останавливаем таймер бездействия
@@ -169,12 +172,11 @@ async def end_q_cmd(
 
 @topic_cmds_router.message(IsTopicMessageWithCommand("release"))
 async def release_q_cmd(
-    message: Message,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
-    question: Question,
+    message: Message, user: User, questions_repo: RequestsRepo, main_repo: RequestsRepo
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=message.chat.id, topic_id=message.message_thread_id
+    )
     if question is not None:
         if (
             question.topic_duty_fullname is not None
@@ -250,8 +252,10 @@ async def release_q_cb(
     callback: CallbackQuery,
     questions_repo: RequestsRepo,
     user: User,
-    question: Question,
 ):
+    question: Question = await questions_repo.questions.get_question(
+        group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
+    )
     if question is not None:
         await questions_repo.questions.update_question_duty(
             token=question.token, topic_duty=None

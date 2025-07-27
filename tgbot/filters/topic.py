@@ -23,6 +23,7 @@ class IsTopicMessage(BaseFilter):
             and message.message_thread_id
             and message.message_thread_id != 1
         )
+
         if not in_topic:
             return False
 
@@ -51,7 +52,11 @@ class IsTopicMessageWithCommand(BaseFilter):
             return False
 
         # Проверка на тему
-        in_topic = bool(message.is_topic_message and message.message_thread_id)
+        in_topic = bool(
+            message.is_topic_message
+            and message.message_thread_id
+            and message.message_thread_id != 1
+        )
         if not in_topic:
             return False
 
