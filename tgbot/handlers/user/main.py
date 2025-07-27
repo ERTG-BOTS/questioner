@@ -219,14 +219,14 @@ async def question_text(
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 РГ:</b> {user.Boss}
+<b>👑 Руководитель:</b> {user.Boss}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
         else:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b> {'(<a href="https://t.me/' + user.Username + '">лс</a>)' if (user.Username != "Не указан" and user.Username != "Скрыто/не определено") else ""}
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 РГ:</b> {user.Boss}
+<b>👑 Руководитель:</b> {user.Boss}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
 
@@ -346,7 +346,7 @@ async def clever_link_handler(
 <b>🗃️ Регламент:</b> <a href='{clever_link}'>тык</a>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 РГ:</b> {user.Boss}
+<b>👑 Руководитель:</b> {user.Boss}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
         disable_web_page_preview=True,

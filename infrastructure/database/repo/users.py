@@ -98,3 +98,17 @@ class UserRepo(BaseRepo):
         except SQLAlchemyError as e:
             logger.error(f"[БД] Ошибка получения администраторов: {e}")
             return []
+
+    async def update_user_role(self, user_id: str | int, role: int) -> Optional[User]:
+        """
+        Обновление роли пользователя
+        :param user_id: Идентификатор пользователя Telegram
+        :param role: Новая роль
+        :return: Обновленный объект вопроса
+        """
+        user = await self.session.get(User, user_id)
+        if user:
+            user.Role = role
+            await self.session.commit()
+            await self.session.refresh(user)
+        return user

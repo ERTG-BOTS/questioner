@@ -8,6 +8,7 @@ from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import Config
+from tgbot.keyboards.group.events import on_user_leave_kb
 from tgbot.services.logger import setup_logging
 
 setup_logging()
@@ -69,16 +70,19 @@ class DatabaseMiddleware(BaseMiddleware):
                             is_bot = event.from_user.is_bot
 
                         # User validation logic remains the same...
-                        if not user and message_thread_id and not is_bot:
+                        if not user and not is_bot:
                             await self.bot.ban_chat_member(
                                 chat_id=self.config.tg_bot.forum_id,
                                 user_id=event.from_user.id,
                             )
-                            await self.bot.send_message(
-                                chat_id=self.config.tg_bot.forum_id,
-                                text=f"""<b>Блокировка</b>
+                            await event.answer(
+                                text=f"""<b>🙅‍♂️ Исключение</b>
 
-Пользователь с id {event.from_user.id} не найден в базе""",
+Пользователь <code>{event.from_user.id}</code> исключен
+Причина: не найден в базе""",
+                                reply_markup=on_user_leave_kb(
+                                    user_id=event.from_user.id,
+                                ),
                             )
                             return
 
@@ -92,11 +96,14 @@ class DatabaseMiddleware(BaseMiddleware):
                                 chat_id=self.config.tg_bot.forum_id,
                                 user_id=event.from_user.id,
                             )
-                            await self.bot.send_message(
-                                chat_id=self.config.tg_bot.forum_id,
-                                text=f"""<b>Блокировка</b>
+                            await event.answer(
+                                text=f"""<b>🙅‍♂️ Исключение</b>
 
-Пользователь имеет роль {user.Role}, для доступа нужна одна из следующих ролей: 2, 3, 10""",
+Пользователь <code>{event.from_user.id}</code> исключен
+Причина: недостаточно прав для входа""",
+                                reply_markup=on_user_leave_kb(
+                                    user_id=event.from_user.id, change_role=True
+                                ),
                             )
                             return
 

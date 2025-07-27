@@ -80,6 +80,7 @@ def register_global_middlewares(
         dp.message.outer_middleware(middleware_type)
         dp.callback_query.outer_middleware(middleware_type)
         dp.edited_message.outer_middleware(middleware_type)
+        dp.chat_member.outer_middleware(middleware_type)
 
     dp.edited_message.outer_middleware(MessagePairingMiddleware())
 
@@ -144,7 +145,7 @@ async def main():
         scheduler.add_job(remove_old_topics, "interval", hours=12, args=[bot, stp_db])
     scheduler.start()
 
-    await on_startup(bot)
+    # await on_startup(bot)
     try:
         await dp.start_polling(bot)
     finally:

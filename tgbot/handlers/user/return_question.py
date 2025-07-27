@@ -22,7 +22,7 @@ from tgbot.keyboards.user.main import (
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
-employee_return_q = Router()
+employee_return_q_router = Router()
 
 config = load_config(".env")
 
@@ -30,7 +30,9 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@employee_return_q.callback_query(QuestionQualitySpecialist.filter(F.return_question))
+@employee_return_q_router.callback_query(
+    QuestionQualitySpecialist.filter(F.return_question)
+)
 async def return_finished_q(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
@@ -121,7 +123,7 @@ async def return_finished_q(
         )
 
 
-@employee_return_q.callback_query(MainMenu.filter(F.menu == "return"))
+@employee_return_q_router.callback_query(MainMenu.filter(F.menu == "return"))
 async def q_list(
     callback: CallbackQuery, state: FSMContext, user: User, questions_repo: RequestsRepo
 ):
@@ -160,7 +162,7 @@ async def q_list(
     )
 
 
-@employee_return_q.callback_query(ReturnQuestion.filter(F.action == "show"))
+@employee_return_q_router.callback_query(ReturnQuestion.filter(F.action == "show"))
 async def q_info(
     callback: CallbackQuery,
     callback_data: ReturnQuestion,
@@ -215,7 +217,7 @@ async def q_info(
     await callback.answer()
 
 
-@employee_return_q.callback_query(ReturnQuestion.filter(F.action == "confirm"))
+@employee_return_q_router.callback_query(ReturnQuestion.filter(F.action == "confirm"))
 async def return_q_confirm(
     callback: CallbackQuery,
     callback_data: ReturnQuestion,
