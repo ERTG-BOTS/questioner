@@ -23,8 +23,8 @@ from tgbot.keyboards.group.main import (
     QuestionAllowReturn,
     QuestionQualityDuty,
     closed_question_duty_kb,
-    question_quality_duty_kb,
     duty_start,
+    question_quality_duty_kb,
 )
 from tgbot.keyboards.user.main import (
     finish_question_kb,
@@ -547,18 +547,18 @@ async def quality_q_duty(
                 f"""<b>🔒 Вопрос закрыт</b>
 
 👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
-👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_question_duty_kb(
-                    token=callback_data.token,
-                ),
+👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
+                reply_markup=closed_question_duty_kb(token=callback_data.token),
             )
         else:
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
 👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
-👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_question_duty_kb(token=callback_data.token),
+👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
+                reply_markup=closed_question_duty_kb(
+                    token=callback_data.token,
+                ),
             )
 
         logger.info(
