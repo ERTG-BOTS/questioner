@@ -105,7 +105,7 @@ class DatabaseMiddleware(BaseMiddleware):
                             await event.answer(
                                 text=f"""<b>🙅‍♂️ Исключение</b>
 
-Пользователь <code>{event.from_user.id}</code> исключен
+Пользователь <code>{user.FIO}</code> исключен
 Причина: недостаточно прав для входа""",
                                 reply_markup=on_user_leave_kb(
                                     user_id=event.from_user.id, change_role=True
