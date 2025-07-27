@@ -122,6 +122,10 @@ async def main():
             BotCommand(command="end", description="Закрыть вопрос"),
         ]
     )
+
+    # TODO Установить универсальное название при запуске бота
+    # await bot.set_my_name(name="Вопросник")
+
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
