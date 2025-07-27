@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import Sequence
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart
@@ -16,7 +17,9 @@ from tgbot.keyboards.user.main import (
     activity_status_toggle_kb,
     back_kb,
     cancel_question_kb,
+    question_ask_kb,
     user_kb,
+    AskQuestionMenu,
 )
 from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
@@ -148,7 +151,11 @@ async def ask_question(
 
 @user_router.message(AskQuestion.question)
 async def question_text(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+    message: Message,
+    state: FSMContext,
+    user: User,
+    questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
 ):
     if message.caption:
         await state.update_data(question=message.caption)
@@ -262,12 +269,23 @@ async def question_text(
         )
         return
 
+    top_users: Sequence[
+        User
+    ] = await questions_repo.questions.get_top_users_by_division(
+        division="НЦК" if "НЦК" in user.Division else "НТП", main_repo=main_repo
+    )
+    logger.warning(top_users)
+
     # Если дошли до сюда, значит нужно запросить ссылку на регламент
     response_msg = await message.answer(
         """<b>🗃️ Регламент</b>
 
 Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос""",
-        reply_markup=back_kb(),
+        reply_markup=question_ask_kb(
+            is_user_in_top=True
+            if user.ChatId in (u.ChatId for u in top_users)
+            else False
+        ),
     )
 
     messages_with_buttons = state_data.get("messages_with_buttons", [])
@@ -375,6 +393,109 @@ async def clever_link_handler(
     await state.clear()
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
+    )
+
+
+@user_router.callback_query(AskQuestionMenu.filter(F.found_regulation == False))
+async def regulation_not_found_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: User,
+    questions_repo: RequestsRepo,
+):
+    """
+    Обработчик кнопки "Не нашел" для случая, когда пользователь не смог найти регламент
+    """
+    state_data = await state.get_data()
+
+    # Получаем статистику для пользователя
+    employee_topics_today = await questions_repo.questions.get_questions_count_today(
+        employee_fullname=user.FIO
+    )
+    employee_topics_month = (
+        await questions_repo.questions.get_questions_count_last_month(
+            employee_fullname=user.FIO
+        )
+    )
+
+    # Отключаем кнопки на предыдущих шагах
+    await disable_previous_buttons(callback.message, state)
+
+    # Создаем новую тему
+    new_topic = await callback.bot.create_forum_topic(
+        chat_id=config.tg_bot.forum_id,
+        name=user.FIO
+        if config.tg_bot.division == "НЦК"
+        else f"{user.Division} | {user.FIO}",
+        icon_custom_emoji_id=dicts.topicEmojis["open"],
+    )
+
+    # Создаем новый вопрос с clever_link = "не нашел"
+    new_question = await questions_repo.questions.add_question(
+        employee_chat_id=callback.from_user.id,
+        employee_fullname=user.FIO,
+        topic_id=new_topic.message_thread_id,
+        start_time=datetime.datetime.now(),
+        question_text=state_data.get("question"),
+        clever_link="не нашел",  # Устанавливаем специальное значение
+    )
+
+    # Отправляем сообщение об успехе
+    await callback.message.edit_text(
+        """<b>✅ Успешно</b>
+
+Вопрос передан на рассмотрение, в скором времени тебе ответят""",
+        reply_markup=cancel_question_kb(token=new_question.token),
+    )
+
+    # Запускаем таймер бездействия для нового вопроса
+    if new_question.status == "open":
+        await start_inactivity_timer(new_question.token, callback.bot, questions_repo)
+
+    # Формируем текст сообщения с указанием "не нашел" в регламенте
+    topic_text = f"""Вопрос задает <b>{user.FIO}</b>
+
+<b>🗃️ Регламент:</b> не нашел
+
+<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<b>👑 Руководитель:</b> {user.Boss}
+
+<b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
+
+    # Отправляем информацию в тему
+    topic_info_msg = await callback.bot.send_message(
+        chat_id=config.tg_bot.forum_id,
+        message_thread_id=new_topic.message_thread_id,
+        text=topic_text,
+        disable_web_page_preview=True,
+        reply_markup=activity_status_toggle_kb(
+            token=new_question.token,
+            user_id=new_question.employee_chat_id,
+            current_status=new_question.activity_status_enabled,
+            global_status=config.tg_bot.activity_status,
+        ),
+    )
+
+    # Копируем оригинальное сообщение с вопросом
+    await callback.bot.copy_message(
+        chat_id=config.tg_bot.forum_id,
+        message_thread_id=new_topic.message_thread_id,
+        from_chat_id=callback.message.chat.id,
+        message_id=state_data.get("question_message_id"),
+    )
+
+    # Закрепляем информационное сообщение
+    await callback.bot.pin_chat_message(
+        chat_id=config.tg_bot.forum_id,
+        message_id=topic_info_msg.message_id,
+        disable_notification=True,
+    )
+
+    # Очищаем состояние
+    await state.clear()
+
+    logging.info(
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Создан новый вопрос {new_question.token} без регламента (не нашел)"
     )
 
 

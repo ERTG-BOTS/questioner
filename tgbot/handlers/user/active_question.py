@@ -391,13 +391,13 @@ async def question_quality_employee(
     if callback_data.answer:
         await callback.message.edit_text(
             """Ты поставил оценку:
-👍 Старший <b>помог решить твой вопрос</b>""",
+👍 Дежурный <b>помог решить твой вопрос</b>""",
             reply_markup=closed_question_specialist_kb(token=callback_data.token),
         )
     else:
         await callback.message.edit_text(
             """Ты поставил оценку:
-👎 Старший <b>не помог решить твой вопрос</b>""",
+👎 Дежурный <b>не помог решить твой вопрос</b>""",
             reply_markup=closed_question_specialist_kb(token=callback_data.token),
         )
     logger.info(

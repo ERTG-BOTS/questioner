@@ -93,7 +93,7 @@ async def return_finished_q(
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос сразу после закрытия
 
-<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+<b>👮‍♂️ Дежурный:</b> {duty.FIO}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
@@ -171,6 +171,7 @@ async def q_info(
     questions_repo: RequestsRepo,
     main_repo: RequestsRepo,
 ):
+    logger.info(f"user: {user}")
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
     question: Question = await questions_repo.questions.get_question(
         token=callback_data.token
@@ -180,7 +181,12 @@ async def q_info(
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
         return
 
-    duty: User = await main_repo.users.get_user(fullname=question.topic_duty_fullname)
+    if question.topic_duty_fullname:
+        duty: User = await main_repo.users.get_user(
+            fullname=question.topic_duty_fullname
+        )
+    else:
+        duty = None
 
     state_data = await state.get_data()
     start_date_str = question.start_time.strftime("%d.%m.%Y %H:%M")
@@ -195,15 +201,18 @@ async def q_info(
         else question.question_text
     )
 
+    # Добавляем инфо только если у вопроса есть закрепленный дежурный
+    duty_info = ""
+    if duty:
+        duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}"
+
     await callback.message.edit_text(
         f"""<b>🔄 Возврат вопроса</b>
 
 ❓ <b>Вопрос:</b>
 <blockquote expandable>{question_text}</blockquote>
 
-🗃️ <b>Регламент:</b> <a href='{question.clever_link}'>тык</a>
-
-<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+🗃️ <b>Регламент:</b> <a href='{question.clever_link}'>тык</a>{duty_info}
 🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 
@@ -244,9 +253,11 @@ async def return_q_confirm(
         and user.FIO not in [d.employee_fullname for d in active_questions]
         and question.allow_return
     ):
-        duty: User = await main_repo.users.get_user(
-            fullname=question.topic_duty_fullname
-        )
+        # Get duty user only if topic_duty_fullname exists
+        duty = None
+        if question.topic_duty_fullname:
+            duty = await main_repo.users.get_user(fullname=question.topic_duty_fullname)
+
         # 1. Обновляем статус вопроса на "open"
         await questions_repo.questions.update_question_status(
             token=question.token, status="open"
@@ -275,15 +286,18 @@ async def return_q_confirm(
             reply_markup=finish_question_kb(),
         )
 
-        # 5. Отправляем уведомление дежурному в тему
+        # 5. Build duty info only if duty exists
+        duty_info = ""
+        if duty:
+            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}"
+
+        # 6. Отправляем уведомление дежурному в тему
         await callback.bot.send_message(
             chat_id=config.tg_bot.forum_id,
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
-
-<b>👮‍♂️ Старший:</b> {duty.FIO} {'(<a href="https://t.me/' + duty.Username + '">лс</a>)' if (duty.Username != "Не указан" or duty.Username != "Скрыто/не определено") else ""}
+Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов{duty_info}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",

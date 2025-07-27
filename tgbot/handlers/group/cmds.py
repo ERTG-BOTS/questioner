@@ -51,7 +51,7 @@ async def end_q_cmd(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Старший: <b>{question.topic_duty_fullname}</b>
+👮‍♂️ Дежурный: <b>{question.topic_duty_fullname}</b>
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -65,7 +65,7 @@ async def end_q_cmd(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
                         
-👮‍♂️ Старший: <b>{question.topic_duty_fullname}</b>
+👮‍♂️ Дежурный: <b>{question.topic_duty_fullname}</b>
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -79,7 +79,7 @@ async def end_q_cmd(
                     message_thread_id=question.topic_id,
                     text=f"""<b>🔒 Вопрос закрыт</b>
                     
-👮‍♂️ Старший: <b>{question.topic_duty_fullname}</b>
+👮‍♂️ Дежурный: <b>{question.topic_duty_fullname}</b>
 Оцени, мог ли специалист решить его самостоятельно""",
                     reply_markup=question_quality_duty_kb(
                         token=question.token,
@@ -110,7 +110,7 @@ async def end_q_cmd(
 
             await message.bot.send_message(
                 chat_id=employee.ChatId,
-                text=f"""Старший <b>{user.FIO}</b> закрыл вопрос
+                text=f"""Дежурный <b>{user.FIO}</b> закрыл вопрос
 Оцени, помогли ли тебе решить его""",
                 reply_markup=question_quality_specialist_kb(token=question.token),
             )
@@ -180,9 +180,9 @@ async def release_q_cmd(
 
             await message.bot.send_message(
                 chat_id=employee.ChatId,
-                text=f"""<b>🕊️ Старший покинул чат</b>
+                text=f"""<b>🕊️ Дежурный покинул чат</b>
 
-Старший <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
+Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
             logger.info(
                 f"[Вопрос] - [Освобождение] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} освобожден"

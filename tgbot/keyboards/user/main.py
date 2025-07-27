@@ -16,6 +16,10 @@ class MainMenu(CallbackData, prefix="menu"):
     menu: str
 
 
+class AskQuestionMenu(CallbackData, prefix="ask_question"):
+    found_regulation: bool
+
+
 class QuestionQualitySpecialist(CallbackData, prefix="q_quality_spec"):
     answer: bool = False
     token: str = None
@@ -81,6 +85,39 @@ def back_kb() -> InlineKeyboardMarkup:
             ),
         ]
     ]
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=buttons,
+    )
+    return keyboard
+
+
+def question_ask_kb(is_user_in_top: bool = False) -> InlineKeyboardMarkup:
+    """
+    Клавиатура для оформления вопроса.
+
+    :return: Объект встроенной клавиатуры для возврата главного меню
+    """
+    if is_user_in_top:
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text="↩️ Домой", callback_data=MainMenu(menu="main").pack()
+                ),
+            ]
+        ]
+    else:
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text="🤷‍♂️ Не нашел",
+                    callback_data=AskQuestionMenu(found_regulation=False).pack(),
+                ),
+                InlineKeyboardButton(
+                    text="↩️ Домой", callback_data=MainMenu(menu="main").pack()
+                ),
+            ]
+        ]
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,

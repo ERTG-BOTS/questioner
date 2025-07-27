@@ -113,7 +113,7 @@ async def handle_q_message(
                 chat_id=employee.ChatId,
                 text=f"""<b>👮‍♂️ Вопрос в работе</b>
 
-Старший <b>{user.FIO}</b> взял вопрос в работу""",
+Дежурный <b>{user.FIO}</b> взял вопрос в работу""",
                 reply_markup=finish_question_kb(),
             )
 
@@ -226,7 +226,7 @@ async def handle_q_message(
                     )
 
                 logger.info(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Старший: {question.topic_duty_fullname} | Сообщение: {message.text}"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}"
                 )
             else:
                 await message.reply("""<b>⚠️ Предупреждение</b>
@@ -235,7 +235,7 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
                 logger.warning(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Старший: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат принадлежит другому старшему"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат принадлежит другому старшему"
                 )
     elif question.status == "closed":
         await message.reply("""<b>⚠️ Предупреждение</b>
@@ -244,7 +244,7 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
         logger.warning(
-            f"[Вопрос] - [Общение] Токен: {question.token} | Старший: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат уже закрыт"
+            f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат уже закрыт"
         )
     else:
         await message.answer("""<b>⚠️ Ошибка</b>
@@ -424,7 +424,7 @@ async def return_q_duty(
             chat_id=question.employee_chat_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Старший <b>{user.FIO}</b> переоткрыл вопрос:
+Дежурный <b>{user.FIO}</b> переоткрыл вопрос:
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
             reply_markup=finish_question_kb(),
         )
@@ -501,7 +501,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Старший <b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
                     token=callback_data.token,
@@ -511,7 +511,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Старший <b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(token=callback_data.token),
             )

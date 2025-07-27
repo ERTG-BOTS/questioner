@@ -5,7 +5,7 @@ from typing import Optional, Sequence
 
 from sqlalchemy import Row, and_, extract, func, or_, select
 
-from infrastructure.database.models import Question
+from infrastructure.database.models import Question, User
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.config import load_config
 from tgbot.services.logger import setup_logging
@@ -349,6 +349,55 @@ class QuestionsRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def get_top_users_by_division(
+        self, division: str, main_repo, limit: int = 15
+    ) -> Sequence[User]:
+        """
+        Получение топ-15 пользователей по количеству вопросов в рамках указанного направления
+        :param division: Направление для фильтрации (например, "НЦК")
+        :param main_repo: Репозиторий для работы с основной БД (RegisteredUsers)
+        :return: Последовательность из топ-15 пользователей с наибольшим количеством вопросов
+        """
+        # Получаем все вопросы
+        stmt = select(Question)
+        result = await self.session.execute(stmt)
+        questions = result.scalars().all()
+
+        # Словарь для подсчета вопросов по пользователям
+        user_question_counts = {}
+        processed_users = {}  # Кеш для пользователей, чтобы не запрашивать их повторно
+
+        for question in questions:
+            try:
+                # Проверяем, есть ли пользователь в кеше
+                if question.employee_chat_id not in processed_users:
+                    user: User = await main_repo.users.get_user(
+                        user_id=question.employee_chat_id
+                    )
+                    processed_users[question.employee_chat_id] = user
+                else:
+                    user: User = processed_users[question.employee_chat_id]
+
+                # Фильтруем по направлению
+                if user and division.upper() in user.Division.upper():
+                    if user.FIO not in user_question_counts:
+                        user_question_counts[user.FIO] = {"user": user, "count": 0}
+                    user_question_counts[user.FIO]["count"] += 1
+
+            except Exception as e:
+                logger.warning(
+                    f"Error processing question {question.token} for top users: {e}"
+                )
+                continue
+
+        # Сортируем пользователей по количеству вопросов (по убыванию) и берем топ-15
+        sorted_users = sorted(
+            user_question_counts.values(), key=lambda x: x["count"], reverse=True
+        )[:limit]
+
+        # Возвращаем только объекты User
+        return [user_data["user"] for user_data in sorted_users]
 
     async def get_old_questions(self) -> Sequence[Question]:
         """
