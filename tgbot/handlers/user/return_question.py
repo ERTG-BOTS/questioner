@@ -228,7 +228,7 @@ async def q_info(
         reply_markup=question_confirm_kb(question.token),
         disable_web_page_preview=True,
     )
-    logging.warning(
+    logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто описание вопроса {question.token} для возврата"
     )
     await callback.answer()
