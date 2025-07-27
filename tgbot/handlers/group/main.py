@@ -24,6 +24,7 @@ from tgbot.keyboards.group.main import (
     QuestionQualityDuty,
     closed_question_duty_kb,
     question_quality_duty_kb,
+    duty_start,
 )
 from tgbot.keyboards.user.main import (
     finish_question_kb,
@@ -109,6 +110,7 @@ async def handle_q_message(
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
                 disable_web_page_preview=True,
+                reply_markup=duty_start(user_id=user.ChatId),
             )
 
             await message.bot.send_message(

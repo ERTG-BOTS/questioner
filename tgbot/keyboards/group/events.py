@@ -22,7 +22,7 @@ def on_user_leave_kb(
     buttons = [
         [
             InlineKeyboardButton(
-                text="💬 Написать в ЛС",
+                text="💬 ЛС",
                 url=f"tg://user?id={user_id}",
             ),
         ]
