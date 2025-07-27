@@ -184,16 +184,12 @@ async def active_question(
         token=active_question_token
     )
 
-    logger.info(
-        f"question: {question}. Сообщение: {message.message_thread_id}. Тема вопроса: {question.topic_id}"
-    )
-
     if message.text == "✅️ Закрыть вопрос":
         await active_question_end(
             message=message,
             questions_repo=questions_repo,
             user=user,
-            question=question,
+            active_question_token=active_question_token,
         )
         return
 
