@@ -82,16 +82,21 @@ async def remove_old_topics(bot: Bot, session_pool):
         questions_result = await questions_repo.questions.delete_question(
             questions=old_questions
         )
+        pairs_result = await questions_repo.messages_pairs.delete_pairs(pairs=old_pairs)
 
         for question in old_questions:
-            await bot.delete_forum_topic(
-                chat_id=config.tg_bot.ntp_forum_id
-                if "НТП" in question.employee_division
-                else config.tg_bot.nck_forum_id,
-                message_thread_id=question.topic_id,
-            )
+            try:
+                await bot.delete_forum_topic(
+                    chat_id=config.tg_bot.ntp_forum_id
+                    if "НТП" in question.employee_division
+                    else config.tg_bot.nck_forum_id,
+                    message_thread_id=question.topic_id,
+                )
+            except Exception as e:
+                logger.error(
+                    f"[Старые топики] Ошибка при удалении топика {question.topic_id}: {e}"
+                )
 
-        pairs_result = await questions_repo.messages_pairs.delete_pairs(pairs=old_pairs)
         logger.info(
             f"[Старые топики] Успешно удалено {questions_result['deleted_count']} из {questions_result['total_count']} старых вопросов"
         )

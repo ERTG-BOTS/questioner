@@ -149,6 +149,7 @@ async def main():
         scheduler.add_job(
             remove_old_topics, "interval", hours=12, args=[bot, questioner_db]
         )
+    await remove_old_topics(bot, questioner_db)
     scheduler.start()
 
     # await on_startup(bot)
