@@ -119,6 +119,7 @@ async def main_cb(
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто юзер-меню"
     )
+    await callback.answer()
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
@@ -144,6 +145,7 @@ async def ask_question(
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
     )
+    await callback.answer()
 
 
 @user_router.message(AskQuestion.question)
@@ -529,6 +531,7 @@ async def regulation_not_found_handler(
 
     # Очищаем состояние
     await state.clear()
+    await callback.answer()
 
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Создан новый вопрос {new_question.token} без регламента (не нашел)"
@@ -540,7 +543,6 @@ async def cancel_question(
     callback: CallbackQuery,
     state: FSMContext,
     questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
     user: User,
     question: Question,
 ):
@@ -587,6 +589,7 @@ async def cancel_question(
         )
     else:
         await callback.answer("Вопрос не может быть отменен. Он уже в работе")
+    await callback.answer()
 
 
 @user_router.callback_query(ActivityStatusToggle.filter())
@@ -705,3 +708,4 @@ async def toggle_activity_status(
     except Exception as e:
         logger.error(f"[Активность] Ошибка при переключении статуса активности: {e}")
         await callback.answer("❌ Произошла ошибка", show_alert=True)
+    await callback.answer()

@@ -128,6 +128,7 @@ async def return_finished_q(
         logger.error(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, диалог {question.token} был закрыт более 24 часов назад или заблокирован"
         )
+    await callback.answer()
 
 
 @employee_return_q_router.callback_query(MainMenu.filter(F.menu == "return"))
@@ -167,6 +168,7 @@ async def q_list(
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню возврата чата"
     )
+    await callback.answer()
 
 
 @employee_return_q_router.callback_query(ReturnQuestion.filter(F.action == "show"))
@@ -178,7 +180,6 @@ async def q_info(
     questions_repo: RequestsRepo,
     main_repo: RequestsRepo,
 ):
-    logger.info(f"user: {user}")
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
     question: Question = await questions_repo.questions.get_question(
         token=callback_data.token

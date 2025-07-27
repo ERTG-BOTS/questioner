@@ -279,3 +279,4 @@ async def release_q_cb(
         logger.error(
             f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Попытка освобождения вопроса неуспешна. Не удалось найти вопрос в базе с TopicId = {callback.message.message_thread_id}"
         )
+    await callback.answer()

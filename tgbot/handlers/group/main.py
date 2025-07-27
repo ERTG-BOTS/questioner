@@ -517,6 +517,7 @@ async def change_q_return_status(
             allow_return=callback_data.allow_return,
         )
     )
+    await callback.answer()
 
 
 @topic_router.callback_query(IsTopicMessage() and QuestionQualityDuty.filter())

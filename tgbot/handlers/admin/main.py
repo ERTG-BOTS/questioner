@@ -80,8 +80,6 @@ async def change_role(
     questions_repo: RequestsRepo,
     user: User,
 ) -> None:
-    await callback.answer("")
-
     match callback_data.role:
         case "spec":
             await state.update_data(role=1)  # Специалист
@@ -92,6 +90,7 @@ async def change_role(
     await main_cb(
         callback=callback, state=state, questions_repo=questions_repo, user=user
     )
+    await callback.answer()
 
 
 @admin_router.callback_query(AdminMenu.filter(F.menu == "reset"))
@@ -114,6 +113,7 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) 
     logging.info(
         f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} кнопкой"
     )
+    await callback.answer()
 
 
 @admin_router.message(Command("reset"))

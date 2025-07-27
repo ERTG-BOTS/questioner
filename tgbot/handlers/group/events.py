@@ -94,6 +94,7 @@ async def unban_removed_user(
     else:
         await callback.answer("У тебя недостаточно прав 🥺")
         return
+    await callback.answer()
 
 
 @group_events_router.callback_query(RemovedUser.filter(F.action == "change_role"))
@@ -140,3 +141,4 @@ async def change_user_role(
     else:
         await callback.answer("У тебя недостаточно прав 🥺")
         return
+    await callback.answer()
