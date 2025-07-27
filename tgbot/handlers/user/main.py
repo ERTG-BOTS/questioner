@@ -1,6 +1,5 @@
 import datetime
 import logging
-from typing import Sequence
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart
@@ -281,22 +280,24 @@ async def question_text(
         )
         return
 
-    top_users: Sequence[
-        User
-    ] = await questions_repo.questions.get_top_users_by_division(
-        division="НЦК" if "НЦК" in user.Division else "НТП", main_repo=main_repo
-    )
+    # TODO Вернуть проверку на топ юзеров после обсуждения
+    # top_users: Sequence[
+    #     User
+    # ] = await questions_repo.questions.get_top_users_by_division(
+    #     division="НЦК" if "НЦК" in user.Division else "НТП", main_repo=main_repo
+    # )
 
     # Если дошли до сюда, значит нужно запросить ссылку на регламент
     response_msg = await message.answer(
         """<b>🗃️ Регламент</b>
 
 Прикрепи ссылку на регламент из клевера, по которому у тебя вопрос""",
-        reply_markup=question_ask_kb(
-            is_user_in_top=True
-            if user.ChatId in (u.ChatId for u in top_users)
-            else False
-        ),
+        reply_markup=question_ask_kb(is_user_in_top=True),
+        # reply_markup=question_ask_kb(
+        #     is_user_in_top=True
+        #     if user.ChatId in (u.ChatId for u in top_users)
+        #     else False
+        # ),
     )
 
     messages_with_buttons = state_data.get("messages_with_buttons", [])
