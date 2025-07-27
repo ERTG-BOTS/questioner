@@ -12,6 +12,13 @@ class MonthStatsExtract(CallbackData, prefix="month_stats"):
     year: int
 
 
+class DivisionStatsExtract(CallbackData, prefix="division_stats"):
+    menu: str
+    month: int
+    year: int
+    division: str
+
+
 # Выбор дат для выгрузки статистики
 def extract_kb() -> InlineKeyboardMarkup:
     current_date = datetime.now()
@@ -35,7 +42,7 @@ def extract_kb() -> InlineKeyboardMarkup:
     buttons = []
 
     # Generate last 6 months in pairs (2 columns)
-    for i in range(0, 2, 2):
+    for i in range(0, 6, 2):
         row = []
 
         # First month in the row
@@ -83,6 +90,50 @@ def extract_kb() -> InlineKeyboardMarkup:
             ),
         ]
     )
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
+
+# Выбор направления для выгрузки статистики
+def division_selection_kb(month: int, year: int) -> InlineKeyboardMarkup:
+    """
+    Клавиатура выбора направления для выгрузки статистики
+
+    :param month: Выбранный месяц
+    :param year: Выбранный год
+    :return: Объект встроенной клавиатуры для выбора направления
+    """
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text="🏢 НЦК",
+                callback_data=DivisionStatsExtract(
+                    menu="division", month=month, year=year, division="НЦК"
+                ).pack(),
+            ),
+            InlineKeyboardButton(
+                text="🏭 НТП",
+                callback_data=DivisionStatsExtract(
+                    menu="division", month=month, year=year, division="НТП"
+                ).pack(),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="📊 Все направления",
+                callback_data=DivisionStatsExtract(
+                    menu="division", month=month, year=year, division="ВСЕ"
+                ).pack(),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="↩️ К выбору месяца",
+                callback_data=AdminMenu(menu="stats_extract").pack(),
+            ),
+        ],
+    ]
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard

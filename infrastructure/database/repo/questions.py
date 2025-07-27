@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Optional, Sequence
 
-from sqlalchemy import Row, and_, extract, func, or_, select
+from sqlalchemy import and_, extract, func, or_, select
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.base import BaseRepo
@@ -194,45 +194,39 @@ class QuestionsRepo(BaseRepo):
         return question
 
     async def get_questions_by_month(
-        self, month: int, year: int, division: str = None, main_repo=None
-    ) -> Sequence[Row[tuple[Question]]]:
+        self, month: int, year: int, division: str = None
+    ) -> Sequence[Question]:
         """
-        Получение вопросов за конкретный месяц с фильтрацией по направлению
-        :param month: Фильтр по месяцу
-        :param year: Фильтр по году
-        :param division: Фильтр по направлению
-        :param main_repo: Репозиторий для работы с основной БД (RegisteredUsers)
+        Получение вопросов за указанный месяц с фильтрацией по направлению
+
+        :param month: Месяц для фильтрации
+        :param year: Год для фильтрации
+        :param division: Направление для фильтрации (НЦК, НТП, ВСЕ, или None)
         :return: Последовательность вопросов, подходящих под фильтры
         """
-        # Базовый запрос
+        # Базовый запрос по месяцу и году
         stmt = select(Question).where(
             extract("month", Question.start_time) == month,
             extract("year", Question.start_time) == year,
         )
 
+        # Добавляем фильтр по направлению если указан
+        if division and division != "ВСЕ":
+            stmt = stmt.where(Question.employee_division.ilike(f"%{division}%"))
+
         result = await self.session.execute(stmt)
         questions = result.fetchall()
 
-        # Если не использован фильтр - возвращаем вопросы
-        if not division or not main_repo:
-            return questions
+        logger.info(
+            f"Found {len(questions)} questions for {month}/{year}"
+            + (
+                f" with division filter '{division}'"
+                if division and division != "ВСЕ"
+                else ""
+            )
+        )
 
-        # Фильтр по направлению
-        filtered_questions = []
-        for question_row in questions:
-            question = question_row[0]
-            try:
-                # Получаем пользователя из основной базы
-                user = await main_repo.users.get_user(user_id=question.employee_chat_id)
-                if user and division.upper() in user.Division.upper():
-                    filtered_questions.append(question_row)
-            except Exception as e:
-                logger.warning(
-                    f"Error filtering question {question.token} by division: {e}"
-                )
-                continue
-
-        return filtered_questions
+        return questions
 
     async def get_questions_count_today(
         self, employee_fullname: str = None, duty_fullname: str = None
