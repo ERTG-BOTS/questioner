@@ -38,8 +38,6 @@ async def admin_start(
         )
     )
 
-    division = "НТП" if config.tg_bot.division == "НТП" else "НЦК"
-
     state_data = await state.get_data()
 
     if "role" in state_data:
@@ -48,8 +46,6 @@ async def admin_start(
         )
         await message.answer(
             f"""👋 Привет, <b>{user.FIO}</b>!
-
-Я - бот-вопросник {division}
 
 <b>❓ Ты задал вопросов:</b>
 - За день {employee_topics_today}

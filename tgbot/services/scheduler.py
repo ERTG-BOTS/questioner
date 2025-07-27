@@ -60,7 +60,10 @@ async def remove_question_timer(bot: Bot, question: Question):
 
 async def remove_question(bot: Bot, question: Question):
     await bot.delete_forum_topic(
-        chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+        chat_id=config.tg_bot.ntp_forum_id
+        if "НТП" in question.employee_division
+        else config.tg_bot.nck_forum_id,
+        message_thread_id=question.topic_id,
     )
 
 
@@ -74,7 +77,10 @@ async def remove_old_topics(bot: Bot, questions_repo: RequestsRepo):
 
     for question in old_questions:
         await bot.delete_forum_topic(
-            chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in question.employee_division
+            else config.tg_bot.nck_forum_id,
+            message_thread_id=question.topic_id,
         )
 
     questions_result = await questions_repo.questions.delete_question(
@@ -110,7 +116,9 @@ async def send_inactivity_warning(
         if question and question.status in ["open", "in_progress"]:
             # Отправляем предупреждение в топик
             await bot.send_message(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in question.employee_division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 text="⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через 5 минут при отсутствии активности",
             )
@@ -147,7 +155,9 @@ async def auto_close_question(
 
             # Уведомляем о закрытии
             await bot.send_message(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in question.employee_division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 text="🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение 10 минут",
                 reply_markup=closed_question_duty_kb(token=question_token),
@@ -155,13 +165,18 @@ async def auto_close_question(
 
             # Обновляем топик
             await bot.edit_forum_topic(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in question.employee_division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
                 icon_custom_emoji_id=dicts.topicEmojis["closed"],
             )
             await bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in question.employee_division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
             )
 
             await bot.send_message(

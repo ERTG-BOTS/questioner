@@ -47,7 +47,9 @@ async def end_q_cmd(
             if question.quality_duty is not None:
                 if question.quality_duty:
                     await message.bot.send_message(
-                        chat_id=config.tg_bot.forum_id,
+                        chat_id=config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id,
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
@@ -61,7 +63,9 @@ async def end_q_cmd(
                     )
                 else:
                     await message.bot.send_message(
-                        chat_id=config.tg_bot.forum_id,
+                        chat_id=config.tg_bot.ntp_forum_id
+                        if "НТП" in user.Division
+                        else config.tg_bot.nck_forum_id,
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
                         
@@ -75,7 +79,9 @@ async def end_q_cmd(
                     )
             else:
                 await message.bot.send_message(
-                    chat_id=config.tg_bot.forum_id,
+                    chat_id=config.tg_bot.ntp_forum_id
+                    if "НТП" in user.Division
+                    else config.tg_bot.nck_forum_id,
                     message_thread_id=question.topic_id,
                     text=f"""<b>🔒 Вопрос закрыт</b>
                     
@@ -89,13 +95,18 @@ async def end_q_cmd(
                 )
 
             await message.bot.edit_forum_topic(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
                 icon_custom_emoji_id=dicts.topicEmojis["closed"],
             )
             await message.bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
             )
 
             employee: User = await main_repo.users.get_user(
@@ -128,9 +139,20 @@ async def end_q_cmd(
                 f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Попытка закрытия вопроса {question.token} неуспешна. Вопрос принадлежит другому дежурному"
             )
         elif question.status == "closed":
+            await message.bot.edit_forum_topic(
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
+                name=question.token,
+                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+            )
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(
-                chat_id=config.tg_bot.forum_id, message_thread_id=question.topic_id
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
+                message_thread_id=question.topic_id,
             )
             logger.warning(
                 f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Попытка закрытия вопроса {question.token} неуспешна. Вопрос уже закрыт"
@@ -170,7 +192,9 @@ async def release_q_cmd(
             )
 
             await message.bot.edit_forum_topic(
-                chat_id=config.tg_bot.forum_id,
+                chat_id=config.tg_bot.ntp_forum_id
+                if "НТП" in user.Division
+                else config.tg_bot.nck_forum_id,
                 message_thread_id=question.topic_id,
                 icon_custom_emoji_id=dicts.topicEmojis["open"],
             )
@@ -211,7 +235,9 @@ async def release_q_cmd(
 
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(
-            chat_id=config.tg_bot.forum_id,
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
             message_thread_id=message.message_thread_id,
         )
         logger.error(
@@ -221,7 +247,10 @@ async def release_q_cmd(
 
 @topic_cmds_router.callback_query(FinishedQuestion.filter(F.action == "release"))
 async def release_q_cb(
-    callback: CallbackQuery, questions_repo: RequestsRepo, question: Question
+    callback: CallbackQuery,
+    questions_repo: RequestsRepo,
+    user: User,
+    question: Question,
 ):
     if question is not None:
         await questions_repo.questions.update_question_duty(
@@ -242,7 +271,9 @@ async def release_q_cb(
 
 Не удалось найти текущую тему в базе, закрываю""")
         await callback.bot.close_forum_topic(
-            chat_id=config.tg_bot.forum_id,
+            chat_id=config.tg_bot.ntp_forum_id
+            if "НТП" in user.Division
+            else config.tg_bot.nck_forum_id,
             message_thread_id=callback.message.message_thread_id,
         )
         logger.error(

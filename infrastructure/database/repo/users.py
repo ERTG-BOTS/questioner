@@ -20,7 +20,6 @@ class UserRepo(BaseRepo):
         fullname: Optional[str] = None,
         email: Optional[str] = None,
     ) -> Optional[User]:
-        logger.info(f"error: {user_id} {username} {fullname} {email}")
         """
         Поиск пользователя в БД по фильтрам
 
