@@ -161,12 +161,9 @@ async def admin_extract_division(
         data.append(
             {
                 "Токен": question.token,
-                "ID группы": question.group_id,
-                "ID топика": question.topic_id,
                 "Дежурный": question.topic_duty_fullname or "Не назначен",
                 "Специалист": question.employee_fullname,
                 "Направление": question.employee_division or "Не указано",
-                "Chat ID специалиста": question.employee_chat_id,
                 "Вопрос": question.question_text,
                 "Время вопроса": question.start_time,
                 "Время завершения": question.end_time,
