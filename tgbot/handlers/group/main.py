@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import Sequence
 
+import pytz
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
@@ -295,7 +296,7 @@ async def handle_edited_message(
         )
         return
 
-    edit_timestamp = f"\n\n<i>Сообщение изменено дежурным — {datetime.now().strftime('%H:%M %d.%m.%Y')}</i>"
+    edit_timestamp = f"\n\n<i>Сообщение изменено дежурным — {datetime.now(pytz.timezone('Asia/Yekaterinburg')).strftime('%H:%M %d.%m.%Y')}</i>"
 
     try:
         # Проверяем сообщение на содержание медиа
