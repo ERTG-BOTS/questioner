@@ -1,7 +1,13 @@
+import logging
 import re
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+
+from tgbot.services.logger import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 async def disable_previous_buttons(message: Message, state: FSMContext):

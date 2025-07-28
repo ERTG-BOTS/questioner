@@ -74,9 +74,7 @@ class DatabaseMiddleware(BaseMiddleware):
                         # User validation logic remains the same...
                         if not user and not is_bot:
                             await self.bot.ban_chat_member(
-                                chat_id=self.config.tg_bot.ntp_forum_id
-                                if "НТП" in user.Division
-                                else config.tg_bot.nck_forum_id,
+                                chat_id=event.chat.id,
                                 user_id=event.from_user.id,
                             )
                             await event.answer(
@@ -97,9 +95,7 @@ class DatabaseMiddleware(BaseMiddleware):
                             and not is_bot
                         ):
                             await self.bot.ban_chat_member(
-                                chat_id=self.config.tg_bot.ntp_forum_id
-                                if "НТП" in user.Division
-                                else config.tg_bot.nck_forum_id,
+                                chat_id=event.chat.id,
                                 user_id=event.from_user.id,
                             )
                             await event.answer(
@@ -113,10 +109,10 @@ class DatabaseMiddleware(BaseMiddleware):
                             )
                             return
 
+                        data["main_repo"] = main_repo
                         data["main_session"] = main_session
                         data["questioner_session"] = questioner_session
                         data["questions_repo"] = questioner_repo
-                        data["main_repo"] = main_repo
                         data["user"] = user
 
                         result = await handler(event, data)

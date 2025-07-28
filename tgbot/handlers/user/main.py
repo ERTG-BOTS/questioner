@@ -23,6 +23,7 @@ from tgbot.keyboards.user.main import (
 from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
 from tgbot.misc.states import AskQuestion
+from tgbot.services.g_sheets import get_target_forum
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     remove_question_timer,
@@ -154,7 +155,6 @@ async def question_text(
     state: FSMContext,
     user: User,
     questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
 ):
     if message.caption:
         await state.update_data(question=message.caption)
@@ -169,11 +169,20 @@ async def question_text(
 
     state_data = await state.get_data()
 
+    target_forum_id = await get_target_forum(
+        username=user.Username, division=user.Division
+    )
+
     is_root_user = user.Role == 10
     skip_clever_link = not config.tg_bot.ask_clever_link
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
-    if has_clever_link or is_root_user or skip_clever_link:
+    if (
+        has_clever_link
+        or is_root_user
+        or skip_clever_link
+        or target_forum_id == config.tg_bot.nck_or_forum_id
+    ):
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
 
@@ -189,9 +198,7 @@ async def question_text(
         )
 
         new_topic = await message.bot.create_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=target_forum_id,
             name=f"{user.Division} | {user.FIO}"
             if "НТП" in user.Division
             else user.FIO,
@@ -199,11 +206,7 @@ async def question_text(
         )  # Создание темы
 
         new_question = await questions_repo.questions.add_question(
-            group_id=int(
-                config.tg_bot.ntp_forum_id
-                if "НТП" in user.Division
-                else config.tg_bot.nck_forum_id
-            ),
+            group_id=target_forum_id,
             topic_id=new_topic.message_thread_id,
             employee_chat_id=message.chat.id,
             employee_fullname=user.FIO,
@@ -245,9 +248,7 @@ async def question_text(
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
 
         topic_info_msg = await message.bot.send_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=new_question.group_id,
             message_thread_id=new_topic.message_thread_id,
             text=topic_text,
             disable_web_page_preview=True,
@@ -261,18 +262,14 @@ async def question_text(
         )
 
         await message.bot.copy_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=new_question.group_id,
             message_thread_id=new_topic.message_thread_id,
             from_chat_id=message.chat.id,
             message_id=state_data.get("question_message_id"),
         )  # Копирование сообщения специалиста в тему
 
         await message.bot.pin_chat_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=new_question.group_id,
             message_id=topic_info_msg.message_id,
             disable_notification=True,
         )  # Пин информации о специалисте
@@ -341,23 +338,21 @@ async def clever_link_handler(
         )
     )
 
+    target_forum_id = await get_target_forum(
+        username=user.Username, division=user.Division
+    )
+
     # Выключаем все предыдущие кнопки
     await disable_previous_buttons(message, state)
 
     new_topic = await message.bot.create_forum_topic(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=target_forum_id,
         name=f"{user.Division} | {user.FIO}" if "НТП" in user.Division else user.FIO,
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
 
     new_question = await questions_repo.questions.add_question(
-        group_id=int(
-            config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id
-        ),
+        group_id=target_forum_id,
         topic_id=new_topic.message_thread_id,
         employee_chat_id=message.chat.id,
         employee_fullname=user.FIO,
@@ -379,9 +374,7 @@ async def clever_link_handler(
         await start_inactivity_timer(new_question.token, message.bot, questions_repo)
 
     topic_info_msg = await message.bot.send_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=target_forum_id,
         message_thread_id=new_topic.message_thread_id,
         text=f"""Вопрос задает <b>{user.FIO}</b>
 
@@ -400,18 +393,14 @@ async def clever_link_handler(
     )
 
     await message.bot.copy_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=new_question.group_id,
         message_thread_id=new_topic.message_thread_id,
         from_chat_id=message.chat.id,
         message_id=state_data.get("question_message_id"),
     )  # Копирование сообщения специалиста в тему
 
     await message.bot.pin_chat_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=new_question.group_id,
         message_id=topic_info_msg.message_id,
         disable_notification=True,
     )  # Пин информации о специалисте
@@ -444,25 +433,23 @@ async def regulation_not_found_handler(
         )
     )
 
+    target_forum_id = await get_target_forum(
+        username=user.Username, division=user.Division
+    )
+
     # Отключаем кнопки на предыдущих шагах
     await disable_previous_buttons(callback.message, state)
 
     # Создаем новую тему
     new_topic = await callback.bot.create_forum_topic(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=target_forum_id,
         name=f"{user.Division} | {user.FIO}" if "НТП" in user.Division else user.FIO,
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )
 
     # Создаем новый вопрос с clever_link = "не нашел"
     new_question = await questions_repo.questions.add_question(
-        group_id=int(
-            config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id
-        ),
+        group_id=target_forum_id,
         topic_id=new_topic.message_thread_id,
         employee_chat_id=callback.from_user.id,
         employee_fullname=user.FIO,
@@ -496,9 +483,7 @@ async def regulation_not_found_handler(
 
     # Отправляем информацию в тему
     topic_info_msg = await callback.bot.send_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=new_question.group_id,
         message_thread_id=new_topic.message_thread_id,
         text=topic_text,
         disable_web_page_preview=True,
@@ -512,9 +497,7 @@ async def regulation_not_found_handler(
 
     # Копируем оригинальное сообщение с вопросом
     await callback.bot.copy_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=new_question.group_id,
         message_thread_id=new_topic.message_thread_id,
         from_chat_id=callback.message.chat.id,
         message_id=state_data.get("question_message_id"),
@@ -522,9 +505,7 @@ async def regulation_not_found_handler(
 
     # Закрепляем информационное сообщение
     await callback.bot.pin_chat_message(
-        chat_id=config.tg_bot.ntp_forum_id
-        if "НТП" in user.Division
-        else config.tg_bot.nck_forum_id,
+        chat_id=new_question.group_id,
         message_id=topic_info_msg.message_id,
         disable_notification=True,
     )
@@ -549,6 +530,7 @@ async def cancel_question(
     question: Question = await questions_repo.questions.get_question(
         token=active_question_token
     )
+
     if (
         question
         and question.status == "open"
@@ -556,24 +538,18 @@ async def cancel_question(
         and not question.end_time
     ):
         await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             icon_custom_emoji_id=dicts.topicEmojis["fired"],
         )
         await callback.bot.close_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
         )
         await questions_repo.questions.delete_question(token=question.token)
         await remove_question_timer(bot=callback.bot, question=question)
         await callback.bot.send_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text="""<b>🔥 Отмена вопроса</b>
         
@@ -600,12 +576,18 @@ async def toggle_activity_status(
     callback: CallbackQuery,
     callback_data: ActivityStatusToggle,
     questions_repo: RequestsRepo,
+    user: User,
     active_question_token: str,
 ):
     """Обработчик переключения статуса активности для топика"""
     question: Question = await questions_repo.questions.get_question(
         token=active_question_token
     )
+
+    target_forum_id = await get_target_forum(
+        username=user.Username, division=user.Division
+    )
+
     try:
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)
@@ -669,9 +651,7 @@ async def toggle_activity_status(
             topic_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nТопик не будет закрываться автоматически\n\n<i>Сообщение удалится через 10 секунд</i>"
 
         topic_msg = await callback.bot.send_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in question.employee_division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text=topic_message_text,
         )
@@ -690,11 +670,7 @@ async def toggle_activity_status(
         # Запускаем таймеры удаления для обоих сообщений
         await run_delete_timer(
             bot=callback.bot,
-            chat_id=int(
-                config.tg_bot.ntp_forum_id
-                if "НТП" in question.employee_division
-                else config.tg_bot.nck_forum_id
-            ),
+            chat_id=question.group_id,
             message_ids=[topic_msg.message_id],
             seconds=10,
         )

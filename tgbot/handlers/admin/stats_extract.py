@@ -12,10 +12,10 @@ from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
 from tgbot.keyboards.admin.main import AdminMenu
 from tgbot.keyboards.admin.stats_extract import (
-    MonthStatsExtract,
     DivisionStatsExtract,
-    extract_kb,
+    MonthStatsExtract,
     division_selection_kb,
+    extract_kb,
 )
 from tgbot.services.logger import setup_logging
 

@@ -69,9 +69,7 @@ async def return_finished_q(
         )
 
         await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             name=f"{user.Division} | {user.FIO}"
             if "НТП" in user.Division
@@ -79,9 +77,7 @@ async def return_finished_q(
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
         await callback.bot.reopen_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
         )
 
@@ -92,9 +88,7 @@ async def return_finished_q(
             reply_markup=finish_question_kb(),
         )
         await callback.bot.send_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
@@ -275,9 +269,7 @@ async def return_q_confirm(
 
         # 2. Обновляем название и иконку темы
         await callback.bot.edit_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             name=f"{user.Division} | {user.FIO}"
             if "НТП" in user.Division
@@ -287,9 +279,7 @@ async def return_q_confirm(
 
         # 3. Переоткрываем тему
         await callback.bot.reopen_forum_topic(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
         )
 
@@ -308,9 +298,7 @@ async def return_q_confirm(
 
         # 6. Отправляем уведомление дежурному в тему
         await callback.bot.send_message(
-            chat_id=config.tg_bot.ntp_forum_id
-            if "НТП" in user.Division
-            else config.tg_bot.nck_forum_id,
+            chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 

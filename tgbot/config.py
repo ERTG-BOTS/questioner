@@ -25,7 +25,11 @@ class TgBot:
 
     ntp_forum_id: str
     nck_forum_id: str
+    nck_or_forum_id: str
     ask_clever_link: bool
+
+    interns_spreadsheet_id: str
+    interns_sheet_name: str
 
     remove_old_questions: bool
     remove_old_questions_days: int
@@ -45,7 +49,11 @@ class TgBot:
 
         ntp_forum_id = env.str("NTP_FORUM_ID")
         nck_forum_id = env.str("NCK_FORUM_ID")
+        nck_or_forum_id = env.str("NCK_OR_FORUM_ID")
         ask_clever_link = env.bool("ASK_CLEVER_LINK")
+
+        interns_spreadsheet_id = env.str("INTERNS_SPREADSHEET_ID")
+        inters_sheet_name = env.str("INTERNS_SHEET_NAME")
 
         remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
         remove_old_questions_days = env.int("REMOVE_OLD_QUESTIONS_DAYS")
@@ -59,9 +67,12 @@ class TgBot:
             use_redis=use_redis,
             ntp_forum_id=ntp_forum_id,
             nck_forum_id=nck_forum_id,
+            nck_or_forum_id=nck_or_forum_id,
+            ask_clever_link=ask_clever_link,
+            interns_spreadsheet_id=interns_spreadsheet_id,
+            interns_sheet_name=inters_sheet_name,
             remove_old_questions=remove_old_questions,
             remove_old_questions_days=remove_old_questions_days,
-            ask_clever_link=ask_clever_link,
             activity_status=activity_status,
             activity_warn_minutes=activity_warn_minutes,
             activity_close_minutes=activity_close_minutes,
