@@ -38,7 +38,7 @@ async def is_employee_intern(
                     return False
                 data = await resp.json()
 
-        values = data.get("values", [])[1:]  # Skip header
+        values = data.get("values", [])
         for row in values:
             if row and row[0].strip() == f"@{username}":
                 return True
