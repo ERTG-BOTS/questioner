@@ -584,10 +584,6 @@ async def toggle_activity_status(
         token=active_question_token
     )
 
-    target_forum_id = await get_target_forum(
-        username=user.Username, division=user.Division
-    )
-
     try:
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)
