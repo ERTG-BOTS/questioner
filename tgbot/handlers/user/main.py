@@ -522,13 +522,13 @@ async def regulation_not_found_handler(
 @user_router.callback_query(CancelQuestion.filter(F.action == "cancel"))
 async def cancel_question(
     callback: CallbackQuery,
+    callback_data: CancelQuestion,
     state: FSMContext,
     questions_repo: RequestsRepo,
     user: User,
-    active_question_token: str,
 ):
     question: Question = await questions_repo.questions.get_question(
-        token=active_question_token
+        token=callback_data.token
     )
 
     if (
