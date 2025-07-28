@@ -230,14 +230,14 @@ async def question_text(
         if clever_link:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
-Специалист не предоставил ссылку на регламент
-
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
         else:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b>
+
+Специалист не предоставил ссылку на регламент
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
