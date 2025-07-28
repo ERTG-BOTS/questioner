@@ -48,7 +48,7 @@ class Question(Base, TableNameMixin):
     employee_fullname: Mapped[str] = mapped_column(Unicode, nullable=False)
     employee_chat_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
     employee_division: Mapped[str] = mapped_column(Unicode, nullable=False)
-    question_text: Mapped[str] = mapped_column(Unicode, nullable=False)
+    question_text: Mapped[str] = mapped_column(Unicode, nullable=True)
     start_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     clever_link: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)

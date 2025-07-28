@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("employee_fullname", sa.Unicode(), nullable=False),
         sa.Column("employee_chat_id", sa.BIGINT(), nullable=False),
         sa.Column("employee_division", sa.Unicode(), nullable=True),
-        sa.Column("question_text", sa.Unicode(), nullable=False),
+        sa.Column("question_text", sa.Unicode(), nullable=True),
         sa.Column("start_time", sa.DateTime(), nullable=True),
         sa.Column("end_time", sa.DateTime(), nullable=True),
         sa.Column("clever_link", sa.Unicode(), nullable=True),
