@@ -16,7 +16,9 @@ def create_engine(db: DbConfig, db_name: str, echo=False):
             "isolation_level": None,
         },
         pool_pre_ping=True,
-        pool_recycle=3600,
+        pool_recycle=1800,
+        pool_timeout=30,
+        pool_reset_on_return="commit",
     )
     return engine
 

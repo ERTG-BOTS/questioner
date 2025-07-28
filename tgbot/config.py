@@ -127,6 +127,9 @@ class DbConfig:
             f"Pooling=yes;"
             f"Max Pool Size=100;"
             f"Min Pool Size=5;"
+            f"TCP KeepAlive=yes;"
+            f"ConnectRetryCount=3;"
+            f"ConnectRetryInterval=10;"
         )
         connection_url = URL.create(
             f"mssql+{driver}", query={"odbc_connect": connection_string}
