@@ -222,7 +222,7 @@ async def release_q_cmd(
 
 Не удалось найти текущую тему в базе, закрываю""")
         await message.bot.close_forum_topic(
-            chat_id=question.group_id,
+            chat_id=message.chat.id,
             message_thread_id=message.message_thread_id,
         )
         logger.error(
@@ -235,6 +235,8 @@ async def release_q_cb(
     callback: CallbackQuery,
     questions_repo: RequestsRepo,
 ):
+    await callback.answer()
+
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
@@ -252,4 +254,10 @@ async def release_q_cb(
 Для взятия вопроса в работу напишите сообщение в эту тему""")
         logger.info(
             f"[Вопрос] - [Освобождение] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.token} освобожден"
+        )
+
+        await callback.bot.edit_forum_topic(
+            chat_id=question.group_id,
+            message_thread_id=question.topic_id,
+            icon_custom_emoji_id=dicts.topicEmojis["open"],
         )

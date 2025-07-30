@@ -392,10 +392,7 @@ async def handle_edited_message(
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))
 async def return_q_duty(
-    callback: CallbackQuery,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    callback: CallbackQuery, user: User, questions_repo: RequestsRepo
 ):
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
