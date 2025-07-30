@@ -156,6 +156,12 @@ async def question_text(
     user: User,
     questions_repo: RequestsRepo,
 ):
+    active_questions = await questions_repo.questions.get_active_questions()
+    if user.FIO in [q.employee_fullname for q in active_questions]:
+        await state.clear()
+        await message.answer("У тебя уже есть активный вопрос")
+        return
+
     if message.caption:
         await state.update_data(question=message.caption)
         has_clever_link = "clever.ertelecom.ru/content/space/" in message.caption
@@ -168,6 +174,10 @@ async def question_text(
     await disable_previous_buttons(message, state)
 
     state_data = await state.get_data()
+    if state_data.get("processing"):
+        return
+
+    await state.update_data(processing=True)
 
     target_forum_id = await get_target_forum(
         username=user.Username, division=user.Division
@@ -314,8 +324,15 @@ async def question_text(
 async def clever_link_handler(
     message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
 ):
+    active_questions = await questions_repo.questions.get_active_questions()
+    if user.FIO in [q.employee_fullname for q in active_questions]:
+        await state.clear()
+        await message.answer("У тебя уже есть активный вопрос")
+        return
+
     clever_link = message.text
     state_data = await state.get_data()
+    await state.clear()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
     if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
@@ -405,7 +422,6 @@ async def clever_link_handler(
         disable_notification=True,
     )  # Пин информации о специалисте
 
-    await state.clear()
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
     )
@@ -422,6 +438,7 @@ async def regulation_not_found_handler(
     Обработчик кнопки "Не нашел" для случая, когда пользователь не смог найти регламент
     """
     state_data = await state.get_data()
+    await state.clear()
 
     # Получаем статистику для пользователя
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
@@ -511,7 +528,6 @@ async def regulation_not_found_handler(
     )
 
     # Очищаем состояние
-    await state.clear()
     await callback.answer()
 
     logging.info(
