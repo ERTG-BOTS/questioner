@@ -87,14 +87,18 @@ async def return_finished_q(
 Можешь писать сообщения, они будут переданы старшему""",
             reply_markup=finish_question_kb(),
         )
+
+        duty_info = ""
+        if duty:
+            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
+
         await callback.bot.send_message(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
 Специалист <b>{user.FIO}</b> переоткрыл вопрос сразу после закрытия
-
-<b>👮‍♂️ Дежурный:</b> {duty.FIO}
+{duty_info}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
@@ -206,7 +210,7 @@ async def q_info(
     # Добавляем инфо только если у вопроса есть закрепленный дежурный
     duty_info = ""
     if duty:
-        duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}"
+        duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
 
     await callback.message.edit_text(
         f"""<b>🔄 Возврат вопроса</b>
@@ -294,7 +298,7 @@ async def return_q_confirm(
         # 5. Build duty info only if duty exists
         duty_info = ""
         if duty:
-            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}"
+            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
 
         # 6. Отправляем уведомление дежурному в тему
         await callback.bot.send_message(
@@ -302,7 +306,8 @@ async def return_q_confirm(
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов{duty_info}
+Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
+{duty_info}
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
