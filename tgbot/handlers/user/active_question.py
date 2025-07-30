@@ -300,7 +300,7 @@ async def handle_edited_message(
         )
         return
 
-    edit_timestamp = f"\n\n<i>Сообщение изменено специалистом — {datetime.datetime.now(pytz.timezone('Asia/Yekaterinburg')).strftime('%H:%M %d.%m.%Y')}</i>"
+    edit_timestamp = f"\n\n<i>Сообщение изменено специалистом — {datetime.datetime.now(pytz.timezone('Asia/Yekaterinburg')).strftime('%H:%M %d.%m.%Y')} ПРМ</i>"
 
     try:
         # Проверяем сообщение на содержание медиа
