@@ -570,6 +570,7 @@ async def toggle_activity_status(
         if callback_data.action == "enable":
             new_status = True
             action_text = "включен"
+
         else:  # disable
             new_status = False
             action_text = "отключен"
@@ -583,7 +584,7 @@ async def toggle_activity_status(
         )
 
         # Теперь запускаем таймер если включили активность
-        if callback_data.action == "enable" and question.status in [
+        if new_status and question.status in [
             "open",
             "in_progress",
         ]:

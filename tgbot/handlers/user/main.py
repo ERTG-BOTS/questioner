@@ -51,6 +51,7 @@ async def main_cmd(
     )
 
     state_data = await state.get_data()
+    await state.clear()
 
     if user:
         await message.answer(
