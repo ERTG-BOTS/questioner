@@ -233,12 +233,6 @@ async def question_text(
             reply_markup=cancel_question_kb(token=new_question.token),
         )
 
-        # Запускаем таймер бездействия для нового вопроса (только если статус "open")
-        if new_question.status == "open":
-            await start_inactivity_timer(
-                new_question.token, message.bot, questions_repo
-            )
-
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b>
@@ -385,10 +379,6 @@ async def clever_link_handler(
 Вопрос передан на рассмотрение, в скором времени тебе ответят""",
         reply_markup=cancel_question_kb(token=new_question.token),
     )
-
-    # Запускаем таймер бездействия для нового вопроса (только если статус "open")
-    if new_question.status == "open":
-        await start_inactivity_timer(new_question.token, message.bot, questions_repo)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=target_forum_id,
