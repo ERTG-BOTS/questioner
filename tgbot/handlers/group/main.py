@@ -408,7 +408,10 @@ async def return_q_duty(
         and question.employee_fullname
         not in [u.employee_fullname for u in active_questions]
         and question.token in [d.token for d in available_to_return_questions]
-        and question.topic_duty_fullname == user.FIO
+        and (
+            question.topic_duty_fullname == user.FIO
+            or question.topic_duty_fullname is None
+        )
     ):
         await questions_repo.questions.update_question_status(
             token=question.token, status="open"
