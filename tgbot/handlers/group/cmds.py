@@ -36,7 +36,9 @@ async def end_q_cmd(
     )
 
     if question is not None:
-        if question.status != "closed" and question.topic_duty_fullname == user.FIO:
+        if question.status != "closed" and (
+            question.topic_duty_fullname == user.FIO or user.Role == 10
+        ):
             # Останавливаем таймер бездействия
             stop_inactivity_timer(question.token)
 
@@ -165,9 +167,8 @@ async def release_q_cmd(
     )
 
     if question is not None:
-        if (
-            question.topic_duty_fullname is not None
-            and question.topic_duty_fullname == user.FIO
+        if question.topic_duty_fullname is not None and (
+            question.topic_duty_fullname == user.FIO or user.Role == 10
         ):
             await questions_repo.questions.update_question_duty(
                 token=question.token, topic_duty=None
