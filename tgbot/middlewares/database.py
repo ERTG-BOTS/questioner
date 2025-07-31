@@ -73,19 +73,22 @@ class DatabaseMiddleware(BaseMiddleware):
 
                         # User validation logic remains the same...
                         if not user and not is_bot:
-                            await self.bot.ban_chat_member(
-                                chat_id=event.chat.id,
-                                user_id=event.from_user.id,
-                            )
-                            await event.answer(
-                                text=f"""<b>🙅‍♂️ Исключение</b>
+                            if event.message_thread_id:
+                                await self.bot.ban_chat_member(
+                                    chat_id=event.chat.id,
+                                    user_id=event.from_user.id,
+                                )
+                                await event.answer(
+                                    text=f"""<b>🙅‍♂️ Исключение</b>
 
 Пользователь <code>{event.from_user.id}</code> исключен
 Причина: не найден в базе""",
-                                reply_markup=on_user_leave_kb(
-                                    user_id=event.from_user.id,
-                                ),
-                            )
+                                    reply_markup=on_user_leave_kb(
+                                        user_id=event.from_user.id,
+                                    ),
+                                )
+                            else:
+                                await event.answer("У тебя нет прав использовать бота")
                             return
 
                         if (
