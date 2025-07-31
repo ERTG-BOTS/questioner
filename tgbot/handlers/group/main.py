@@ -28,6 +28,8 @@ from tgbot.keyboards.group.main import (
     question_quality_duty_kb,
 )
 from tgbot.keyboards.user.main import (
+    ActivityStatusToggle,
+    activity_status_toggle_kb,
     finish_question_kb,
 )
 from tgbot.middlewares.message_pairing import store_message_connection
@@ -542,4 +544,120 @@ async def quality_q_duty(
         logger.warning(
             f"[Вопрос] - [Оценка] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка выставить оценку {callback_data.answer} вопросу {question.token}. Вопрос принадлежит другому старшему"
         )
+    await callback.answer()
+
+
+@topic_router.callback_query(ActivityStatusToggle.filter())
+async def toggle_activity_status(
+    callback: CallbackQuery,
+    callback_data: ActivityStatusToggle,
+    questions_repo: RequestsRepo,
+):
+    """Обработчик переключения статуса активности для топика"""
+    question: Question = await questions_repo.questions.get_question(
+        group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
+    )
+
+    try:
+        if not question:
+            await callback.answer("❌ Вопрос не найден", show_alert=True)
+            return
+        elif question.status not in ["open", "in_progress"]:
+            await callback.answer("Вопрос уже закрыт")
+            return
+
+        # Определяем новое значение статуса активности
+        if callback_data.action == "enable":
+            new_status = True
+            action_text = "включен"
+        else:  # disable
+            new_status = False
+            action_text = "отключен"
+            from tgbot.services.scheduler import stop_inactivity_timer
+
+            stop_inactivity_timer(question.token)
+
+        # Обновляем статус в базе данных
+        await questions_repo.questions.update_question_activity_status(
+            token=callback_data.token, activity_status_enabled=new_status
+        )
+
+        # Теперь запускаем таймер если включили активность
+        if callback_data.action == "enable" and question.status in [
+            "open",
+            "in_progress",
+        ]:
+            await start_inactivity_timer(
+                question_token=question.token,
+                bot=callback.bot,
+                questions_repo=questions_repo,
+            )
+
+        # Обновляем клавиатуру
+        await callback.message.edit_reply_markup(
+            reply_markup=activity_status_toggle_kb(
+                token=callback_data.token,
+                user_id=question.employee_chat_id,
+                clever_link=question.clever_link if question.clever_link else None,
+                current_status=new_status,
+                global_status=config.tg_bot.activity_status,
+            )
+        )
+
+        # Показываем уведомление пользователю
+        if new_status:
+            await callback.answer(
+                f"🟢 Статус активности {action_text} для данного топика"
+            )
+        else:
+            await callback.answer(
+                f"🟠 Статус активности {action_text} для данного топика"
+            )
+
+        # Отправляем уведомление в топик (автоудаление через 10 секунд)
+        if new_status:
+            topic_message_text = "🟢 <b>Автозакрытие включено</b>\n\nТопик будет автоматически закрыт при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
+        else:
+            topic_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nТопик не будет закрываться автоматически\n\n<i>Сообщение удалится через 10 секунд</i>"
+
+        topic_msg = await callback.bot.send_message(
+            chat_id=question.group_id,
+            message_thread_id=question.topic_id,
+            text=topic_message_text,
+        )
+
+        # Отправляем уведомление пользователю (автоудаление через 10 секунд)
+        if new_status:
+            user_message_text = "🟢 <b>Автозакрытие включено</b>\n\nВопрос включил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
+        else:
+            user_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nДежурный выключил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
+
+        user_msg = await callback.bot.send_message(
+            chat_id=question.employee_chat_id,
+            text=user_message_text,
+        )
+
+        # Запускаем таймеры удаления для обоих сообщений
+        await run_delete_timer(
+            bot=callback.bot,
+            chat_id=question.group_id,
+            message_ids=[topic_msg.message_id],
+            seconds=10,
+        )
+
+        await run_delete_timer(
+            bot=callback.bot,
+            chat_id=question.employee_chat_id,
+            message_ids=[user_msg.message_id],
+            seconds=10,
+        )
+
+        logger.info(
+            f"[Активность] Дежурный {callback.from_user.username} ({callback.from_user.id}): "
+            f"Статус активности {action_text} для вопроса {question.token}"
+        )
+
+    except Exception as e:
+        logger.error(f"[Активность] Ошибка при переключении статуса активности: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
     await callback.answer()
