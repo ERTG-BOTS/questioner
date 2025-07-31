@@ -223,6 +223,7 @@ async def question_text(
             start_time=datetime.datetime.now(),
             question_text=state_data.get("question"),
             clever_link=clever_link,  # Может быть None если ссылки нет
+            activity_status_enabled=config.tg_bot.activity_status,
         )  # Добавление вопроса в БД
 
         await message.answer(
@@ -370,6 +371,7 @@ async def clever_link_handler(
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link=clever_link,
+        activity_status_enabled=config.tg_bot.activity_status,
     )  # Добавление вопроса в БД
 
     await message.answer(
@@ -462,7 +464,8 @@ async def regulation_not_found_handler(
         employee_division=user.Division,
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
-        clever_link="не нашел",  # Устанавливаем специальное значение
+        clever_link="не нашел",  # Устанавливаем специальное значение,
+        activity_status_enabled=config.tg_bot.activity_status,
     )
 
     # Отправляем сообщение об успехе
@@ -474,7 +477,7 @@ async def regulation_not_found_handler(
     )
 
     # Запускаем таймер бездействия для нового вопроса
-    if new_question.status == "open":
+    if new_question.status == "open" and new_question.activity_status_enabled:
         await start_inactivity_timer(new_question.token, callback.bot, questions_repo)
 
     # Формируем текст сообщения с указанием "не нашел" в регламенте
