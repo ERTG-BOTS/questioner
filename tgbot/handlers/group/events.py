@@ -54,12 +54,25 @@ async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
 
 @group_events_router.chat_member(ChatMemberUpdatedFilter(IS_MEMBER >> IS_NOT_MEMBER))
 async def on_user_leave(event: ChatMemberUpdated, user: User):
-    await event.answer(
-        text=f"""<b>🙅‍♂️ Исключение</b>
+    left_user_id = event.new_chat_member.user.id
+    action_user_id = event.from_user.id
+
+    if left_user_id == action_user_id:
+        await event.answer(
+            text=f"""<b>🚪 Выход</b>
 
 Пользователь <code>{user.FIO}</code> вышел из группы""",
-        reply_markup=on_user_leave_kb(user_id=event.from_user.id),
-    )
+            reply_markup=on_user_leave_kb(user_id=left_user_id),
+        )
+    else:
+        # User was kicked by someone else
+        kicker_user = await event.bot.get_chat_member(event.chat.id, action_user_id)
+        await event.answer(
+            text=f"""<b>🙅‍♂️ Исключение</b>
+
+Пользователь <code>{user.FIO}</code> был исключен администратором <code>{kicker_user.user.first_name}</code>""",
+            reply_markup=on_user_leave_kb(user_id=left_user_id),
+        )
 
 
 @group_events_router.callback_query(RemovedUser.filter(F.action == "unban"))
