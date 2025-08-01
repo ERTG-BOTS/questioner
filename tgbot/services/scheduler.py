@@ -318,7 +318,7 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             send_inactivity_warning_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(seconds=config.tg_bot.activity_warn_minutes),
+            + datetime.timedelta(minutes=config.tg_bot.activity_warn_minutes),
             args=[question_token],  # Only pass picklable arguments
             id=warning_job_id,
             jobstore="redis",
@@ -330,7 +330,7 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             auto_close_question_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(seconds=config.tg_bot.activity_close_minutes),
+            + datetime.timedelta(minutes=config.tg_bot.activity_close_minutes),
             args=[question_token],  # Only pass picklable arguments
             id=close_job_id,
             jobstore="redis",
