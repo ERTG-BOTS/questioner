@@ -59,11 +59,10 @@ async def active_question_end(
             # Останавливаем таймер бездействия
             stop_inactivity_timer(question.token)
 
-            await questions_repo.questions.update_question_status(
-                token=question.token, status="closed"
-            )
-            await questions_repo.questions.update_question_end(
-                token=question.token, end_time=datetime.datetime.now()
+            await questions_repo.questions.update_question(
+                token=question.token,
+                end_time=datetime.datetime.now(),
+                status="closed",
             )
 
             if question.quality_duty is not None:
@@ -405,8 +404,8 @@ async def question_quality_employee(
     callback_data: QuestionQualitySpecialist,
     questions_repo: RequestsRepo,
 ):
-    question: Question = await questions_repo.questions.update_question_quality(
-        token=callback_data.token, quality=callback_data.answer, is_duty=False
+    question: Question = await questions_repo.questions.update_question(
+        token=callback_data.token, quality_employee=callback_data.answer
     )
 
     await callback.answer("Оценка успешно выставлена ❤️")

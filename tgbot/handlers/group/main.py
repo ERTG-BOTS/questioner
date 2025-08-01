@@ -83,11 +83,8 @@ async def handle_q_message(
                 )
             )
 
-            await questions_repo.questions.update_question_duty(
-                token=question.token, topic_duty=user.FIO
-            )
-            await questions_repo.questions.update_question_status(
-                token=question.token, status="in_progress"
+            await questions_repo.questions.update_question(
+                token=question.token, topic_duty_fullname=user.FIO, status="in_progress"
             )
 
             employee: User = await main_repo.users.get_user(
@@ -416,8 +413,8 @@ async def return_q_duty(
             or question.topic_duty_fullname is None
         )
     ):
-        await questions_repo.questions.update_question_status(
-            token=question.token, status="open"
+        await questions_repo.questions.update_question(
+            token=question.token, status="in_progress"
         )
 
         await callback.bot.edit_forum_topic(
@@ -485,8 +482,8 @@ async def change_q_return_status(
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
-    await questions_repo.questions.update_question_return_status(
-        token=callback_data.token, status=callback_data.allow_return
+    await questions_repo.questions.update_question(
+        token=callback_data.token, allow_return=callback_data.allow_return
     )
     if callback_data.allow_return:
         await callback.answer("🟢 Возврат текущего вопроса был разрешен")
@@ -514,8 +511,8 @@ async def quality_q_duty(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
     if question.topic_duty_fullname == user.FIO:
-        await questions_repo.questions.update_question_quality(
-            token=callback_data.token, quality=callback_data.answer, is_duty=True
+        await questions_repo.questions.update_question(
+            token=question.token, quality_duty=callback_data.answer
         )
         await callback.answer("Оценка успешно выставлена ❤️")
         if callback_data.answer:
@@ -580,7 +577,7 @@ async def toggle_activity_status(
             stop_inactivity_timer(question.token)
 
         # Обновляем статус в базе данных
-        await questions_repo.questions.update_question_activity_status(
+        await questions_repo.questions.update_question(
             token=callback_data.token, activity_status_enabled=new_status
         )
 

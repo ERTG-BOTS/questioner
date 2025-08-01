@@ -64,8 +64,9 @@ async def return_finished_q(
         duty: User = await main_repo.users.get_user(
             fullname=question.topic_duty_fullname
         )
-        await questions_repo.questions.update_question_status(
-            token=question.token, status="open"
+        await questions_repo.questions.update_question(
+            token=question.token,
+            status="open",
         )
 
         await callback.bot.edit_forum_topic(
@@ -267,8 +268,9 @@ async def return_q_confirm(
             )
 
         # 1. Обновляем статус вопроса на "open"
-        await questions_repo.questions.update_question_status(
-            token=question.token, status="open"
+        await questions_repo.questions.update_question(
+            token=question.token,
+            status="open",
         )
 
         # 2. Обновляем название и иконку темы

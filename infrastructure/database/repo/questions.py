@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TypedDict, Unpack
 
 from sqlalchemy import and_, extract, func, or_, select
 
@@ -14,6 +14,26 @@ config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+
+class QuestionUpdateParams(TypedDict, total=False):
+    """Доступные параметры для обновления вопроса."""
+
+    group_id: int
+    topic_id: int
+    topic_duty_fullname: str | None
+    employee_fullname: str
+    employee_chat_id: int
+    employee_division: str | None
+    question_text: str | None
+    start_time: datetime
+    end_time: datetime
+    clever_link: str | None
+    quality_employee: bool | None
+    quality_duty: bool | None
+    status: str | None
+    allow_return: bool
+    activity_status_enabled: bool | None
 
 
 class QuestionsRepo(BaseRepo):
@@ -64,6 +84,35 @@ class QuestionsRepo(BaseRepo):
         await self.session.refresh(question)
         return question
 
+    async def update_question(
+        self,
+        token: str = None,
+        group_id: int | str = None,
+        topic_id: int | str = None,
+        **kwargs: Unpack[QuestionUpdateParams],
+    ) -> Optional[Question]:
+        if token:
+            select_stmt = select(Question).where(Question.token == token)
+        elif group_id and topic_id:
+            select_stmt = select(Question).where(
+                Question.token == token,
+                Question.group_id == group_id,
+                Question.topic_id == topic_id,
+            )
+        else:
+            return None
+
+        result = await self.session.execute(select_stmt)
+        question = result.scalar_one_or_none()
+
+        # Если вопрос существует - обновляем его
+        if question:
+            for key, value in kwargs.items():
+                setattr(question, key, value)
+            await self.session.commit()
+
+        return question
+
     async def get_question(
         self, token: str = None, group_id: str | int = None, topic_id: int = None
     ) -> Optional[Question]:
@@ -92,106 +141,6 @@ class QuestionsRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
-
-    async def update_question_status(
-        self, token: str, status: str
-    ) -> Optional[Question]:
-        """
-        Обновление статуса вопроса
-        :param token: Уникальный идентификатор вопроса
-        :param status: Новый статус
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.status = status
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_end(
-        self, token: str, end_time: date
-    ) -> Optional[Question]:
-        """
-        Обновление времени закрытия вопроса
-        :param token: Уникальный идентификатор вопроса
-        :param end_time: Время закрытия вопроса
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.end_time = end_time
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_quality(
-        self, token: str, quality: bool, is_duty: bool = False
-    ) -> Optional[Question]:
-        """
-        Обновление оценки вопроса. Может быть использовано и дежурным, и специалистом
-        :param token: Уникальный идентификатор вопроса
-        :param quality: Выставляемое качество
-        :param is_duty: Оценка от дежурного или нет
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            if is_duty:
-                question.quality_duty = quality
-            else:
-                question.quality_employee = quality
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_duty(
-        self, token: str, topic_duty: Optional[str]
-    ) -> Optional[Question]:
-        """
-        Обновление дежурного, ответственного за вопрос
-        :param token: Уникальный идентификатор вопроса
-        :param topic_duty: Дежурный, закрепляемый за вопросом
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.topic_duty_fullname = topic_duty
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_return_status(
-        self, token: str, status: bool
-    ) -> Optional[Question]:
-        """
-        Обновление статуса возможности возврата вопроса
-        :param token: Уникальный идентификатор вопроса
-        :param status: Новый статус возможности возврата
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.allow_return = status
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
-
-    async def update_question_activity_status(
-        self, token: str, activity_status_enabled: Optional[bool]
-    ) -> Optional[Question]:
-        """
-        Обновление статуса отслеживания бездействия
-        :param token: Уникальный идентификатор вопроса
-        :param activity_status_enabled: Новый статус отслеживания бездействия
-        :return: Обновленный объект вопроса
-        """
-        question = await self.session.get(Question, token)
-        if question:
-            question.activity_status_enabled = activity_status_enabled
-            await self.session.commit()
-            await self.session.refresh(question)
-        return question
 
     async def get_questions_by_month(
         self, month: int, year: int, division: str = None

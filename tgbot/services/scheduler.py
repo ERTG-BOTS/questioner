@@ -150,11 +150,8 @@ async def auto_close_question(
 
         if question and question.status in ["open", "in_progress"]:
             # Закрываем вопрос
-            await questions_repo.questions.update_question_status(
-                token=question_token, status="closed"
-            )
-            await questions_repo.questions.update_question_end(
-                token=question_token, end_time=datetime.datetime.now()
+            await questions_repo.questions.update_question(
+                token=question.token, status="closed", end_time=datetime.datetime.now()
             )
 
             # Уведомляем о закрытии

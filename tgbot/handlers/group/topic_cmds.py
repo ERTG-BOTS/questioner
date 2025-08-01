@@ -42,11 +42,8 @@ async def end_q_cmd(
             # Останавливаем таймер бездействия
             stop_inactivity_timer(question.token)
 
-            await questions_repo.questions.update_question_status(
-                token=question.token, status="closed"
-            )
-            await questions_repo.questions.update_question_end(
-                token=question.token, end_time=datetime.datetime.now()
+            await questions_repo.questions.update_question(
+                token=question.token, status="closed", end_time=datetime.datetime.now()
             )
 
             if question.quality_duty is not None:
@@ -170,11 +167,10 @@ async def release_q_cmd(
         if question.topic_duty_fullname is not None and (
             question.topic_duty_fullname == user.FIO or user.Role == 10
         ):
-            await questions_repo.questions.update_question_duty(
-                token=question.token, topic_duty=None
-            )
-            await questions_repo.questions.update_question_status(
-                token=question.token, status="open"
+            await questions_repo.questions.update_question(
+                token=question.token,
+                topic_duty_fullname=None,
+                status="open",
             )
 
             employee: User = await main_repo.users.get_user(
@@ -243,11 +239,10 @@ async def release_q_cb(
     )
 
     if question:
-        await questions_repo.questions.update_question_duty(
-            token=question.token, topic_duty=None
-        )
-        await questions_repo.questions.update_question_status(
-            token=question.token, status="open"
+        await questions_repo.questions.update_question(
+            token=question.token,
+            topic_duty_fullname=None,
+            status="open",
         )
 
         await callback.message.answer("""<b>🕊️ Вопрос освобожден</b>
