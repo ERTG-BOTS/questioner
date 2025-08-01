@@ -143,7 +143,7 @@ async def ask_question(
     await state.update_data(messages_with_buttons=[msg.message_id])
     await state.set_state(AskQuestion.question)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
+        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} [{user.Division}] {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
     )
     await callback.answer()
 

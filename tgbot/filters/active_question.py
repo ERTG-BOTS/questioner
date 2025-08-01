@@ -27,10 +27,6 @@ class ActiveQuestion(BaseFilter):
         if obj.chat.type != "private":
             return False
 
-        logger.info(
-            f"Checking active question for user {obj.from_user.id} in private chat"
-        )
-
         active_questions: Sequence[
             Question
         ] = await questions_repo.questions.get_active_questions()
@@ -38,8 +34,16 @@ class ActiveQuestion(BaseFilter):
         for question in active_questions:
             if question.employee_chat_id == obj.from_user.id:
                 active_question_token = question.token
+
+                logger.info(
+                    f"[Активные вопросы] Найден активный вопрос с токеном {active_question_token} у специалиста {obj.from_user.id}"
+                )
+
                 return {"active_question_token": active_question_token}
 
+        logger.info(
+            f"[Активные вопросы] Не найдено активных вопросов у специалиста {obj.from_user.id}"
+        )
         return False
 
 
@@ -64,7 +68,15 @@ class ActiveQuestionWithCommand(BaseFilter):
             for question in current_questions:
                 if question.employee_chat_id == obj.from_user.id:
                     active_question_token = question.token
+
+                    logger.info(
+                        f"[Активные вопросы] Найден активный вопрос с токеном {active_question_token} у специалиста {obj.from_user.id}"
+                    )
+
                     return {"active_question_token": active_question_token}
 
             return False
+        logger.info(
+            f"[Активные вопросы] Не найдено активных вопросов у специалиста {obj.from_user.id}"
+        )
         return None
