@@ -14,7 +14,10 @@ from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.middlewares.database import DatabaseMiddleware
 from tgbot.middlewares.message_pairing import MessagePairingMiddleware
 from tgbot.services.logger import setup_logging
-from tgbot.services.scheduler import remove_old_topics, scheduler
+from tgbot.services.scheduler import (
+    remove_old_topics,
+    scheduler,
+)
 
 bot_config = load_config(".env")
 
@@ -145,18 +148,30 @@ async def main():
 
     register_global_middlewares(dp, bot_config, bot, stp_db, questioner_db)
 
+    from tgbot.services.scheduler import register_scheduler_dependencies
+
+    register_scheduler_dependencies(bot, questioner_db)
+
     if bot_config.tg_bot.remove_old_questions:
         scheduler.add_job(
-            remove_old_topics, "interval", hours=12, args=[bot, questioner_db]
+            remove_old_topics,
+            "interval",
+            hours=12,
+            args=[bot, questioner_db],
         )
     # await remove_old_topics(bot, questioner_db)
     scheduler.start()
+
+    existing_jobs = scheduler.get_jobs()
+    # scheduler.print_jobs()
+    logger.info(f"[Redis] Найдено {len(existing_jobs)} существующих задач в Redis")
 
     # await on_startup(bot)
     try:
         await dp.start_polling(bot)
     finally:
         await stp_db_engine.dispose()
+        await questioner_db_engine.dispose()
 
 
 if __name__ == "__main__":
