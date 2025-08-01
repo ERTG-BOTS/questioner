@@ -17,7 +17,6 @@ from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
-logging.getLogger("apscheduler").setLevel(logging.DEBUG)
 
 job_defaults = {
     "coalesce": True,
@@ -31,7 +30,7 @@ REDIS = {
     "password": config.redis.redis_pass,
     "db": 1,
     "ssl": False,
-    "decode_responses": False,  # Must be False for APScheduler binary data
+    "decode_responses": False,
 }
 
 jobstores = {
