@@ -10,6 +10,10 @@ class ChangeRole(CallbackData, prefix="role"):
     role: str
 
 
+class SelectDivision(CallbackData, prefix="select_division"):
+    division: str
+
+
 # Основная клавиатура для команды /start
 def admin_kb() -> InlineKeyboardMarkup:
     buttons = [
@@ -21,7 +25,8 @@ def admin_kb() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
-                text="👶🏻 Стать спецом", callback_data=ChangeRole(role="spec").pack()
+                text="🎭 Изменить роль",
+                callback_data=AdminMenu(menu="change_role").pack(),
             ),
         ],
     ]
@@ -29,4 +34,33 @@ def admin_kb() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=buttons,
     )
+    return keyboard
+
+
+def division_selection_kb() -> InlineKeyboardMarkup:
+    """
+    Клавиатура для выбора направления при смене роли админа
+    """
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text="🏢 НЦК", callback_data=SelectDivision(division="НЦК").pack()
+            ),
+            InlineKeyboardButton(
+                text="👶 НЦК ОР", callback_data=SelectDivision(division="НЦК ОР").pack()
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="🏭 НТП", callback_data=SelectDivision(division="НТП").pack()
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="↩️ Назад", callback_data=AdminMenu(menu="main").pack()
+            ),
+        ],
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard

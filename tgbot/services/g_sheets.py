@@ -53,7 +53,41 @@ async def is_employee_intern(
 async def get_target_forum(
     username: str,
     division: str,
+    temp_division: str = None,  # Новый параметр для временного направления
 ) -> int | str:
+    """
+    Определяет целевой форум для создания вопроса
+
+    :param username: Username пользователя
+    :param division: Направление пользователя из БД
+    :param temp_division: Временное направление из состояния (для админов)
+    :return: ID целевого форума
+    """
+    # Если есть временное направление (админ сменил роль), используем его
+    if temp_division:
+        # Админ явно выбрал направление - не проверяем статус стажёра
+        if temp_division == "НЦК":
+            target_forum_id = config.tg_bot.nck_forum_id
+            logger.info(f"[Админ роль] Пользователь {username} маскируется под НЦК")
+
+        elif temp_division == "НЦК ОР":
+            target_forum_id = config.tg_bot.nck_or_forum_id
+            logger.info(f"[Админ роль] Пользователь {username} маскируется под НЦК ОР")
+
+        elif temp_division == "НТП":
+            target_forum_id = config.tg_bot.ntp_forum_id
+            logger.info(f"[Админ роль] Пользователь {username} маскируется под НТП")
+
+        else:
+            # Fallback если что-то пошло не так
+            target_forum_id = config.tg_bot.nck_forum_id
+            logger.warning(
+                f"[Админ роль] Неизвестное временное направление: {temp_division}"
+            )
+
+        return target_forum_id
+
+    # Обычная логика для пользователей (не админов с временной ролью)
     if division == "НЦК":
         try:
             # Проверяем, является ли пользователь стажёром

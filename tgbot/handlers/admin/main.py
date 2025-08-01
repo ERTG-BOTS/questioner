@@ -11,7 +11,13 @@ from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
-from tgbot.keyboards.admin.main import AdminMenu, ChangeRole, admin_kb
+from tgbot.keyboards.admin.main import (
+    AdminMenu,
+    ChangeRole,
+    SelectDivision,
+    admin_kb,
+    division_selection_kb,
+)
 from tgbot.keyboards.user.main import user_kb
 from tgbot.misc.dicts import role_names
 from tgbot.services.logger import setup_logging
@@ -41,11 +47,17 @@ async def admin_start(
     state_data = await state.get_data()
 
     if "role" in state_data:
+        # Определяем текущую временную роль
+        temp_division = state_data.get("temp_division", "")
+        role_text = f"Специалист ({temp_division})" if temp_division else "Специалист"
+
         logging.info(
             f"[Админ] {message.from_user.username} ({message.from_user.id}): Открыто меню пользователя"
         )
         await message.answer(
             f"""👋 Привет, <b>{user.FIO}</b>!
+
+<b>🎭 Твоя временная роль:</b> {role_text}
 
 <b>❓ Ты задал вопросов:</b>
 - За день {employee_topics_today}
@@ -116,6 +128,61 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) 
     await callback.answer()
 
 
+@admin_router.callback_query(AdminMenu.filter(F.menu == "change_role"))
+async def show_division_selection(
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: User,
+) -> None:
+    """
+    Показывает меню выбора направления для смены роли
+    """
+    await callback.message.edit_text(
+        """<b>🎭 Изменение роли</b>
+
+Выбери новую роль из списка:
+- <b>НЦК</b> - Специалист НЦК
+- <b>НЦК ОР</b> - Специалист НЦК Общего Ряда (стажёры)
+- <b>НТП</b> - Специалист НТП""",
+        reply_markup=division_selection_kb(),
+    )
+
+    logging.info(
+        f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Открыто меню выбора направления"
+    )
+    await callback.answer()
+
+
+@admin_router.callback_query(SelectDivision.filter())
+async def change_role_to_division(
+    callback: CallbackQuery,
+    callback_data: SelectDivision,
+    state: FSMContext,
+    questions_repo: RequestsRepo,
+    user: User,
+) -> None:
+    """
+    Изменяет роль админа на специалиста выбранного направления
+    """
+    division = callback_data.division
+
+    # Устанавливаем роль специалиста (1) и сохраняем выбранное направление
+    await state.update_data(
+        role=1,  # Специалист
+        temp_division=division,  # Сохраняем выбранное направление
+    )
+
+    logging.info(
+        f"[Админ] {callback.from_user.username} ({callback.from_user.id}): "
+        f"Роль изменена с {user.Role} на специалиста {division}"
+    )
+
+    await main_cb(
+        callback=callback, state=state, questions_repo=questions_repo, user=user
+    )
+    await callback.answer()
+
+
 @admin_router.message(Command("reset"))
 async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> None:
     """
@@ -136,3 +203,17 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
     logging.info(
         f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой"
     )
+
+
+@admin_router.callback_query(AdminMenu.filter(F.menu == "main"))
+async def back_to_main_menu(
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: User,
+    questions_repo: RequestsRepo,
+) -> None:
+    """
+    Возврат в главное админ-меню
+    """
+    await admin_start(callback.message, state, user, questions_repo)
+    await callback.answer()

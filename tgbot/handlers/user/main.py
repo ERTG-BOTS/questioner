@@ -173,13 +173,14 @@ async def question_text(
     await disable_previous_buttons(message, state)
 
     state_data = await state.get_data()
+    temp_division = state_data.get("temp_division")
     if state_data.get("processing"):
         return
 
     await state.update_data(processing=True)
 
     target_forum_id = await get_target_forum(
-        username=user.Username, division=user.Division
+        username=user.Username, division=user.Division, temp_division=temp_division
     )
 
     is_root_user = user.Role == 10
