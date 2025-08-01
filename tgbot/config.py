@@ -122,6 +122,7 @@ class DbConfig:
             f"PWD={self.password};"
             f"TrustServerCertificate=yes;"
             f"MultipleActiveResultSets=yes;"
+            f"MARS_Connection=yes;"
             f"Connection Timeout=30;"
             f"Command Timeout=60;"
             f"Pooling=yes;"
