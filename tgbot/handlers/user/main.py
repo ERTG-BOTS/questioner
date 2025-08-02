@@ -163,10 +163,12 @@ async def question_text(
 
     if message.caption:
         await state.update_data(question=message.caption)
-        has_clever_link = "clever.ertelecom.ru/content/space/" in message.caption
+        has_clever_link = (
+            "https://clever.ertelecom.ru/content/space/" in message.caption
+        )
     else:
         await state.update_data(question=message.text)
-        has_clever_link = "clever.ertelecom.ru/content/space/" in message.text
+        has_clever_link = "https://clever.ertelecom.ru/content/space/" in message.text
     await state.update_data(question_message_id=message.message_id)
 
     # Отключаем кнопки на предыдущих шагах
@@ -330,7 +332,10 @@ async def clever_link_handler(
     await state.clear()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
+    if (
+        "https://clever.ertelecom.ru/content/space/" not in message.text
+        and user.Role != 10
+    ):
         await message.answer(
             """<b>🗃️ Регламент</b>
 
