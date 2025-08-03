@@ -327,7 +327,6 @@ async def clever_link_handler(
         await message.answer("У тебя уже есть активный вопрос")
         return
 
-    clever_link = message.text
     state_data = await state.get_data()
     await state.clear()
 
@@ -346,6 +345,7 @@ async def clever_link_handler(
         )
         return
 
+    clever_link = extract_clever_link(message.text)
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
@@ -376,7 +376,7 @@ async def clever_link_handler(
         employee_division=user.Division,
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
-        clever_link=clever_link,
+        clever_link=clever_link if clever_link else None,
         activity_status_enabled=config.tg_bot.activity_status,
     )  # Добавление вопроса в БД
 
