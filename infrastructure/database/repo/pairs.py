@@ -109,16 +109,16 @@ class MessagesPairsRepo:
 
     async def get_old_pairs(self) -> Sequence[MessagesPair]:
         """
-        Получает пары сообщений старше 2 дней.
+        Получает пары сообщений старше 1 дня (в связи с невозможностью вернуть вопрос старше дня).
 
         Returns:
-            Sequence[MessagesPair]: Список пар сообщений старше 2 ней
+            Sequence[MessagesPair]: Список пар сообщений старше 1 дня
         """
         from datetime import datetime, timedelta
 
-        # Считаем дату два дня назад
+        # Считаем дату день назад
         today = datetime.now()
-        two_days_ago = today - timedelta(days=2)
+        two_days_ago = today - timedelta(days=1)
 
         stmt = select(MessagesPair).where(MessagesPair.created_at < two_days_ago)
         result = await self.session.execute(stmt)
