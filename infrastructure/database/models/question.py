@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy import BIGINT, Boolean, DateTime, Integer, String, Unicode
+from sqlalchemy import Boolean, DateTime, Integer, String, Unicode, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TableNameMixin
@@ -42,11 +42,11 @@ class Question(Base, TableNameMixin):
     __tablename__ = "questions"
 
     token: Mapped[str] = mapped_column(String(255), primary_key=True)
-    group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     topic_id: Mapped[int] = mapped_column(Integer, nullable=False)
     topic_duty_fullname: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
     employee_fullname: Mapped[str] = mapped_column(Unicode, nullable=False)
-    employee_chat_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
+    employee_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     employee_division: Mapped[str] = mapped_column(Unicode, nullable=False)
     question_text: Mapped[str] = mapped_column(Unicode, nullable=True)
     start_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
