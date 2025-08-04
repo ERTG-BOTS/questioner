@@ -25,7 +25,7 @@ from tgbot.keyboards.user.main import (
     closed_question_specialist_kb,
     question_quality_specialist_kb,
 )
-from tgbot.middlewares.message_pairing import store_message_connection
+from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
 from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging

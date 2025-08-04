@@ -32,7 +32,7 @@ from tgbot.keyboards.user.main import (
     activity_status_toggle_kb,
     finish_question_kb,
 )
-from tgbot.middlewares.message_pairing import store_message_connection
+from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
 from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging

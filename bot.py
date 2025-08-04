@@ -10,9 +10,11 @@ from aiogram.types import BotCommand
 from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import Config, load_config
 from tgbot.handlers import routers_list
-from tgbot.middlewares.config import ConfigMiddleware
-from tgbot.middlewares.database import DatabaseMiddleware
-from tgbot.middlewares.message_pairing import MessagePairingMiddleware
+from tgbot.middlewares.AdminRoleMiddleware import AdminRoleMiddleware
+from tgbot.middlewares.ConfigMiddleware import ConfigMiddleware
+from tgbot.middlewares.DatabaseMiddleware import DatabaseMiddleware
+from tgbot.middlewares.MessagePairingMiddleware import MessagePairingMiddleware
+from tgbot.middlewares.UserAccessMiddleware import UserAccessMiddleware
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     remove_old_topics,
@@ -51,7 +53,7 @@ logger = logging.getLogger(__name__)
 #     )
 
 
-def register_global_middlewares(
+def register_selective_middlewares(
     dp: Dispatcher,
     config: Config,
     bot: Bot,
@@ -59,33 +61,49 @@ def register_global_middlewares(
     questioner_session_pool=None,
 ):
     """
-    Register global middlewares for the given dispatcher.
-    Global middlewares here are the ones that are applied to all the handlers (you specify the type of update)
-
-    :param bot: Bot object.
-    :param dp: The dispatcher instance.
-    :type dp: Dispatcher
-    :param config: The configuration object from the loaded configuration.
-    :param session_pool: Optional session pool object for the database using SQLAlchemy.
-    :return: None
+    Alternative setup with more selective middleware application.
+    Use this if you want different middleware chains for different event types.
     """
-    middleware_types = [
-        ConfigMiddleware(config),
-        DatabaseMiddleware(
-            config=config,
-            bot=bot,
-            main_session_pool=main_session_pool,
-            questioner_session_pool=questioner_session_pool,
-        ),
-    ]
 
-    for middleware_type in middleware_types:
-        dp.message.outer_middleware(middleware_type)
-        dp.callback_query.outer_middleware(middleware_type)
-        dp.edited_message.outer_middleware(middleware_type)
-        dp.chat_member.outer_middleware(middleware_type)
+    # Always needed
+    config_middleware = ConfigMiddleware(config)
+    database_middleware = DatabaseMiddleware(
+        config=config,
+        bot=bot,
+        main_session_pool=main_session_pool,
+        questioner_session_pool=questioner_session_pool,
+    )
 
+    # User management middlewares
+    access_middleware = UserAccessMiddleware(bot=bot)
+    role_middleware = AdminRoleMiddleware(bot=bot)
+
+    # Apply to messages (most comprehensive chain)
+    for middleware in [
+        config_middleware,
+        database_middleware,
+        access_middleware,
+        role_middleware,
+    ]:
+        dp.message.outer_middleware(middleware)
+
+    # Apply to callback queries (skip role management if not needed)
+    for middleware in [config_middleware, database_middleware, access_middleware]:
+        dp.callback_query.outer_middleware(middleware)
+
+    # Apply to edited messages (includes message pairing)
+    for middleware in [
+        config_middleware,
+        database_middleware,
+        access_middleware,
+        role_middleware,
+    ]:
+        dp.edited_message.outer_middleware(middleware)
     dp.edited_message.outer_middleware(MessagePairingMiddleware())
+
+    # Apply to chat member updates (minimal chain)
+    for middleware in [config_middleware, database_middleware]:
+        dp.chat_member.outer_middleware(middleware)
 
 
 def get_storage(config):
@@ -145,7 +163,7 @@ async def main():
 
     dp.include_routers(*routers_list)
 
-    register_global_middlewares(dp, bot_config, bot, stp_db, questioner_db)
+    register_selective_middlewares(dp, bot_config, bot, stp_db, questioner_db)
 
     from tgbot.services.scheduler import register_scheduler_dependencies
 
