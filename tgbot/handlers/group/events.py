@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @group_events_router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
 async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
-    user: User = await main_repo.users.get_user(event.from_user.id)
+    user: User = await main_repo.users.get_user(event.new_chat_member.user.id)
 
     if user is None:
         return
@@ -41,14 +41,9 @@ async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
 <i><b>Роль:</b> {role_names[user.Role]}</i>""",
     )
 
-    # TODO удалить промоут при накате общих прав на приглашения в группу
-    await event.bot.promote_chat_member(
-        chat_id=event.from_user.id, user_id=event.from_user.id, can_invite_users=True
-    )
-
     await event.bot.set_chat_administrator_custom_title(
         chat_id=event.chat.id,
-        user_id=event.from_user.id,
+        user_id=event.new_chat_member.user.id,
         custom_title=group_admin_titles[user.Role],
     )
 
@@ -83,6 +78,7 @@ async def unban_removed_user(
     user: User,
     main_repo: RequestsRepo,
 ):
+    logger.info(callback_data.user_id)
     removed_user: User = await main_repo.users.get_user(callback_data.user_id)
     if user.Role == 10 and removed_user:
         await callback.bot.unban_chat_member(
@@ -118,6 +114,7 @@ async def change_user_role(
     user: User,
     main_repo: RequestsRepo,
 ):
+    logger.info(callback_data.user_id)
     removed_user: User = await main_repo.users.get_user(callback_data.user_id)
 
     if user.Role == 10 and removed_user:

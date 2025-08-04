@@ -4,6 +4,7 @@ import logging
 import pytz
 from aiogram import Bot
 from aiogram.types import ReplyKeyboardRemove
+from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import Sequence
@@ -38,6 +39,7 @@ if config.tg_bot.use_redis:
     }
 
     jobstores = {
+        "default": MemoryJobStore(),
         "redis": RedisJobStore(**REDIS),
     }
 
@@ -46,6 +48,24 @@ if config.tg_bot.use_redis:
         job_defaults=job_defaults,
         timezone=pytz.utc,
     )
+else:
+    jobstores = {
+        "default": MemoryJobStore(),
+    }
+
+    job_defaults = {
+        "coalesce": True,
+        "misfire_grace_time": 300,
+        "replace_existing": True,
+    }
+
+    scheduler.configure(
+        jobstores=jobstores,
+        job_defaults=job_defaults,
+        timezone=pytz.utc,
+    )
+
+# TODO ОПТИМИЗИРОВАТЬ
 
 # Global registry to store picklable dependencies
 _scheduler_registry = {}
@@ -94,7 +114,7 @@ async def run_delete_timer(
             run_date=datetime.datetime.now(tz=pytz.utc)
             + datetime.timedelta(seconds=seconds),
             args=[chat_id, message_ids],
-            jobstore="redis",
+            jobstore="redis" if config.tg_bot.use_redis else "default",
         )
     except Exception as e:
         logger.error(f"Ошибка при планировании удаления сообщений: {e}")
@@ -115,7 +135,7 @@ async def remove_question_timer(bot: Bot, question: Question):
                 question.topic_id,
             ],  # Pass only picklable data
             id=warning_job_id,
-            jobstore="redis",
+            jobstore="redis" if config.tg_bot.use_redis else "default",
         )
     except Exception as e:
         logger.error(f"Ошибка при планировании удаления вопроса {question.token}: {e}")
@@ -337,7 +357,7 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             + datetime.timedelta(minutes=config.questioner.activity_warn_minutes),
             args=[question_token],
             id=warning_job_id,
-            jobstore="redis",
+            jobstore="redis" if config.tg_bot.use_redis else "default",
         )
 
         # Запускаем таймер автозакрытия
@@ -349,7 +369,7 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             + datetime.timedelta(minutes=config.questioner.activity_close_minutes),
             args=[question_token],
             id=close_job_id,
-            jobstore="redis",
+            jobstore="redis" if config.tg_bot.use_redis else "default",
         )
 
     except Exception as e:
@@ -366,12 +386,17 @@ def stop_inactivity_timer(question_token: str):
 
         # Удаляем задачи, если они существуют
         try:
-            scheduler.remove_job(warning_job_id, jobstore="redis")
+            scheduler.remove_job(
+                warning_job_id,
+                jobstore="redis" if config.tg_bot.use_redis else "default",
+            )
         except Exception:
             pass  # Задача может не существовать
 
         try:
-            scheduler.remove_job(close_job_id, jobstore="redis")
+            scheduler.remove_job(
+                close_job_id, jobstore="redis" if config.tg_bot.use_redis else "default"
+            )
         except Exception:
             pass  # Задача может не существовать
 

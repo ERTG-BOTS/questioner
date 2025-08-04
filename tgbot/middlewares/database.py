@@ -1,14 +1,15 @@
 import logging
-from typing import Any, Awaitable, Callable, Dict, Union
+from typing import Any, Awaitable, Callable, Dict, Sequence, Union
 
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 
-from infrastructure.database.models import User
+from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import Config, load_config
 from tgbot.keyboards.group.events import on_user_leave_kb
+from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
@@ -99,7 +100,8 @@ class DatabaseMiddleware(BaseMiddleware):
                                 chat_id=event.chat.id,
                                 user_id=event.from_user.id,
                             )
-                            await event.answer(
+                            await event.bot.send_message(
+                                chat_id=event.chat.id,
                                 text=f"""<b>🙅‍♂️ Исключение</b>
 
 Пользователь <code>{user.FIO}</code> исключен
@@ -108,6 +110,65 @@ class DatabaseMiddleware(BaseMiddleware):
                                     user_id=event.from_user.id, change_role=True
                                 ),
                             )
+
+                            active_questions: Sequence[
+                                Question
+                            ] = await questioner_repo.questions.get_active_questions()
+                            if user.FIO in [
+                                d.topic_duty_fullname for d in active_questions
+                            ]:
+                                duty_active_questions: Sequence[Question] = [
+                                    question
+                                    for question in active_questions
+                                    if user.FIO == question.topic_duty_fullname
+                                ]
+
+                                for question in duty_active_questions:
+                                    await questioner_repo.questions.update_question(
+                                        token=question.token,
+                                        topic_duty_fullname=None,
+                                        status="open",
+                                    )
+
+                                    await self.bot.edit_forum_topic(
+                                        chat_id=question.group_id,
+                                        message_thread_id=question.topic_id,
+                                        icon_custom_emoji_id=dicts.topicEmojis["open"],
+                                    )
+                                    await self.bot.send_message(
+                                        chat_id=question.group_id,
+                                        message_thread_id=question.topic_id,
+                                        text=f"""<b>🕊️ Вопрос освобожден</b>
+
+Дежурный <b>{user.FIO}</b> был исключен из-за недостающих прав
+Для взятия вопроса в работу напишите сообщение в эту тему""",
+                                    )
+                                    await self.bot.send_message(
+                                        chat_id=question.employee_chat_id,
+                                        text=f"""<b>🕊️ Дежурный покинул чат</b>
+
+Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
+                                    )
+                                    logger.info(
+                                        f"[Вопрос] - [Освобождение] Дежурный {user.FIO} ({user.ChatId}) исключен и освобожден от вопроса {question.token}"
+                                    )
+
+                                question_list = []
+                                for i, question in enumerate(duty_active_questions, 1):
+                                    link = f"<a href='https://t.me/c/{str(question.group_id)[4:]}/{question.topic_id}'>{str(question.token)}</a>"
+                                    question_list.append(f"{i}. {link}")
+
+                                question_text = (
+                                    "\n".join(question_list)
+                                    if question_list
+                                    else "Нет вопросов"
+                                )
+
+                                await self.bot.send_message(
+                                    chat_id=event.chat.id,
+                                    text=f"Список вопросов с исключенным дежурным:\n{question_text}",
+                                )
+
                             return
 
                         data["main_repo"] = main_repo

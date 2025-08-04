@@ -87,8 +87,8 @@ class QuestionsRepo(BaseRepo):
     async def update_question(
         self,
         token: str = None,
-        group_id: int | str = None,
-        topic_id: int | str = None,
+        group_id: int = None,
+        topic_id: int = None,
         **kwargs: Unpack[QuestionUpdateParams],
     ) -> Optional[Question]:
         if token:
