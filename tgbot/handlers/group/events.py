@@ -103,8 +103,8 @@ async def change_user_role(
             chat_id=callback.message.chat.id, user_id=callback_data.user_id
         )
 
-        updated_user: User = await main_repo.users.update_user_role(
-            user_id=callback_data.user_id, role=callback_data.role
+        updated_user: User = await main_repo.users.update_user(
+            user_id=callback_data.user_id, Role=callback_data.role
         )
 
         invite_link: str = await callback.bot.export_chat_invite_link(

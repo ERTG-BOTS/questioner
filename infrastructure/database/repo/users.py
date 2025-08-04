@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TypedDict, Unpack
 
 from sqlalchemy import and_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -10,6 +10,19 @@ from tgbot.services.logger import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+
+class RegisteredUserParams(TypedDict, total=False):
+    """Доступные параметры для обновления пользователя в таблице RegisteredUsers."""
+
+    ChatId: int
+    Username: str | None
+    Division: str | None
+    Position: str | None
+    FIO: str
+    Boss: str | None
+    Email: str | None
+    Role: int
 
 
 class UserRepo(BaseRepo):
@@ -55,6 +68,24 @@ class UserRepo(BaseRepo):
         except SQLAlchemyError as e:
             logger.error(f"[БД] Ошибка получения пользователя: {e}")
             return None
+
+    async def update_user(
+        self,
+        user_id: int = None,
+        **kwargs: Unpack[RegisteredUserParams],
+    ) -> Optional[User]:
+        select_stmt = select(User).where(User.ChatId == user_id)
+
+        result = await self.session.execute(select_stmt)
+        user: User | None = result.scalar_one_or_none()
+
+        # Если пользователь существует - обновляем его
+        if user:
+            for key, value in kwargs.items():
+                setattr(user, key, value)
+            await self.session.commit()
+
+        return user
 
     async def get_users_by_fio_parts(
         self, fullname: str, limit: int = 10
