@@ -10,7 +10,6 @@ class RemovedUser(CallbackData, prefix="removed_user"):
 
 def on_user_leave_kb(
     user_id: int | str,
-    unban: bool = True,
     change_role: bool = False,
 ) -> InlineKeyboardMarkup:
     """
@@ -28,27 +27,17 @@ def on_user_leave_kb(
         ]
     ]
 
-    if unban:
-        buttons.append(
-            [
-                InlineKeyboardButton(
-                    text="🗝️ Разблокировать",
-                    callback_data=RemovedUser(action="unban", user_id=user_id).pack(),
-                )
-            ]
-        )
-
     if change_role:
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text="Это РГ",
+                    text="👑 Это РГ",
                     callback_data=RemovedUser(
                         action="change_role", user_id=user_id, role=2
                     ).pack(),
                 ),
                 InlineKeyboardButton(
-                    text="Это старший",
+                    text="👮‍♂️ Это старший",
                     callback_data=RemovedUser(
                         action="change_role", user_id=user_id, role=3
                     ).pack(),

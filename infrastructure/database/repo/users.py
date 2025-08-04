@@ -102,11 +102,16 @@ class UserRepo(BaseRepo):
     async def update_user_role(self, user_id: str | int, role: int) -> Optional[User]:
         """
         Обновление роли пользователя
-        :param user_id: Идентификатор пользователя Telegram
+        :param user_id: Идентификатор пользователя Telegram (ChatId)
         :param role: Новая роль
-        :return: Обновленный объект вопроса
+        :return: Обновленный объект пользователя
         """
-        user = await self.session.get(User, user_id)
+        from sqlalchemy import select
+
+        query = select(User).where(User.ChatId == int(user_id))
+        result = await self.session.execute(query)
+        user = result.scalar_one_or_none()
+
         if user:
             user.Role = role
             await self.session.commit()
