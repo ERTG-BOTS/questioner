@@ -67,17 +67,31 @@ async def delete_messages(bot: Bot, chat_id: int, message_ids: list[int]):
         logger.error(f"Ошибка при удалении сообщений: {e}")
 
 
+async def delete_messages_job(chat_id: int, message_ids: list[int]):
+    """Standalone job function to delete messages."""
+    try:
+        bot = _scheduler_registry.get("bot")
+        if not bot:
+            logger.error("Bot not registered in scheduler")
+            return
+
+        for message_id in message_ids:
+            await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+        logger.error(f"Ошибка при удалении сообщений: {e}")
+
+
 async def run_delete_timer(
     bot: Bot, chat_id: int, message_ids: list[int], seconds: int = 60
 ):
     """Delete messages after timer. Default - 60 seconds."""
     try:
         scheduler.add_job(
-            delete_messages,
+            delete_messages_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
             + datetime.timedelta(seconds=seconds),
-            args=[bot, chat_id, message_ids],
+            args=[chat_id, message_ids],
             jobstore="redis",
         )
     except Exception as e:
