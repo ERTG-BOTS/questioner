@@ -126,8 +126,7 @@ async def main():
         ]
     )
 
-    # TODO Установить универсальное название при запуске бота
-    # await bot.set_my_name(name="Вопросник")
+    await bot.set_my_name(name="Вопросник")
 
     dp = Dispatcher(storage=storage)
 
