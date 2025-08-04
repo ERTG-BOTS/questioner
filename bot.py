@@ -126,7 +126,7 @@ async def main():
         ]
     )
 
-    await bot.set_my_name(name="Вопросник")
+    # await bot.set_my_name(name="Вопросник")
 
     dp = Dispatcher(storage=storage)
 
@@ -163,7 +163,9 @@ async def main():
 
     existing_jobs = scheduler.get_jobs()
     # scheduler.print_jobs()
-    logger.info(f"[Redis] Найдено {len(existing_jobs)} существующих задач в Redis")
+    logger.info(
+        f"[Redis] Найдено {len(existing_jobs)} существующих задач в планировщике"
+    )
 
     # await on_startup(bot)
     try:

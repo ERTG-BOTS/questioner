@@ -18,32 +18,34 @@ from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
 
-job_defaults = {
-    "coalesce": True,
-    "misfire_grace_time": 300,
-    "replace_existing": True,
-}
-
-REDIS = {
-    "host": config.redis.redis_host,
-    "port": config.redis.redis_port,
-    "password": config.redis.redis_pass,
-    "db": 1,
-    "ssl": False,
-    "decode_responses": False,
-}
-
-jobstores = {
-    "redis": RedisJobStore(**REDIS),
-}
 
 scheduler = AsyncIOScheduler()
 
-scheduler.configure(
-    jobstores=jobstores,
-    job_defaults=job_defaults,
-    timezone=pytz.utc,
-)
+if config.tg_bot.use_redis:
+    job_defaults = {
+        "coalesce": True,
+        "misfire_grace_time": 300,
+        "replace_existing": True,
+    }
+
+    REDIS = {
+        "host": config.redis.redis_host,
+        "port": config.redis.redis_port,
+        "password": config.redis.redis_pass,
+        "db": 1,
+        "ssl": False,
+        "decode_responses": False,
+    }
+
+    jobstores = {
+        "redis": RedisJobStore(**REDIS),
+    }
+
+    scheduler.configure(
+        jobstores=jobstores,
+        job_defaults=job_defaults,
+        timezone=pytz.utc,
+    )
 
 # Global registry to store picklable dependencies
 _scheduler_registry = {}
