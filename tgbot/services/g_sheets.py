@@ -13,7 +13,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-async def is_employee_intern(username: str, division: str) -> bool:
+async def is_employee_trainee(username: str, division: str) -> bool:
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -93,9 +93,9 @@ async def get_target_forum(
     if division == "НЦК":
         try:
             # Проверяем, является ли пользователь стажёром
-            is_intern = await is_employee_intern(username=username, division=division)
+            is_trainee = await is_employee_trainee(username=username, division=division)
 
-            if is_intern:
+            if is_trainee:
                 # Если стажёр - используем специальный форум для стажёров
                 target_forum_id = config.forum.nck_trainee_forum_id
                 logger.info(f"[Проверка ОР] [НЦК] Определен стажер: {username}")
@@ -112,9 +112,9 @@ async def get_target_forum(
     else:
         try:
             # Проверяем, является ли пользователь стажёром
-            is_intern = await is_employee_intern(username=username, division=division)
+            is_trainee = await is_employee_trainee(username=username, division=division)
 
-            if is_intern:
+            if is_trainee:
                 # Если стажёр - используем специальный форум для стажёров
                 target_forum_id = config.forum.ntp_trainee_forum_id
                 logger.info(f"[Проверка ОР] [НТП] Определен стажер: {username}")
