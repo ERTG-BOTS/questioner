@@ -71,7 +71,9 @@ async def handle_q_message(
         return
 
     if question is not None and question.status != "closed":
-        if not question.topic_duty_fullname:
+        if not question.topic_duty_fullname and "".join(
+            c for c in question.employee_division if c.isalpha()
+        ) == "".join(c for c in user.Division if c.isalpha()):
             duty_topics_today = (
                 await questions_repo.questions.get_questions_count_today(
                     duty_fullname=user.FIO
@@ -147,6 +149,18 @@ async def handle_q_message(
                 f"[Вопрос] - [В работе] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} взят в работу"
             )
         else:
+            if "".join(c for c in question.employee_division if c.isalpha()) != "".join(
+                c for c in user.Division if c.isalpha()
+            ):
+                await message.answer(
+                    """<b>⚠️ Внимание</b>
+
+Ты не можешь отвечать на вопросы в этом форуме, форум принадлежит другому направлению
+
+<i>Твое сообщение не отобразится специалисту</i>"""
+                )
+                return
+
             if question.topic_duty_fullname == user.FIO:
                 # Перезапускаем таймер бездействия при сообщении от дежурного
                 await restart_inactivity_timer(
