@@ -2,7 +2,17 @@ import logging
 from typing import Any, Awaitable, Callable, Dict, Sequence, Union
 
 from aiogram import BaseMiddleware, Bot
-from aiogram.types import CallbackQuery, Message
+from aiogram.enums import ChatMemberStatus
+from aiogram.types import (
+    CallbackQuery,
+    ChatMemberAdministrator,
+    ChatMemberBanned,
+    ChatMemberLeft,
+    ChatMemberMember,
+    ChatMemberOwner,
+    ChatMemberRestricted,
+    Message,
+)
 from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 
 from infrastructure.database.models import Question, User
@@ -10,6 +20,7 @@ from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import Config, load_config
 from tgbot.keyboards.group.events import on_user_leave_kb
 from tgbot.misc import dicts
+from tgbot.misc.dicts import group_admin_titles
 from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
@@ -170,6 +181,51 @@ class DatabaseMiddleware(BaseMiddleware):
                                 )
 
                             return
+
+                        chat_admins: list[
+                            ChatMemberOwner
+                            | ChatMemberAdministrator
+                            | ChatMemberMember
+                            | ChatMemberRestricted
+                            | ChatMemberLeft
+                            | ChatMemberBanned
+                        ] = await self.bot.get_chat_administrators(
+                            chat_id=event.chat.id
+                        )
+
+                        is_user_admin = False
+                        for admin in chat_admins:
+                            if event.from_user.id == admin.user.id:
+                                is_user_admin = True
+
+                                if (
+                                    group_admin_titles[user.Role] != admin.custom_title
+                                    and admin.status != ChatMemberStatus.CREATOR
+                                ):
+                                    await self.bot.set_chat_administrator_custom_title(
+                                        chat_id=event.chat.id,
+                                        user_id=event.from_user.id,
+                                        custom_title=group_admin_titles[user.Role],
+                                    )
+                                    logger.info(
+                                        f"[Роли] Обновлена роль для пользователя {user.FIO} - {group_admin_titles[user.Role]}"
+                                    )
+                                break
+
+                        if not is_user_admin:
+                            await self.bot.promote_chat_member(
+                                chat_id=event.chat.id,
+                                user_id=event.from_user.id,
+                                can_invite_users=True,
+                            )
+                            await self.bot.set_chat_administrator_custom_title(
+                                chat_id=event.chat.id,
+                                user_id=event.from_user.id,
+                                custom_title=group_admin_titles[user.Role],
+                            )
+                            logger.info(
+                                f"[Роли] Обновлена роль для пользователя {user.FIO} - {group_admin_titles[user.Role]}. Выдана роль администратора"
+                            )
 
                         data["main_repo"] = main_repo
                         data["main_session"] = main_session
