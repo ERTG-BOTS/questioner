@@ -62,38 +62,38 @@ class UserAccessMiddleware(BaseMiddleware):
             and event.edit_date
         ):
             logger.info(
-                f"[Edit] User {event.from_user.username} ({event.from_user.id}) "
-                f"edited message in topic {message_thread_id}"
+                f"[Изменение] Пользователь {event.from_user.username} ({event.from_user.id}) "
+                f"изменил сообщение в топике {message_thread_id}"
             )
 
-        # Check if user exists in database
+        # Проверяем есть ли пользователь в базе
         if not user:
             if message_thread_id:
                 await self._ban_user_with_notification(
                     event,
                     chat,
-                    f"User <code>{event.from_user.id}</code> banned\nReason: not found in database",
+                    f"Пользователь <code>{event.from_user.id}</code> заблокирован\nПричина: не найден в базе",
                 )
             return None
 
-        # Check if user has sufficient permissions for topic access
+        # Проверяем есть ли у пользователя доступ к форуму
         if user.Role not in [2, 3, 10] and message_thread_id:
             await self._ban_user_with_notification(
                 event,
                 chat,
-                f"User <code>{user.FIO}</code> banned\nReason: insufficient permissions for access",
+                f"Пользователь <code>{user.FIO}</code> заблокирован\nПричина: недостаточно прав для доступа к чату",
                 change_role=True,
             )
 
-            # Handle active questions for banned user
+            # Обрабатываем активные вопросы заблокированного пользователя
             await self._handle_banned_user_questions(user, questions_repo, chat.id)
             return None
 
-        # User passed all checks, continue to next middleware/handler
+        # Юзер прошел все проверки - продолжаем к следующей middleware
         return await handler(event, data)
 
     def _get_message_thread_id(self, event: Union[Message, CallbackQuery]) -> int:
-        """Extract message_thread_id from event"""
+        """Экстракт message_thread_id из ивента"""
         if isinstance(event, Message):
             return event.message_thread_id
         elif isinstance(event, CallbackQuery) and event.message:
@@ -107,16 +107,18 @@ class UserAccessMiddleware(BaseMiddleware):
         message: str,
         change_role: bool = False,
     ):
-        """Ban user and send notification"""
+        """
+        Бан пользователя с уведомлением
+        """
         await self.bot.ban_chat_member(
             chat_id=chat.id,
             user_id=event.from_user.id,
         )
 
-        # Send notification message
+        # Отправка уведомления об исключении
         if isinstance(event, Message):
             await event.answer(
-                text=f"<b>🙅‍♂️ Exclusion</b>\n\n{message}",
+                text=f"<b>🙅‍♂️ Исключение</b>\n\n{message}",
                 reply_markup=on_user_leave_kb(
                     user_id=event.from_user.id, change_role=change_role
                 ),
@@ -124,7 +126,7 @@ class UserAccessMiddleware(BaseMiddleware):
         else:
             await self.bot.send_message(
                 chat_id=chat.id,
-                text=f"<b>🙅‍♂️ Exclusion</b>\n\n{message}",
+                text=f"<b>🙅‍♂️ Исключение</b>\n\n{message}",
                 reply_markup=on_user_leave_kb(
                     user_id=event.from_user.id, change_role=change_role
                 ),
@@ -138,7 +140,7 @@ class UserAccessMiddleware(BaseMiddleware):
             Question
         ] = await questions_repo.questions.get_active_questions()
 
-        # Find questions assigned to banned user
+        # Находим активные вопросы пользователя
         duty_active_questions = [
             question
             for question in active_questions
@@ -148,7 +150,7 @@ class UserAccessMiddleware(BaseMiddleware):
         if not duty_active_questions:
             return
 
-        # Release all questions assigned to banned user
+        # Освобождение всех вопросов, принадлежавших исключенному пользователю
         for question in duty_active_questions:
             await questions_repo.questions.update_question(
                 token=question.token,
@@ -156,34 +158,34 @@ class UserAccessMiddleware(BaseMiddleware):
                 status="open",
             )
 
-            # Update topic emoji
+            # Обновление эмодзи топика
             await self.bot.edit_forum_topic(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 icon_custom_emoji_id=dicts.topicEmojis["open"],
             )
 
-            # Notify in topic
+            # Уведомление в главную тему
             await self.bot.send_message(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                text=f"""<b>🕊️ Question Released</b>
+                text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Duty officer <b>{user.FIO}</b> was excluded due to insufficient permissions
-To take the question, write a message in this topic""",
+Дежурный <b>{user.FIO}</b> был исключен из-за недостатка прав
+Для взятия вопроса в работу напиши сообщение в эту тему""",
             )
 
-            # Notify employee
+            # Уведомление специалиста
             await self.bot.send_message(
                 chat_id=question.employee_chat_id,
-                text=f"""<b>🕊️ Duty Officer Left Chat</b>
+                text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Duty officer <b>{user.FIO}</b> released the question. Wait for senior reconnection""",
+Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
 
             logger.info(
-                f"[Question] - [Release] Duty officer {user.FIO} ({user.ChatId}) "
-                f"excluded and released from question {question.token}"
+                f"[Вопрос] - [Освобождение] Дежурный {user.FIO} ({user.ChatId}) "
+                f"исключен и освободил вопрос {question.token}"
             )
 
         # Send summary of released questions
@@ -192,9 +194,9 @@ Duty officer <b>{user.FIO}</b> released the question. Wait for senior reconnecti
             link = f"<a href='https://t.me/c/{str(question.group_id)[4:]}/{question.topic_id}'>{str(question.token)}</a>"
             question_list.append(f"{i}. {link}")
 
-        question_text = "\n".join(question_list) if question_list else "No questions"
+        question_text = "\n".join(question_list) if question_list else "Нет вопросов"
 
         await self.bot.send_message(
             chat_id=chat_id,
-            text=f"List of questions with excluded duty officer:\n{question_text}",
+            text=f"Список активных вопросов исключенного дежурного:\n{question_text}",
         )
