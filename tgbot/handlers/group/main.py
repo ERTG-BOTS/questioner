@@ -174,7 +174,7 @@ async def handle_q_message(
                             reply_to_message_id=message_pair.user_message_id,
                         )
                         logger.info(
-                            f"[Вопрос] - [Ответ] Найдена связь для ответа дежурного: {config.tg_bot.ntp_forum_id if 'НТП' in user.Division else 'НЦК'}:{message.reply_to_message.message_id} -> {message_pair.user_chat_id}:{message_pair.user_message_id}"
+                            f"[Вопрос] - [Ответ] Найдена связь для ответа дежурного: {message.chat.id}:{message.reply_to_message.message_id} -> {message_pair.user_chat_id}:{message_pair.user_message_id}"
                         )
                     else:
                         # Не найдено связи, просто копируем
@@ -599,7 +599,7 @@ async def toggle_activity_status(
                 user_id=question.employee_chat_id,
                 clever_link=question.clever_link if question.clever_link else None,
                 current_status=new_status,
-                global_status=config.tg_bot.activity_status,
+                global_status=config.questioner.activity_status,
             )
         )
 

@@ -151,7 +151,7 @@ async def main():
 
     register_scheduler_dependencies(bot, questioner_db)
 
-    if bot_config.tg_bot.remove_old_questions:
+    if bot_config.questioner.remove_old_questions:
         scheduler.add_job(
             remove_old_topics,
             "interval",

@@ -54,6 +54,9 @@ def division_selection_kb() -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text="🏭 НТП", callback_data=SelectDivision(division="НТП").pack()
             ),
+            InlineKeyboardButton(
+                text="👶 НТП ОР", callback_data=SelectDivision(division="НТП ОР").pack()
+            ),
         ],
         [
             InlineKeyboardButton(

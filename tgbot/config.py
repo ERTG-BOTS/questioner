@@ -16,20 +16,125 @@ class TgBot:
         Токен бота.
     use_redis : str
         Нужно ли использовать Redis.
-    division : str
-        Направление, для которого запускается текущий экземпляр бота.
     """
 
     token: str
     use_redis: bool
 
-    ntp_forum_id: str
-    nck_forum_id: str
-    nck_or_forum_id: str
-    ask_clever_link: bool
+    @staticmethod
+    def from_env(env: Env):
+        """
+        Создает объект TgBot из переменных окружения.
+        """
+        token = env.str("BOT_TOKEN")
 
-    interns_spreadsheet_id: str
-    interns_sheet_name: str
+        use_redis = env.bool("USE_REDIS")
+
+        return TgBot(
+            token=token,
+            use_redis=use_redis,
+        )
+
+
+@dataclass
+class ForumsConfig:
+    """
+    Класс конфигурации ForumsConfig.
+
+    Attributes
+    ----------
+    ntp_main_forum_id : str
+        Идентификатор форума ТГ НТП
+    ntp_trainee_forum_id : str
+        Идентификатор форума ТГ НТП ОР
+    nck_main_forum_id : str
+        Идентификатор форума ТГ НЦК
+    nck_trainee_forum_id : str
+        Идентификатор форума ТГ НЦК ОР
+    """
+
+    ntp_main_forum_id: str
+    ntp_trainee_forum_id: str
+    nck_main_forum_id: str
+    nck_trainee_forum_id: str
+
+    @staticmethod
+    def from_env(env: Env):
+        """
+        Создает объект ForumsConfig из переменных окружения.
+        """
+        ntp_main_forum_id = env.str("NTP_MAIN_FORUM_ID")
+        ntp_trainee_forum_id = env.str("NTP_TRAINEE_FORUM_ID")
+        nck_main_forum_id = env.str("NCK_MAIN_FORUM_ID")
+        nck_trainee_forum_id = env.str("NCK_TRAINEE_FORUM_ID")
+
+        return ForumsConfig(
+            ntp_main_forum_id=ntp_main_forum_id,
+            ntp_trainee_forum_id=ntp_trainee_forum_id,
+            nck_main_forum_id=nck_main_forum_id,
+            nck_trainee_forum_id=nck_trainee_forum_id,
+        )
+
+
+@dataclass
+class GoogleSheetsConfig:
+    """
+    Класс конфигурации GoogleSheets.
+
+    Attributes
+    ----------
+    ntp_trainee_spreadsheet_id : str
+        Идентификатор таблицы НТП
+    ntp_trainee_sheet_name : str
+        Название листа в таблице НТП
+    nck_trainee_spreadsheet_id : str
+        Идентификатор таблицы НЦК
+    nck_trainee_sheet_name : str
+        Название листа в таблице НЦК
+    """
+
+    ntp_trainee_spreadsheet_id: str
+    ntp_trainee_sheet_name: str
+
+    nck_trainee_spreadsheet_id: str
+    nck_trainee_sheet_name: str
+
+    @staticmethod
+    def from_env(env: Env):
+        """
+        Создает объект GoogleSheets из переменных окружения.
+        """
+        ntp_trainee_spreadsheet_id = env.str("NTP_TRAINEE_SPREADSHEET_ID")
+        ntp_trainee_sheet_name = env.str("NTP_TRAINEE_SHEET_NAME")
+        nck_trainee_spreadsheet_id = env.str("NCK_TRAINEE_SPREADSHEET_ID")
+        nck_trainee_sheet_name = env.str("NCK_TRAINEE_SHEET_NAME")
+
+        return GoogleSheetsConfig(
+            ntp_trainee_spreadsheet_id=ntp_trainee_spreadsheet_id,
+            ntp_trainee_sheet_name=ntp_trainee_sheet_name,
+            nck_trainee_spreadsheet_id=nck_trainee_spreadsheet_id,
+            nck_trainee_sheet_name=nck_trainee_sheet_name,
+        )
+
+
+@dataclass
+class QuestionerConfig:
+    """
+    Класс конфигурации QuestionerConfig.
+
+    Attributes
+    ----------
+    ask_clever_link : str
+        Запрашивать ли регламент
+    ntp_trainee_sheet_name : str
+        Название листа в таблице НТП
+    nck_trainee_spreadsheet_id : str
+        Идентификатор таблицы НЦК
+    nck_trainee_sheet_name : str
+        Название листа в таблице НЦК
+    """
+
+    ask_clever_link: bool
 
     remove_old_questions: bool
     remove_old_questions_days: int
@@ -41,19 +146,9 @@ class TgBot:
     @staticmethod
     def from_env(env: Env):
         """
-        Создает объект TgBot из переменных окружения.
+        Создает объект QuestionerConfig из переменных окружения.
         """
-        token = env.str("BOT_TOKEN")
-
-        use_redis = env.bool("USE_REDIS")
-
-        ntp_forum_id = env.str("NTP_FORUM_ID")
-        nck_forum_id = env.str("NCK_FORUM_ID")
-        nck_or_forum_id = env.str("NCK_OR_FORUM_ID")
         ask_clever_link = env.bool("ASK_CLEVER_LINK")
-
-        interns_spreadsheet_id = env.str("INTERNS_SPREADSHEET_ID")
-        inters_sheet_name = env.str("INTERNS_SHEET_NAME")
 
         remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
         remove_old_questions_days = env.int("REMOVE_OLD_QUESTIONS_DAYS")
@@ -62,15 +157,8 @@ class TgBot:
         activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
         activity_close_minutes = env.int("ACTIVITY_CLOSE_MINUTES")
 
-        return TgBot(
-            token=token,
-            use_redis=use_redis,
-            ntp_forum_id=ntp_forum_id,
-            nck_forum_id=nck_forum_id,
-            nck_or_forum_id=nck_or_forum_id,
+        return QuestionerConfig(
             ask_clever_link=ask_clever_link,
-            interns_spreadsheet_id=interns_spreadsheet_id,
-            interns_sheet_name=inters_sheet_name,
             remove_old_questions=remove_old_questions,
             remove_old_questions_days=remove_old_questions_days,
             activity_status=activity_status,
@@ -226,6 +314,9 @@ class Config:
     """
 
     tg_bot: TgBot
+    gsheets: GoogleSheetsConfig
+    forum: ForumsConfig
+    questioner: QuestionerConfig
     db: DbConfig
     redis: Optional[RedisConfig] = None
 
@@ -245,6 +336,9 @@ def load_config(path: str = None) -> Config:
 
     return Config(
         tg_bot=TgBot.from_env(env),
+        gsheets=GoogleSheetsConfig.from_env(env),
+        forum=ForumsConfig.from_env(env),
+        questioner=QuestionerConfig.from_env(env),
         db=DbConfig.from_env(env),
         redis=RedisConfig.from_env(env),
     )

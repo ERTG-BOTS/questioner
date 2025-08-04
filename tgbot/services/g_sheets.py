@@ -13,9 +13,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-async def is_employee_intern(
-    username: str,
-) -> bool:
+async def is_employee_intern(username: str, division: str) -> bool:
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -25,8 +23,8 @@ async def is_employee_intern(
         creds.refresh(Request())
         access_token = creds.token
 
-        range_query = f"{config.tg_bot.interns_sheet_name}!A:A"
-        url = f"https://sheets.googleapis.com/v4/spreadsheets/{config.tg_bot.interns_spreadsheet_id}/values/{range_query}"
+        range_query = f"{config.gsheets.ntp_trainee_sheet_name if 'НТП' in division else config.gsheets.nck_trainee_sheet_name}!A:A"
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{config.gsheets.ntp_trainee_spreadsheet_id if 'НТП' in division else config.gsheets.nck_trainee_spreadsheet_id}/values/{range_query}"
         headers = {"Authorization": f"Bearer {access_token}"}
 
         async with aiohttp.ClientSession() as session:
@@ -53,7 +51,7 @@ async def is_employee_intern(
 async def get_target_forum(
     username: str,
     division: str,
-    temp_division: str = None,  # Новый параметр для временного направления
+    temp_division: str = None,
 ) -> int | str:
     """
     Определяет целевой форум для создания вопроса
@@ -67,20 +65,24 @@ async def get_target_forum(
     if temp_division:
         # Админ явно выбрал направление - не проверяем статус стажёра
         if temp_division == "НЦК":
-            target_forum_id = config.tg_bot.nck_forum_id
+            target_forum_id = config.forum.nck_main_forum_id
             logger.info(f"[Админ роль] Пользователь {username} маскируется под НЦК")
 
         elif temp_division == "НЦК ОР":
-            target_forum_id = config.tg_bot.nck_or_forum_id
+            target_forum_id = config.forum.nck_trainee_forum_id
             logger.info(f"[Админ роль] Пользователь {username} маскируется под НЦК ОР")
 
         elif temp_division == "НТП":
-            target_forum_id = config.tg_bot.ntp_forum_id
+            target_forum_id = config.forum.ntp_main_forum_id
             logger.info(f"[Админ роль] Пользователь {username} маскируется под НТП")
+
+        elif temp_division == "НТП ОР":
+            target_forum_id = config.forum.ntp_trainee_forum_id
+            logger.info(f"[Админ роль] Пользователь {username} маскируется под НТП ОР")
 
         else:
             # Fallback если что-то пошло не так
-            target_forum_id = config.tg_bot.nck_forum_id
+            target_forum_id = config.forum.nck_main_forum_id
             logger.warning(
                 f"[Админ роль] Неизвестное временное направление: {temp_division}"
             )
@@ -91,24 +93,40 @@ async def get_target_forum(
     if division == "НЦК":
         try:
             # Проверяем, является ли пользователь стажёром
-            is_intern = await is_employee_intern(username=username)
+            is_intern = await is_employee_intern(username=username, division=division)
 
             if is_intern:
                 # Если стажёр - используем специальный форум для стажёров
-                target_forum_id = config.tg_bot.nck_or_forum_id
-                logger.info(f"[Проверка ОР] Определен стажер: {username}")
+                target_forum_id = config.forum.nck_trainee_forum_id
+                logger.info(f"[Проверка ОР] [НЦК] Определен стажер: {username}")
             else:
                 # Если не стажёр - используем обычный НЦК форум
-                target_forum_id = config.tg_bot.nck_forum_id
+                target_forum_id = config.forum.nck_main_forum_id
 
         except Exception as e:
             # В случае ошибки при проверке стажёра, отправляем в основной НЦК форум
             logging.error(
                 f"Ошибка при проверке стажёра для пользователя {username}: {e}"
             )
-            target_forum_id = config.tg_bot.nck_forum_id
+            target_forum_id = config.forum.nck_main_forum_id
     else:
-        # Для НТП используем соответствующий форум
-        target_forum_id = config.tg_bot.ntp_forum_id
+        try:
+            # Проверяем, является ли пользователь стажёром
+            is_intern = await is_employee_intern(username=username, division=division)
+
+            if is_intern:
+                # Если стажёр - используем специальный форум для стажёров
+                target_forum_id = config.forum.ntp_trainee_forum_id
+                logger.info(f"[Проверка ОР] [НТП] Определен стажер: {username}")
+            else:
+                # Если не стажёр - используем обычный НТП форум
+                target_forum_id = config.forum.ntp_main_forum_id
+
+        except Exception as e:
+            # В случае ошибки при проверке стажёра, отправляем в основной НТП форум
+            logging.error(
+                f"Ошибка при проверке стажёра для пользователя {username}: {e}"
+            )
+            target_forum_id = config.forum.ntp_main_forum_id
 
     return target_forum_id

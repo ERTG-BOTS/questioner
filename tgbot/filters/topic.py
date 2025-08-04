@@ -91,9 +91,10 @@ class IsMainTopicMessageWithCommand(BaseFilter):
         in_topic = bool(
             str(message.chat.id)
             in [
-                config.tg_bot.ntp_forum_id,
-                config.tg_bot.nck_forum_id,
-                config.tg_bot.nck_or_forum_id,
+                config.forum.ntp_main_forum_id,
+                config.forum.ntp_trainee_forum_id,
+                config.forum.nck_main_forum_id,
+                config.forum.nck_trainee_forum_id,
             ]
             and not message.message_thread_id
         )

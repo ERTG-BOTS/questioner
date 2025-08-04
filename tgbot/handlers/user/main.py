@@ -186,14 +186,17 @@ async def question_text(
     )
 
     is_root_user = user.Role == 10
-    skip_clever_link = not config.tg_bot.ask_clever_link
+    skip_clever_link = not config.questioner.ask_clever_link
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
     if (
         has_clever_link
         or is_root_user
         or skip_clever_link
-        or target_forum_id == config.tg_bot.nck_or_forum_id
+        or (
+            target_forum_id == config.forum.ntp_trainee_forum_id
+            or target_forum_id == config.forum.nck_trainee_forum_id
+        )
     ):
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
@@ -226,7 +229,7 @@ async def question_text(
             start_time=datetime.datetime.now(),
             question_text=state_data.get("question"),
             clever_link=clever_link,  # Может быть None если ссылки нет
-            activity_status_enabled=config.tg_bot.activity_status,
+            activity_status_enabled=config.questioner.activity_status,
         )  # Добавление вопроса в БД
 
         await message.answer(
@@ -264,7 +267,7 @@ async def question_text(
                 user_id=new_question.employee_chat_id,
                 clever_link=clever_link if clever_link else None,
                 current_status=new_question.activity_status_enabled,
-                global_status=config.tg_bot.activity_status,
+                global_status=config.questioner.activity_status,
             ),
         )
 
@@ -377,7 +380,7 @@ async def clever_link_handler(
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link=clever_link if clever_link else None,
-        activity_status_enabled=config.tg_bot.activity_status,
+        activity_status_enabled=config.questioner.activity_status,
     )  # Добавление вопроса в БД
 
     await message.answer(
@@ -402,7 +405,7 @@ async def clever_link_handler(
             user_id=new_question.employee_chat_id,
             clever_link=clever_link if clever_link else None,
             current_status=new_question.activity_status_enabled,
-            global_status=config.tg_bot.activity_status,
+            global_status=config.questioner.activity_status,
         ),
     )
 
@@ -471,7 +474,7 @@ async def regulation_not_found_handler(
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link="не нашел",  # Устанавливаем специальное значение,
-        activity_status_enabled=config.tg_bot.activity_status,
+        activity_status_enabled=config.questioner.activity_status,
     )
 
     # Отправляем сообщение об успехе
@@ -506,7 +509,7 @@ async def regulation_not_found_handler(
             token=new_question.token,
             user_id=new_question.employee_chat_id,
             current_status=new_question.activity_status_enabled,
-            global_status=config.tg_bot.activity_status,
+            global_status=config.questioner.activity_status,
         ),
     )
 

@@ -238,13 +238,13 @@ async def send_inactivity_warning(
             await bot.send_message(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                text=f"⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через {config.tg_bot.activity_warn_minutes} минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через {config.questioner.activity_warn_minutes} минут при отсутствии активности",
             )
 
             # Отправляем предупреждение пользователю
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {config.tg_bot.activity_warn_minutes} минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {config.questioner.activity_warn_minutes} минут при отсутствии активности",
             )
 
     except Exception as e:
@@ -272,7 +272,7 @@ async def auto_close_question(
             await bot.send_message(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                text=f"🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение {config.tg_bot.activity_close_minutes} минут",
+                text=f"🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение {config.questioner.activity_close_minutes} минут",
                 reply_markup=closed_question_duty_kb(token=question_token),
             )
 
@@ -295,7 +295,7 @@ async def auto_close_question(
             )
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {config.tg_bot.activity_close_minutes} минут",
+                text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {config.questioner.activity_close_minutes} минут",
                 reply_markup=closed_question_specialist_kb(token=question_token),
             )
 
@@ -317,7 +317,7 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
         activity_enabled = (
             question.activity_status_enabled
             if question.activity_status_enabled is not None
-            else config.tg_bot.activity_status
+            else config.questioner.activity_status
         )
         if not activity_enabled:
             # Если активность отключена для этого топика, не запускаем таймер
@@ -332,8 +332,8 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             send_inactivity_warning_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(minutes=config.tg_bot.activity_warn_minutes),
-            args=[question_token],  # Only pass picklable arguments
+            + datetime.timedelta(minutes=config.questioner.activity_warn_minutes),
+            args=[question_token],
             id=warning_job_id,
             jobstore="redis",
         )
@@ -344,8 +344,8 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             auto_close_question_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(minutes=config.tg_bot.activity_close_minutes),
-            args=[question_token],  # Only pass picklable arguments
+            + datetime.timedelta(minutes=config.questioner.activity_close_minutes),
+            args=[question_token],
             id=close_job_id,
             jobstore="redis",
         )

@@ -355,7 +355,7 @@ class QuestionsRepo(BaseRepo):
         :return: Последовательность вопросов старше определенной даты
         """
         today = datetime.now()
-        old_date = today - timedelta(days=config.tg_bot.remove_old_questions_days)
+        old_date = today - timedelta(days=config.questioner.remove_old_questions_days)
 
         stmt = select(Question).where(Question.start_time < old_date)
         result = await self.session.execute(stmt)
