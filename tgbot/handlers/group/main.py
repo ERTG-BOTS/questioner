@@ -245,7 +245,7 @@ async def handle_q_message(
                     )
 
                 logger.info(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}"
                 )
             else:
                 await message.reply("""<b>⚠️ Предупреждение</b>
@@ -254,7 +254,7 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
                 logger.warning(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат принадлежит другому старшему"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}. Чат принадлежит другому старшему"
                 )
     elif question.status == "closed":
         await message.reply("""<b>⚠️ Предупреждение</b>
@@ -263,7 +263,7 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
         logger.warning(
-            f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text}. Чат уже закрыт"
+            f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}. Чат уже закрыт"
         )
     else:
         await message.answer("""<b>⚠️ Ошибка</b>

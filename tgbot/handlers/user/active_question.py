@@ -260,7 +260,7 @@ async def active_question(
         )
 
     logger.info(
-        f"[Вопрос] - [Общение] Токен: {question.token} | Специалист: {question.employee_fullname} | Сообщение: {message.text}"
+        f"[Вопрос] - [Общение] Токен: {question.token} | Специалист: {question.employee_fullname} | Сообщение: {message.text if message.text else message.caption}"
     )
 
 
