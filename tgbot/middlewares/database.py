@@ -87,8 +87,6 @@ class DatabaseMiddleware(BaseMiddleware):
                                         user_id=event.from_user.id,
                                     ),
                                 )
-                            else:
-                                await event.answer("У тебя нет прав использовать бота")
                             return
 
                         if (

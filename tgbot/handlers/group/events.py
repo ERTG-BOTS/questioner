@@ -26,13 +26,14 @@ async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
     if user is None:
         return
 
-    if user not in [2, 3, 10]:
+    if user.Role not in [2, 3, 10]:
         return
 
-    await event.answer(
-        text=f"""<b>Новый пользователь</b>
+    await event.bot.send_message(
+        chat_id=event.chat.id,
+        text=f"""<b>❤️‍ Новый пользователь</b>
 
-👋 {user.FIO} присоединился 
+<b>{user.FIO}</b> присоединился к группе
 
 <b>👔 Должность:</b>{user.Position}
 <b>👑 Руководитель:</b>{user.Boss}
