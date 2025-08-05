@@ -521,9 +521,9 @@ async def start_attention_reminder(question_token: str, questions_repo):
         scheduler.add_job(
             send_attention_reminder_job,
             "interval",
-            seconds=15,
+            minutes=5,
             start_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
-            + datetime.timedelta(seconds=15),
+            + datetime.timedelta(minutes=5),
             args=[question_token],
             id=attention_job_id,
             jobstore="redis" if config.tg_bot.use_redis else "default",
