@@ -26,6 +26,7 @@ from tgbot.services.g_sheets import get_target_forum
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     remove_question_timer,
+    start_attention_reminder,
     start_inactivity_timer,
 )
 
@@ -276,6 +277,7 @@ async def question_text(
             disable_notification=True,
         )  # Пин информации о специалисте
 
+        await start_attention_reminder(new_question.token, questions_repo)
         await state.clear()
         logging.info(
             f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
@@ -417,6 +419,7 @@ async def clever_link_handler(
         disable_notification=True,
     )  # Пин информации о специалисте
 
+    await start_attention_reminder(new_question.token, questions_repo)
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
     )
@@ -528,6 +531,8 @@ async def regulation_not_found_handler(
 
     # Очищаем состояние
     await callback.answer()
+
+    await start_attention_reminder(new_question.token, questions_repo)
 
     logging.info(
         f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Создан новый вопрос {new_question.token} без регламента (не нашел)"

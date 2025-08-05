@@ -40,6 +40,7 @@ from tgbot.services.scheduler import (
     restart_inactivity_timer,
     run_delete_timer,
     start_inactivity_timer,
+    stop_attention_reminder,
 )
 
 topic_router = Router()
@@ -88,6 +89,7 @@ async def handle_q_message(
             await questions_repo.questions.update_question(
                 token=question.token, topic_duty_fullname=user.FIO, status="in_progress"
             )
+            stop_attention_reminder(question.token)
 
             employee: User = await main_repo.users.get_user(
                 fullname=question.employee_fullname

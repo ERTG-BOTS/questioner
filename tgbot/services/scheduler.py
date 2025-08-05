@@ -109,7 +109,7 @@ async def run_delete_timer(chat_id: int, message_ids: list[int], seconds: int = 
         scheduler.add_job(
             delete_messages_job,
             "date",
-            run_date=datetime.datetime.now(tz=pytz.utc)
+            run_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
             + datetime.timedelta(seconds=seconds),
             args=[chat_id, message_ids],
             jobstore="redis" if config.tg_bot.use_redis else "default",
@@ -125,7 +125,7 @@ async def remove_question_timer(question: Question):
         scheduler.add_job(
             remove_question_job,
             "date",
-            run_date=datetime.datetime.now(tz=pytz.utc)
+            run_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
             + datetime.timedelta(seconds=30),
             args=[
                 question.group_id,
@@ -359,7 +359,7 @@ async def start_inactivity_timer(question_token: str, questions_repo):
         scheduler.add_job(
             send_inactivity_warning_job,
             "date",
-            run_date=datetime.datetime.now(tz=pytz.utc)
+            run_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
             + datetime.timedelta(
                 minutes=int(group_settings.get_setting("activity_warn_minutes"))
             ),
@@ -373,7 +373,7 @@ async def start_inactivity_timer(question_token: str, questions_repo):
         scheduler.add_job(
             auto_close_question_job,
             "date",
-            run_date=datetime.datetime.now(tz=pytz.utc)
+            run_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
             + datetime.timedelta(
                 minutes=int(group_settings.get_setting("activity_close_minutes"))
             ),
@@ -428,4 +428,136 @@ async def restart_inactivity_timer(question_token: str, questions_repo):
     except Exception as e:
         logger.error(
             f"[Таймер бездействия] Ошибка при перезапуске таймера для вопроса {question_token}: {e}"
+        )
+
+
+async def send_attention_reminder_job(question_token: str):
+    """Standalone function to send attention reminder to general chat."""
+    try:
+        bot = _scheduler_registry.get("bot")
+        questioner_session_pool = _scheduler_registry.get("questioner_session_pool")
+
+        if not bot or not questioner_session_pool:
+            logger.error("Bot or questioner_session_pool not registered in scheduler")
+            return
+
+        # Create a fresh session for this job
+        async with questioner_session_pool() as session:
+            questions_repo = RequestsRepo(session=session)
+            await send_attention_reminder(bot, question_token, questions_repo)
+
+    except Exception as e:
+        logger.error(f"Error in attention reminder job for {question_token}: {e}")
+
+
+async def send_attention_reminder(
+    bot: Bot, question_token: str, questions_repo: RequestsRepo
+):
+    """Отправляет напоминание о вопросе, требующем внимания, в общий чат группы."""
+    try:
+        question: Question = await questions_repo.questions.get_question(
+            token=question_token
+        )
+
+        if not question:
+            logger.warning(
+                f"[Внимание вопросу] Вопрос {question_token} не найден в базе для напоминания"
+            )
+            stop_attention_reminder(question.token)
+            return
+
+        # Проверка, что вопрос все еще открыт и не имеет дежурного
+        if question.status != "open" or question.topic_duty_fullname:
+            logger.info(
+                f"[Внимание вопросу] Вопрос {question_token} уже имеет дежурного или закрыт, пропускаем напоминание"
+            )
+            stop_attention_reminder(question.token)
+            return
+
+        # Отправка уведомления в главную тему
+        reminder_text = f"""🔔 <b>Вопрос требует внимания!</b>
+
+<b>От:</b> {question.employee_fullname}
+<b>Создан в:</b> {question.start_time.strftime("%H:%M")} ПРМ
+
+Вопрос ожидает дежурного уже 5 минут!
+
+<a href="https://t.me/c/{str(question.group_id)[4:]}/{question.topic_id}">Перейти к вопросу</a>"""
+
+        await bot.send_message(
+            chat_id=question.group_id,
+            text=reminder_text,
+            disable_web_page_preview=True,
+        )
+
+        logger.info(
+            f"[Внимание вопросу] Напоминание отправлено по вопросу {question_token}"
+        )
+
+    except Exception as e:
+        logger.error(
+            f"[Внимание вопросу] Ошибка при отправке напоминания для вопроса {question_token}: {e}"
+        )
+
+
+async def start_attention_reminder(question_token: str, questions_repo):
+    """Запускает таймер напоминаний о внимании для нового вопроса."""
+    try:
+        question = await questions_repo.questions.get_question(token=question_token)
+        if not question:
+            stop_attention_reminder(question.token)
+            return
+
+        # Проверка, что вопрос все еще открыт и не имеет дежурного
+        if question.status != "open" or question.topic_duty_fullname:
+            stop_attention_reminder(question.token)
+            return
+
+        # Останавливаем все активные напоминания для этого вопроса
+        stop_attention_reminder(question_token)
+
+        # Запускаем рекуррентную задачу для проверки каждые 5 минут
+        attention_job_id = f"attention_reminder_{question_token}"
+        scheduler.add_job(
+            send_attention_reminder_job,
+            "interval",
+            seconds=15,
+            start_date=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
+            + datetime.timedelta(seconds=15),
+            args=[question_token],
+            id=attention_job_id,
+            jobstore="redis" if config.tg_bot.use_redis else "default",
+        )
+
+        logger.info(
+            f"[Внимание вопросу] Отслеживание дежурного включено для вопроса {question_token}"
+        )
+
+    except Exception as e:
+        logger.error(
+            f"[Внимание вопросу] Ошибка при запуске отслеживания дежурного для вопроса {question_token}: {e}"
+        )
+
+
+def stop_attention_reminder(question_token: str):
+    """Останавливает таймер напоминаний о внимании для вопроса."""
+    try:
+        attention_job_id = f"attention_reminder_{question_token}"
+
+        # Удаляем задачу если найдена
+        try:
+            scheduler.remove_job(
+                attention_job_id,
+                jobstore="redis" if config.tg_bot.use_redis else "default",
+            )
+            logger.info(
+                f"[Внимание вопросу] Отслеживание выключено для вопроса {question_token}"
+            )
+        except Exception:
+            # Задача может не существовать, это норма
+            pass
+
+    except Exception as e:
+        logger.error(
+            f"[Напоминание о внимании] Ошибка при остановке напоминаний для вопроса {question_token}: {e}"
         )
