@@ -151,9 +151,9 @@ async def main():
     # Определение команд для групповых чатов
     await bot.set_my_commands(
         commands=[
+            BotCommand(command="settings", description="Настройки форума"),
             BotCommand(command="release", description="Освободить вопрос"),
             BotCommand(command="end", description="Закрыть вопрос"),
-            BotCommand(command="settings", description="Настройки форума"),
         ],
         scope=BotCommandScopeAllGroupChats(),
     )
