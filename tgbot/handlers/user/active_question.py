@@ -17,7 +17,6 @@ from aiogram.types import (
 
 from infrastructure.database.models import MessagesPair, Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
 from tgbot.keyboards.group.main import question_quality_duty_kb
 from tgbot.keyboards.user.main import (
@@ -36,8 +35,6 @@ from tgbot.services.scheduler import (
 )
 
 user_q_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

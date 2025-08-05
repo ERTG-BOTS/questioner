@@ -6,9 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from infrastructure.database.models import User
-from infrastructure.database.models.settings import Settings
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
@@ -25,8 +23,6 @@ from tgbot.services.logger import setup_logging
 
 admin_router = Router()
 admin_router.message.filter(AdminFilter())
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

@@ -8,7 +8,6 @@ from numpy.random.mtrand import Sequence
 
 from infrastructure.database.models import Question
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.admin import AdminFilter
 from tgbot.keyboards.admin.main import AdminMenu
 from tgbot.keyboards.admin.stats_extract import (
@@ -22,8 +21,6 @@ from tgbot.services.logger import setup_logging
 stats_router = Router()
 stats_router.message.filter(AdminFilter())
 stats_router.callback_query.filter(AdminFilter())
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

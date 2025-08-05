@@ -6,14 +6,11 @@ from aiogram.types import CallbackQuery, ChatMemberUpdated
 
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.keyboards.group.events import RemovedUser, on_user_leave_kb
 from tgbot.misc.dicts import group_admin_titles, role_names
 from tgbot.services.logger import setup_logging
 
 group_events_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

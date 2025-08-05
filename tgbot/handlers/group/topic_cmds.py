@@ -6,20 +6,17 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessageWithCommand
 from tgbot.keyboards.group.main import FinishedQuestion, question_quality_duty_kb
 from tgbot.keyboards.user.main import question_quality_specialist_kb
 from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
-    stop_inactivity_timer,
     start_attention_reminder,
+    stop_inactivity_timer,
 )
 
 topic_cmds_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

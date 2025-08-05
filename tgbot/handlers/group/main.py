@@ -17,7 +17,6 @@ from aiogram.types import (
 
 from infrastructure.database.models import MessagesPair, Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.group.topic_cmds import end_q_cmd
 from tgbot.keyboards.group.main import (
@@ -44,8 +43,6 @@ from tgbot.services.scheduler import (
 )
 
 topic_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

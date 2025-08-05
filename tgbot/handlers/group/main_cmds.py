@@ -6,13 +6,10 @@ from aiogram.types import Message
 
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.filters.topic import IsMainTopicMessageWithCommand
 from tgbot.services.logger import setup_logging
 
 main_topic_cmds_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

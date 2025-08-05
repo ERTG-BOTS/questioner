@@ -7,7 +7,6 @@ from aiogram.types import CallbackQuery
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.keyboards.group.main import reopened_question_kb
 from tgbot.keyboards.user.main import (
     MainMenu,
@@ -23,8 +22,6 @@ from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 employee_return_q_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)

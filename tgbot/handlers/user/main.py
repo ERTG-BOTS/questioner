@@ -8,7 +8,6 @@ from aiogram.types import CallbackQuery, Message
 
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
-from tgbot.config import load_config
 from tgbot.keyboards.user.main import (
     AskQuestionMenu,
     CancelQuestion,
@@ -31,8 +30,6 @@ from tgbot.services.scheduler import (
 )
 
 user_router = Router()
-
-config = load_config(".env")
 
 setup_logging()
 logger = logging.getLogger(__name__)
