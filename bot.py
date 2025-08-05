@@ -5,7 +5,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import DefaultKeyBuilder, RedisStorage
-from aiogram.types import BotCommand
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeAllPrivateChats,
+    BotCommandScopeAllGroupChats,
+)
 
 from infrastructure.database.setup import create_engine, create_session_pool
 from tgbot.config import Config, load_config
@@ -134,14 +138,24 @@ async def main():
     bot = Bot(
         token=bot_config.tg_bot.token, default=DefaultBotProperties(parse_mode="HTML")
     )
+
+    # Определение команд для приватных чатов
     await bot.set_my_commands(
         commands=[
             BotCommand(command="start", description="Главное меню"),
-            BotCommand(
-                command="release", description="Освободить вопрос (для старших)"
-            ),
             BotCommand(command="end", description="Закрыть вопрос"),
-        ]
+        ],
+        scope=BotCommandScopeAllPrivateChats(),
+    )
+
+    # Определение команд для групповых чатов
+    await bot.set_my_commands(
+        commands=[
+            BotCommand(command="start", description="Главное меню"),
+            BotCommand(command="release", description="Освободить вопрос"),
+            BotCommand(command="end", description="Закрыть вопрос"),
+        ],
+        scope=BotCommandScopeAllGroupChats(),
     )
 
     # await bot.set_my_name(name="Вопросник")
