@@ -36,7 +36,7 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
         f"""⚙️ Настройки <b>{message.chat.title}</b>
 
 <b>🧩 Функции:</b>
-- Запрос регламента - {"Да" if group_settings.get_setting("ask_clever_link") else "Нет"}  (/clever)
+- Запрос регламента - {"Да" if group_settings.get_setting("ask_clever_link") else "Нет"} (/clever)
 - Закрытие по бездействию - {"Да" if group_settings.get_setting("activity_status") else "Нет"} (/activity)
 
 <b>⏳ Таймеры:</b>
