@@ -3,6 +3,7 @@ from typing import Any, Awaitable, Callable, Dict, Union
 
 from aiogram import BaseMiddleware, Bot
 from aiogram.enums import ChatMemberStatus
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     CallbackQuery,
     ChatMemberAdministrator,
@@ -113,6 +114,10 @@ class AdminRoleMiddleware(BaseMiddleware):
                 )
                 logger.info(
                     f"[Роли] Обновлена роль для пользователя {user.FIO} - {expected_title}"
+                )
+            except TelegramBadRequest:
+                logger.error(
+                    f"[Роли] Ошибка обновления роли для {user.FIO}: Недостаточно прав для изменения пользователя"
                 )
             except Exception as e:
                 logger.error(f"[Роли] Ошибка обновления роли для {user.FIO}: {e}")
