@@ -174,7 +174,8 @@ async def timer_warn_change(
         group_id=message.chat.id
     )
 
-    current_state: int = group_settings.get_setting("activity_warn_minutes")
+    current_state = int(group_settings.get_setting("activity_warn_minutes"))
+    close_state = int(group_settings.get_setting("activity_close_minutes"))
     user_name = user.FIO
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
@@ -184,14 +185,20 @@ async def timer_warn_change(
             f"Предупреждение <b>уже через {new_timer} минут</b>"
         )
     else:
-        # Обновление настроек
-        await questions_repo.settings.update_setting(
-            group_id=message.chat.id, key="activity_warn_minutes", value=new_timer
-        )
-        response = (
-            f"<b>✨ Изменение настроек форума</b>\n\n"
-            f"Пользователь <b>{user_name}</b> установил предупреждение через {new_timer} минут"
-        )
+        if int(new_timer) < close_state:
+            # Обновление настроек
+            await questions_repo.settings.update_setting(
+                group_id=message.chat.id, key="activity_warn_minutes", value=new_timer
+            )
+            response = (
+                f"<b>✨ Изменение настроек форума</b>\n\n"
+                f"Пользователь <b>{user_name}</b> установил предупреждение через {new_timer} минут"
+            )
+        else:
+            response = (
+                f"<b>✨ Изменение настроек форума</b>\n\n"
+                f"Невозможно установить время предупреждения меньше или равному времени закрытия ({close_state} минут) "
+            )
 
     await message.reply(response)
 
@@ -222,7 +229,8 @@ async def timer_close_change(
         group_id=message.chat.id
     )
 
-    current_state: int = group_settings.get_setting("activity_close_minutes")
+    current_state = int(group_settings.get_setting("activity_close_minutes"))
+    warn_state = int(group_settings.get_setting("activity_warn_minutes"))
     target_state = new_timer == current_state
     user_name = user.FIO
 
@@ -233,13 +241,19 @@ async def timer_close_change(
             f"Закрытие <b>уже {new_timer} минут</b>"
         )
     else:
-        # Обновление настроек
-        await questions_repo.settings.update_setting(
-            group_id=message.chat.id, key="activity_close_minutes", value=new_timer
-        )
-        response = (
-            f"<b>✨ Изменение настроек форума</b>\n\n"
-            f"Пользователь <b>{user_name}</b> установил таймер закрытия на {new_timer} минут"
-        )
+        if int(new_timer) > warn_state:
+            # Обновление настроек
+            await questions_repo.settings.update_setting(
+                group_id=message.chat.id, key="activity_close_minutes", value=new_timer
+            )
+            response = (
+                f"<b>✨ Изменение настроек форума</b>\n\n"
+                f"Пользователь <b>{user_name}</b> установил таймер закрытия на {new_timer} минут"
+            )
+        else:
+            response = (
+                f"<b>✨ Изменение настроек форума</b>\n\n"
+                f"Невозможно установить время закрытия меньше или равному времени предупреждения ({warn_state} минут) "
+            )
 
     await message.reply(response)
