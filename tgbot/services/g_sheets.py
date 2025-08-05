@@ -110,26 +110,23 @@ async def get_target_forum(
             )
             target_forum_id = config.forum.nck_main_forum_id
     else:
-        target_forum_id = config.forum.ntp_main_forum_id
+        try:
+            # Проверяем, является ли пользователь стажёром
+            is_trainee = await is_employee_trainee(username=username, division=division)
 
-        # TODO вернуть проверку на ОР после раската общего ряда НТП
-        # try:
-        #     # Проверяем, является ли пользователь стажёром
-        #     is_trainee = await is_employee_trainee(username=username, division=division)
-        #
-        #     if is_trainee:
-        #         # Если стажёр - используем специальный форум для стажёров
-        #         target_forum_id = config.forum.ntp_trainee_forum_id
-        #         logger.info(f"[Проверка ОР] [НТП] Определен стажер: {username}")
-        #     else:
-        #         # Если не стажёр - используем обычный НТП форум
-        #         target_forum_id = config.forum.ntp_main_forum_id
-        #
-        # except Exception as e:
-        #     # В случае ошибки при проверке стажёра, отправляем в основной НТП форум
-        #     logging.error(
-        #         f"Ошибка при проверке стажёра для пользователя {username}: {e}"
-        #     )
-        #     target_forum_id = config.forum.ntp_main_forum_id
+            if is_trainee:
+                # Если стажёр - используем специальный форум для стажёров
+                target_forum_id = config.forum.ntp_trainee_forum_id
+                logger.info(f"[Проверка ОР] [НТП] Определен стажер: {username}")
+            else:
+                # Если не стажёр - используем обычный НТП форум
+                target_forum_id = config.forum.ntp_main_forum_id
+
+        except Exception as e:
+            # В случае ошибки при проверке стажёра, отправляем в основной НТП форум
+            logging.error(
+                f"Ошибка при проверке стажёра для пользователя {username}: {e}"
+            )
+            target_forum_id = config.forum.ntp_main_forum_id
 
     return target_forum_id
