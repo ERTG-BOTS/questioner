@@ -134,36 +134,20 @@ class QuestionerConfig:
         Название листа в таблице НЦК
     """
 
-    ask_clever_link: bool
-
     remove_old_questions: bool
     remove_old_questions_days: int
-
-    activity_status: bool
-    activity_warn_minutes: int
-    activity_close_minutes: int
 
     @staticmethod
     def from_env(env: Env):
         """
         Создает объект QuestionerConfig из переменных окружения.
         """
-        ask_clever_link = env.bool("ASK_CLEVER_LINK")
-
         remove_old_questions = env.bool("REMOVE_OLD_QUESTIONS")
         remove_old_questions_days = env.int("REMOVE_OLD_QUESTIONS_DAYS")
 
-        activity_status = env.bool("ACTIVITY_STATUS")
-        activity_warn_minutes = env.int("ACTIVITY_WARN_MINUTES")
-        activity_close_minutes = env.int("ACTIVITY_CLOSE_MINUTES")
-
         return QuestionerConfig(
-            ask_clever_link=ask_clever_link,
             remove_old_questions=remove_old_questions,
             remove_old_questions_days=remove_old_questions_days,
-            activity_status=activity_status,
-            activity_warn_minutes=activity_warn_minutes,
-            activity_close_minutes=activity_close_minutes,
         )
 
 

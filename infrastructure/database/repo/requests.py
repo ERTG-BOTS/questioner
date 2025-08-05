@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.repo.pairs import MessagesPairsRepo
 from infrastructure.database.repo.questions import QuestionsRepo
+from infrastructure.database.repo.settings import SettingsRepo
 from infrastructure.database.repo.users import UserRepo
 
 
@@ -37,3 +38,10 @@ class RequestsRepo:
         The MessageConnectionRepo repository sessions are required to manage message connections.
         """
         return MessagesPairsRepo(self.session)
+
+    @property
+    def settings(self) -> SettingsRepo:
+        """
+        The SettingsRepo repository sessions are required to manage bot settings.
+        """
+        return SettingsRepo(self.session)

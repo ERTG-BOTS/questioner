@@ -184,20 +184,14 @@ async def question_text(
     target_forum_id = await get_target_forum(
         username=user.Username, division=user.Division, temp_division=temp_division
     )
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=target_forum_id
+    )
 
-    is_root_user = user.Role == 10
-    skip_clever_link = not config.questioner.ask_clever_link
+    ask_clever_link: bool = group_settings.get_setting("ask_clever_link")
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
-    if (
-        has_clever_link
-        or is_root_user
-        or skip_clever_link
-        or (
-            target_forum_id == config.forum.ntp_trainee_forum_id
-            or target_forum_id == config.forum.nck_trainee_forum_id
-        )
-    ):
+    if has_clever_link or user.Role == 10 or not ask_clever_link:
         # Извлекаем ссылку если она есть, иначе None
         clever_link = extract_clever_link(message.text) if has_clever_link else None
 
@@ -229,7 +223,7 @@ async def question_text(
             start_time=datetime.datetime.now(),
             question_text=state_data.get("question"),
             clever_link=clever_link,  # Может быть None если ссылки нет
-            activity_status_enabled=config.questioner.activity_status,
+            activity_status_enabled=group_settings.get_setting("activity_status"),
         )  # Добавление вопроса в БД
 
         await message.answer(
@@ -250,8 +244,6 @@ async def question_text(
         else:
             topic_text = f"""Вопрос задает <b>{user.FIO}</b>
 
-Специалист не предоставил ссылку на регламент
-
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
 
@@ -267,7 +259,7 @@ async def question_text(
                 user_id=new_question.employee_chat_id,
                 clever_link=clever_link if clever_link else None,
                 current_status=new_question.activity_status_enabled,
-                global_status=config.questioner.activity_status,
+                global_status=group_settings.get_setting("activity_status"),
             ),
         )
 
@@ -361,6 +353,9 @@ async def clever_link_handler(
     target_forum_id = await get_target_forum(
         username=user.Username, division=user.Division
     )
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=target_forum_id
+    )
 
     # Выключаем все предыдущие кнопки
     await disable_previous_buttons(message, state)
@@ -380,7 +375,7 @@ async def clever_link_handler(
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link=clever_link if clever_link else None,
-        activity_status_enabled=config.questioner.activity_status,
+        activity_status_enabled=group_settings.get_setting("activity_status"),
     )  # Добавление вопроса в БД
 
     await message.answer(
@@ -405,7 +400,7 @@ async def clever_link_handler(
             user_id=new_question.employee_chat_id,
             clever_link=clever_link if clever_link else None,
             current_status=new_question.activity_status_enabled,
-            global_status=config.questioner.activity_status,
+            global_status=group_settings.get_setting("activity_status"),
         ),
     )
 
@@ -453,6 +448,9 @@ async def regulation_not_found_handler(
     target_forum_id = await get_target_forum(
         username=user.Username, division=user.Division
     )
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=target_forum_id
+    )
 
     # Отключаем кнопки на предыдущих шагах
     await disable_previous_buttons(callback.message, state)
@@ -474,7 +472,7 @@ async def regulation_not_found_handler(
         start_time=datetime.datetime.now(),
         question_text=state_data.get("question"),
         clever_link="не нашел",  # Устанавливаем специальное значение,
-        activity_status_enabled=config.questioner.activity_status,
+        activity_status_enabled=group_settings.get_setting("activity_status"),
     )
 
     # Отправляем сообщение об успехе
@@ -509,7 +507,7 @@ async def regulation_not_found_handler(
             token=new_question.token,
             user_id=new_question.employee_chat_id,
             current_status=new_question.activity_status_enabled,
-            global_status=config.questioner.activity_status,
+            global_status=group_settings.get_setting("activity_status"),
         ),
     )
 

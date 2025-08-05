@@ -254,19 +254,22 @@ async def send_inactivity_warning(
         question: Question = await questions_repo.questions.get_question(
             token=question_token
         )
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id,
+        )
 
         if question and question.status in ["open", "in_progress"]:
             # Отправляем предупреждение в топик
             await bot.send_message(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                text=f"⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через {config.questioner.activity_warn_minutes} минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nЧат будет автоматически закрыт через {group_settings.get_setting('activity_warn_minutes')} минут при отсутствии активности",
             )
 
             # Отправляем предупреждение пользователю
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {config.questioner.activity_warn_minutes} минут при отсутствии активности",
+                text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {group_settings.get_setting('activity_warn_minutes')} минут при отсутствии активности",
             )
 
     except Exception as e:
@@ -283,6 +286,9 @@ async def auto_close_question(
         question: Question = await questions_repo.questions.get_question(
             token=question_token
         )
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id,
+        )
 
         if question and question.status in ["open", "in_progress"]:
             # Закрываем вопрос
@@ -294,7 +300,7 @@ async def auto_close_question(
             await bot.send_message(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                text=f"🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение {config.questioner.activity_close_minutes} минут",
+                text=f"🔒 <b>Вопрос автоматически закрыт</b>\n\nВопрос был закрыт из-за отсутствия активности в течение {group_settings.get_setting('activity_close_minutes')} минут",
                 reply_markup=closed_question_duty_kb(token=question_token),
             )
 
@@ -317,7 +323,7 @@ async def auto_close_question(
             )
             await bot.send_message(
                 chat_id=question.employee_chat_id,
-                text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {config.questioner.activity_close_minutes} минут",
+                text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {group_settings.get_setting('activity_close_minutes')} минут",
                 reply_markup=closed_question_specialist_kb(token=question_token),
             )
 
@@ -330,16 +336,19 @@ async def auto_close_question(
 async def start_inactivity_timer(question_token: str, bot, questions_repo):
     """Запускает таймер бездействия для вопроса."""
     try:
-        # Проверяем, нужно ли запускать тайметр для этого вопроса
+        # Проверяем, нужно ли запускать таймер для этого вопроса
         question = await questions_repo.questions.get_question(token=question_token)
         if not question:
             return
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id,
+        )
 
         # Определяем эффективный статус активности
         activity_enabled = (
             question.activity_status_enabled
             if question.activity_status_enabled is not None
-            else config.questioner.activity_status
+            else group_settings.get_setting("activity_status")
         )
         if not activity_enabled:
             # Если активность отключена для этого топика, не запускаем таймер
@@ -354,7 +363,9 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             send_inactivity_warning_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(minutes=config.questioner.activity_warn_minutes),
+            + datetime.timedelta(
+                minutes=int(group_settings.get_setting("activity_warn_minutes"))
+            ),
             args=[question_token],
             id=warning_job_id,
             jobstore="redis" if config.tg_bot.use_redis else "default",
@@ -366,7 +377,9 @@ async def start_inactivity_timer(question_token: str, bot, questions_repo):
             auto_close_question_job,
             "date",
             run_date=datetime.datetime.now(tz=pytz.utc)
-            + datetime.timedelta(minutes=config.questioner.activity_close_minutes),
+            + datetime.timedelta(
+                minutes=int(group_settings.get_setting("activity_close_minutes"))
+            ),
             args=[question_token],
             id=close_job_id,
             jobstore="redis" if config.tg_bot.use_redis else "default",

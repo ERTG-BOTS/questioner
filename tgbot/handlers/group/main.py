@@ -570,6 +570,10 @@ async def toggle_activity_status(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
 
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=callback.chat.id,
+    )
+
     try:
         if not question:
             await callback.answer("❌ Вопрос не найден", show_alert=True)
@@ -613,7 +617,7 @@ async def toggle_activity_status(
                 user_id=question.employee_chat_id,
                 clever_link=question.clever_link if question.clever_link else None,
                 current_status=new_status,
-                global_status=config.questioner.activity_status,
+                global_status=group_settings.get_setting("activity_status"),
             )
         )
 
