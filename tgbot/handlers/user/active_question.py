@@ -182,7 +182,7 @@ async def active_question(
 
     # Перезапускаем таймер бездействия при сообщении от пользователя
     await restart_inactivity_timer(
-        question_token=question.token, bot=message.bot, questions_repo=questions_repo
+        question_token=question.token, questions_repo=questions_repo
     )
 
     # Если реплай - пробуем отправить ответом
@@ -253,7 +253,6 @@ async def active_question(
 
 <i>Предупреждение удалится через 30 секунд</i>""")
         await run_delete_timer(
-            bot=message.bot,
             chat_id=message.chat.id,
             message_ids=[emoji_message.message_id],
             seconds=30,

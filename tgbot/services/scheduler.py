@@ -103,9 +103,7 @@ async def delete_messages_job(chat_id: int, message_ids: list[int]):
         logger.error(f"Ошибка при удалении сообщений: {e}")
 
 
-async def run_delete_timer(
-    bot: Bot, chat_id: int, message_ids: list[int], seconds: int = 60
-):
+async def run_delete_timer(chat_id: int, message_ids: list[int], seconds: int = 60):
     """Delete messages after timer. Default - 60 seconds."""
     try:
         scheduler.add_job(
@@ -120,7 +118,7 @@ async def run_delete_timer(
         logger.error(f"Ошибка при планировании удаления сообщений: {e}")
 
 
-async def remove_question_timer(bot: Bot, question: Question):
+async def remove_question_timer(question: Question):
     """Schedule question removal after 30 seconds."""
     try:
         warning_job_id = f"remove_{question.token}"
@@ -130,10 +128,9 @@ async def remove_question_timer(bot: Bot, question: Question):
             run_date=datetime.datetime.now(tz=pytz.utc)
             + datetime.timedelta(seconds=30),
             args=[
-                question.token,
                 question.group_id,
                 question.topic_id,
-            ],  # Pass only picklable data
+            ],
             id=warning_job_id,
             jobstore="redis" if config.tg_bot.use_redis else "default",
         )
@@ -141,7 +138,7 @@ async def remove_question_timer(bot: Bot, question: Question):
         logger.error(f"Ошибка при планировании удаления вопроса {question.token}: {e}")
 
 
-async def remove_question_job(question_token: str, group_id: int, topic_id: int):
+async def remove_question_job(group_id: int, topic_id: int):
     """Standalone job function to remove question topic."""
     try:
         bot = _scheduler_registry.get("bot")
@@ -333,7 +330,7 @@ async def auto_close_question(
         )
 
 
-async def start_inactivity_timer(question_token: str, bot, questions_repo):
+async def start_inactivity_timer(question_token: str, questions_repo):
     """Запускает таймер бездействия для вопроса."""
     try:
         # Проверяем, нужно ли запускать таймер для этого вопроса
@@ -419,14 +416,14 @@ def stop_inactivity_timer(question_token: str):
         )
 
 
-async def restart_inactivity_timer(question_token: str, bot, questions_repo):
+async def restart_inactivity_timer(question_token: str, questions_repo):
     """Перезапускает таймер бездействия для вопроса."""
     try:
         # Останавливаем существующий таймер
         stop_inactivity_timer(question_token)
 
         # Запускаем новый таймер
-        await start_inactivity_timer(question_token, bot, questions_repo)
+        await start_inactivity_timer(question_token, questions_repo)
 
     except Exception as e:
         logger.error(

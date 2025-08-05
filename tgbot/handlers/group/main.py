@@ -97,7 +97,6 @@ async def handle_q_message(
             if question.activity_status_enabled:
                 await start_inactivity_timer(
                     question_token=question.token,
-                    bot=message.bot,
                     questions_repo=questions_repo,
                 )
 
@@ -165,7 +164,6 @@ async def handle_q_message(
                 # Перезапускаем таймер бездействия при сообщении от дежурного
                 await restart_inactivity_timer(
                     question_token=question.token,
-                    bot=message.bot,
                     questions_repo=questions_repo,
                 )
 
@@ -238,7 +236,6 @@ async def handle_q_message(
 
 <i>Предупреждение удалится через 30 секунд</i>""")
                     await run_delete_timer(
-                        bot=message.bot,
                         chat_id=question.group_id,
                         message_ids=[emoji_message.message_id],
                         seconds=30,
@@ -606,7 +603,6 @@ async def toggle_activity_status(
         ]:
             await start_inactivity_timer(
                 question_token=question.token,
-                bot=callback.bot,
                 questions_repo=questions_repo,
             )
 
@@ -656,14 +652,12 @@ async def toggle_activity_status(
 
         # Запускаем таймеры удаления для обоих сообщений
         await run_delete_timer(
-            bot=callback.bot,
             chat_id=question.group_id,
             message_ids=[topic_msg.message_id],
             seconds=10,
         )
 
         await run_delete_timer(
-            bot=callback.bot,
             chat_id=question.employee_chat_id,
             message_ids=[user_msg.message_id],
             seconds=10,

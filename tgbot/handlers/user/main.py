@@ -485,7 +485,7 @@ async def regulation_not_found_handler(
 
     # Запускаем таймер бездействия для нового вопроса
     if new_question.status == "open" and new_question.activity_status_enabled:
-        await start_inactivity_timer(new_question.token, callback.bot, questions_repo)
+        await start_inactivity_timer(new_question.token, questions_repo)
 
     # Формируем текст сообщения с указанием "не нашел" в регламенте
     topic_text = f"""Вопрос задает <b>{user.FIO}</b>
@@ -562,7 +562,7 @@ async def cancel_question(
             message_thread_id=question.topic_id,
         )
         await questions_repo.questions.delete_question(token=question.token)
-        await remove_question_timer(bot=callback.bot, question=question)
+        await remove_question_timer(question=question)
         await callback.bot.send_message(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
