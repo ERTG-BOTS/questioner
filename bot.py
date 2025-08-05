@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 #     )
 
 
-def register_selective_middlewares(
+def register_middlewares(
     dp: Dispatcher,
     config: Config,
     bot: Bot,
@@ -177,7 +177,7 @@ async def main():
 
     dp.include_routers(*routers_list)
 
-    register_selective_middlewares(dp, bot_config, bot, stp_db, questioner_db)
+    register_middlewares(dp, bot_config, bot, stp_db, questioner_db)
 
     from tgbot.services.scheduler import register_scheduler_dependencies
 
