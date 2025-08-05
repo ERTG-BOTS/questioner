@@ -14,6 +14,7 @@ from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     stop_inactivity_timer,
+    start_attention_reminder,
 )
 
 topic_cmds_router = Router()
@@ -192,6 +193,7 @@ async def release_q_cmd(
 
 Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
+            await start_attention_reminder(question.token, questions_repo)
             logger.info(
                 f"[Вопрос] - [Освобождение] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} освобожден"
             )
@@ -257,3 +259,5 @@ async def release_q_cb(
             message_thread_id=question.topic_id,
             icon_custom_emoji_id=dicts.topicEmojis["open"],
         )
+
+        await start_attention_reminder(question.token, questions_repo)
