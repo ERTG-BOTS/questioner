@@ -40,13 +40,17 @@ class UserAccessMiddleware(BaseMiddleware):
             else None
         )
 
-        # Skip all access control logic for private chats, bots, or if no chat found
-        if not chat or chat.type == "private" or event.from_user.is_bot:
-            return await handler(event, data)
-
         # Get user and repos from previous middleware (DatabaseMiddleware)
         user: User = data.get("user")
+        main_repo: RequestsRepo = data.get("main_repo")
         questions_repo: RequestsRepo = data.get("questions_repo")
+
+        # Skip all access control logic for private chats, bots, or if no chat found
+        if not chat or chat.type == "private" or event.from_user.is_bot:
+            # Проверяем необходимость обновления пользователя
+            await self._update_username(user, event, main_repo)
+
+            return await handler(event, data)
 
         if not questions_repo:
             logger.error("[UserAccessMiddleware] No questions_repo found in data")
@@ -66,6 +70,7 @@ class UserAccessMiddleware(BaseMiddleware):
                 f"изменил сообщение в топике {message_thread_id}"
             )
 
+        logger.info(user)
         # Проверяем есть ли пользователь в базе
         if not user:
             if message_thread_id:
@@ -200,3 +205,38 @@ class UserAccessMiddleware(BaseMiddleware):
             chat_id=chat_id,
             text=f"Список активных вопросов исключенного дежурного:\n{question_text}",
         )
+
+    async def _update_username(
+        self, user: User, event: Union[Message, CallbackQuery], main_repo: RequestsRepo
+    ):
+        """
+        Обновление юзернейма пользователя если он отличается от записанного
+        :param user:
+        :param event:
+        :param main_repo:
+        :return:
+        """
+        current_username = event.from_user.username
+        stored_username = user.Username
+
+        if stored_username != current_username:
+            try:
+                if current_username is None:
+                    await main_repo.users.update_user(
+                        user_id=event.from_user.id,
+                        Username=None,
+                    )
+                    logger.info(
+                        f"[Юзернейм] Удален юзернейм пользователя {event.from_user.id}"
+                    )
+                else:
+                    await main_repo.users.update_user(
+                        user_id=event.from_user.id, Username=current_username
+                    )
+                    logger.info(
+                        f"[Юзернейм] Обновлен юзернейм пользователя {event.from_user.id} - @{current_username}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"[Юзернейм] Ошибка обновления юзернейма для пользователя {event.from_user.id}: {e}"
+                )

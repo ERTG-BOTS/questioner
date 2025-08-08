@@ -34,7 +34,7 @@ class User(Base, TableNameMixin):
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True)
     ChatId: Mapped[int] = mapped_column(BIGINT)
-    Username: Mapped[str] = mapped_column(Unicode)
+    Username: Mapped[str] = mapped_column(Unicode, nullable=True)
     Division: Mapped[str] = mapped_column(Unicode)
     Position: Mapped[str] = mapped_column(Unicode)
     FIO: Mapped[str] = mapped_column(Unicode)
