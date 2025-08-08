@@ -52,7 +52,7 @@ async def active_question_end(
 
     if question is not None:
         group_settings = await questions_repo.settings.get_settings_by_group_id(
-            group_id=message.chat.id,
+            group_id=question.group_id,
         )
 
         if question.status != "closed":
