@@ -21,6 +21,8 @@ from tgbot.keyboards.user.main import (
 from tgbot.services.logger import setup_logging
 
 employee_return_q_router = Router()
+employee_return_q_router.message.filter(F.chat.type == "private")
+employee_return_q_router.callback_query.filter(F.message.chat.type == "private")
 
 setup_logging()
 logger = logging.getLogger(__name__)

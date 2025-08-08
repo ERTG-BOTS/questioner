@@ -30,6 +30,9 @@ from tgbot.services.scheduler import (
 )
 
 user_router = Router()
+user_router.message.filter(F.chat.type == "private")
+user_router.callback_query.filter(F.message.chat.type == "private")
+
 
 setup_logging()
 logger = logging.getLogger(__name__)
