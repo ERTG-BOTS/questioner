@@ -465,7 +465,7 @@ async def send_attention_reminder(
             logger.warning(
                 f"[Внимание вопросу] Вопрос {question_token} не найден в базе для напоминания"
             )
-            stop_attention_reminder(question.token)
+            stop_attention_reminder(question_token)
             return
 
         # Проверка, что вопрос все еще открыт и не имеет дежурного
