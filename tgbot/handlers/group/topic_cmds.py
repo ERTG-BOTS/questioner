@@ -54,7 +54,7 @@ async def end_q_cmd(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Дежурный: <b>{question.topic_duty_fullname}</b>
+👮‍♂️ Дежурный: <b>{question.topic_duty_fullname if question.topic_duty_fullname else "Не закреплен"}</b>
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
