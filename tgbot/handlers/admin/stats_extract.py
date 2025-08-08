@@ -135,8 +135,6 @@ async def admin_extract_division(
             status = "В работе"
         elif question.status == "closed":
             status = "Закрыт"
-        elif question.status == "lost":
-            status = "Потерян"
         else:
             status = question.status
 
