@@ -70,7 +70,6 @@ class UserAccessMiddleware(BaseMiddleware):
                 f"изменил сообщение в топике {message_thread_id}"
             )
 
-        logger.info(user)
         # Проверяем есть ли пользователь в базе
         if not user:
             if message_thread_id:
