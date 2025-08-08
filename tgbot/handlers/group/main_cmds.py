@@ -75,7 +75,7 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
 - Закрытый вопрос: {format_emoji(emoji_ids["closed"], "неизвестно")} (/emoji_closed)
 - Отмененный вопрос: {format_emoji(emoji_ids["cancelled"], "неизвестно")} (/emoji_fired)
 
-<i>Изменять настройки может только РГ и администраторы</i>""",
+<i>Изменять настройки могут только РГ и администраторы</i>""",
         parse_mode="HTML",
     )
 
