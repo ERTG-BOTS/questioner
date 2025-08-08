@@ -218,6 +218,9 @@ class UserAccessMiddleware(BaseMiddleware):
         :param main_repo:
         :return:
         """
+        if not user:
+            return
+
         current_username = event.from_user.username
         stored_username = user.Username
 
