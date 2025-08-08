@@ -30,15 +30,16 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
     )
 
     await message.reply(
-        f"""⚙️ Настройки <b>{message.chat.title}</b>
+        f"""<b>⚙️ Настройки чата:</b> <code>{message.chat.title}</code>
 
 <b>🧩 Функции:</b>
-- Запрос регламента - {"Да" if group_settings.get_setting("ask_clever_link") else "Нет"} (/clever)
-- Закрытие по бездействию - {"Да" if group_settings.get_setting("activity_status") else "Нет"} (/activity)
+- Запрос регламента - {"✅" if group_settings.get_setting("ask_clever_link") else "❌"} (/clever)
+- Отображение направления - {"✅" if group_settings.get_setting("show_division") else "❌"} (/division)
+- Закрытие по бездействию - {"✅" if group_settings.get_setting("activity_status") else "❌"} (/activity)
 
 <b>⏳ Таймеры:</b>
-- Предупреждение о бездействии - {group_settings.get_setting("activity_warn_minutes")} минут (/warn)
-- Закрытие по бездействию - {group_settings.get_setting("activity_close_minutes")} минут (/close)
+- Предупреждение о бездействии: {group_settings.get_setting("activity_warn_minutes")} минут (/warn)
+- Закрытие по бездействию: {group_settings.get_setting("activity_close_minutes")} минут (/close)
 """
     )
 
@@ -89,6 +90,57 @@ async def ask_clever_link_change(
         response = (
             f"<b>✨ Изменение настроек форума</b>\n\n"
             f"Пользователь <b>{user_name}</b> {action_text} запрос регламента"
+        )
+
+    await message.reply(response)
+
+
+@main_topic_cmds_router.message(Command("division"), IsMainTopicMessageWithCommand())
+async def show_division_change(
+    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+):
+    """Управление статусом отображения направления специалиста для форумов."""
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    # Валидация аргументов команды
+    if not command.args:
+        await message.reply("Пример команды: /division [on или off]")
+        return
+
+    action = command.args.split(maxsplit=1)[0].lower()
+    if action not in ("on", "off"):
+        await message.reply("Пример команды: /division [on или off]")
+        return
+
+    # Получаем текущие настройки
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=message.chat.id
+    )
+
+    current_state = group_settings.get_setting("show_division")
+    target_state = action == "on"
+    user_name = user.FIO
+
+    # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
+    if current_state == target_state:
+        status = "включено" if current_state else "выключено"
+        response = (
+            f"<b>✨ Изменение настроек форума</b>\n\n"
+            f"Отображения направления специалистов <b>уже {status}</b>"
+        )
+    else:
+        # Обновление настроек
+        await questions_repo.settings.update_setting(
+            group_id=message.chat.id, key="show_division", value=target_state
+        )
+        action_text = "включил" if target_state else "выключил"
+        response = (
+            f"<b>✨ Изменение настроек форума</b>\n\n"
+            f"Пользователь <b>{user_name}</b> {action_text} отображение направления специалистов"
         )
 
     await message.reply(response)

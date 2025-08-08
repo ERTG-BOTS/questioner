@@ -407,6 +407,9 @@ async def return_q_duty(
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=question.group_id,
+    )
 
     available_to_return_questions: Sequence[
         Question
@@ -431,7 +434,7 @@ async def return_q_duty(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
             name=f"{user.Division} | {user.FIO}"
-            if "НТП" in user.Division
+            if group_settings.get_setting("show_division")
             else user.FIO,
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )

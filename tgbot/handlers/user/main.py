@@ -207,7 +207,7 @@ async def question_text(
         new_topic = await message.bot.create_forum_topic(
             chat_id=target_forum_id,
             name=f"{user.Division} | {user.FIO}"
-            if "НТП" in user.Division
+            if group_settings.get_setting("show_division")
             else user.FIO,
             icon_custom_emoji_id=dicts.topicEmojis["open"],
         )  # Создание темы
@@ -361,7 +361,9 @@ async def clever_link_handler(
 
     new_topic = await message.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {user.FIO}" if "НТП" in user.Division else user.FIO,
+        name=f"{user.Division} | {user.FIO}"
+        if group_settings.get_setting("show_division")
+        else user.FIO,
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )  # Создание темы
 
@@ -458,7 +460,9 @@ async def regulation_not_found_handler(
     # Создаем новую тему
     new_topic = await callback.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {user.FIO}" if "НТП" in user.Division else user.FIO,
+        name=f"{user.Division} | {user.FIO}"
+        if group_settings.get_setting("show_division")
+        else user.FIO,
         icon_custom_emoji_id=dicts.topicEmojis["open"],
     )
 

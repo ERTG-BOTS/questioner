@@ -49,6 +49,9 @@ async def return_finished_q(
     question: Question = await questions_repo.questions.get_question(
         callback_data.token
     )
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=question.group_id,
+    )
     available_to_return_questions: Sequence[
         Question
     ] = await questions_repo.questions.get_available_to_return_questions()
@@ -70,7 +73,7 @@ async def return_finished_q(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
             name=f"{user.Division} | {user.FIO}"
-            if "НТП" in user.Division
+            if group_settings.get_setting("show_division")
             else user.FIO,
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
@@ -250,6 +253,10 @@ async def return_q_confirm(
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
         return
 
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=question.group_id,
+    )
+
     active_questions = await questions_repo.questions.get_active_questions()
 
     if (
@@ -275,7 +282,7 @@ async def return_q_confirm(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
             name=f"{user.Division} | {user.FIO}"
-            if "НТП" in user.Division
+            if group_settings.get_setting("show_division")
             else user.FIO,
             icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
         )
