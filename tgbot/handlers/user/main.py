@@ -593,54 +593,54 @@ async def cancel_question(
     await callback.answer()
 
 
-@user_router.message()
-async def default_message_handler(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
-):
-    """
-    Default handler for all unhandled user messages.
-    Sends start message if user is not in question state and doesn't have active questions.
-    """
-    # Проверяем FSM
-    current_state = await state.get_state()
-
-    # Пропускаем если у пользователя есть состояние
-    if current_state is not None:
-        return
-
-    # Проверяем есть ли у пользователя активные вопросы
-    try:
-        active_questions = await questions_repo.questions.get_active_questions()
-        if user.FIO in [q.employee_fullname for q in active_questions]:
-            return
-    except Exception as e:
-        logger.error(f"Error checking active questions for user {user.FIO}: {e}")
-        return
-
-    # Если мы оказались здесь - у пользователя нет активных вопросов и состояний в FSM
-    # Отправляем стартовое сообщение
-    employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
-    )
-    employee_topics_month = (
-        await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
-        )
-    )
-
-    await message.answer(
-        f"""👋 Привет, <b>{user.FIO}</b>!
-
-Я - бот-вопросник
-
-<b>❓ Ты задал вопросов:</b>
-- За день {employee_topics_today}
-- За месяц {employee_topics_month}
-
-<i>Используй меню для управление ботом</i>""",
-        reply_markup=user_kb(is_role_changed=user.Role == 10),
-    )
-
-    logging.info(
-        f"[Дефолт] {message.from_user.username} ({message.from_user.id}): Отправлено стартовое сообщение"
-    )
+# @user_router.message()
+# async def default_message_handler(
+#     message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+# ):
+#     """
+#     Default handler for all unhandled user messages.
+#     Sends start message if user is not in question state and doesn't have active questions.
+#     """
+#     # Проверяем FSM
+#     current_state = await state.get_state()
+#
+#     # Пропускаем если у пользователя есть состояние
+#     if current_state is not None:
+#         return
+#
+#     # Проверяем есть ли у пользователя активные вопросы
+#     try:
+#         active_questions = await questions_repo.questions.get_active_questions()
+#         if user.FIO in [q.employee_fullname for q in active_questions]:
+#             return
+#     except Exception as e:
+#         logger.error(f"Error checking active questions for user {user.FIO}: {e}")
+#         return
+#
+#     # Если мы оказались здесь - у пользователя нет активных вопросов и состояний в FSM
+#     # Отправляем стартовое сообщение
+#     employee_topics_today = await questions_repo.questions.get_questions_count_today(
+#         employee_fullname=user.FIO
+#     )
+#     employee_topics_month = (
+#         await questions_repo.questions.get_questions_count_last_month(
+#             employee_fullname=user.FIO
+#         )
+#     )
+#
+#     await message.answer(
+#         f"""👋 Привет, <b>{user.FIO}</b>!
+#
+# Я - бот-вопросник
+#
+# <b>❓ Ты задал вопросов:</b>
+# - За день {employee_topics_today}
+# - За месяц {employee_topics_month}
+#
+# <i>Используй меню для управление ботом</i>""",
+#         reply_markup=user_kb(is_role_changed=user.Role == 10),
+#     )
+#
+#     logging.info(
+#         f"[Дефолт] {message.from_user.username} ({message.from_user.id}): Отправлено стартовое сообщение"
+#     )
