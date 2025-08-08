@@ -18,9 +18,9 @@ routers_list = [
     main_topic_cmds_router,
     topic_cmds_router,
     topic_router,
-    user_router,
     user_q_router,
     employee_return_q_router,
+    user_router,
 ]
 
 __all__ = [
