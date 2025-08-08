@@ -1,5 +1,6 @@
 from typing import Optional, Sequence
 
+import pytz
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -117,7 +118,7 @@ class MessagesPairsRepo:
         from datetime import datetime, timedelta
 
         # Считаем дату день назад
-        today = datetime.now()
+        today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
         two_days_ago = today - timedelta(days=1)
 
         stmt = select(MessagesPair).where(MessagesPair.created_at < two_days_ago)

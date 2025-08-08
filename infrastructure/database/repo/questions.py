@@ -3,6 +3,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Optional, Sequence, TypedDict, Unpack
 
+import pytz
 from sqlalchemy import and_, extract, func, or_, select
 
 from infrastructure.database.models import Question, User
@@ -186,7 +187,7 @@ class QuestionsRepo(BaseRepo):
         :param duty_fullname: ФИО искомого дежурного
         :return: Кол-во вопросов за последний день
         """
-        today = datetime.now().date()
+        today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")).date()
         tomorrow = today + timedelta(days=1)
 
         if employee_fullname:
@@ -217,7 +218,7 @@ class QuestionsRepo(BaseRepo):
         :param duty_fullname: ФИО искомого дежурного
         :return: Кол-во вопросов за последний месяц
         """
-        today = datetime.now()
+        today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
         first_day_current_month = datetime(today.year, today.month, 1).date()
 
         if today.month == 12:
@@ -257,7 +258,9 @@ class QuestionsRepo(BaseRepo):
         :param limit: Лимит вопросов для выдачи. Сортировка по убыванию даты закрытия вопроса
         :return: Последовательность вопросов
         """
-        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+        twenty_four_hours_ago = datetime.now(
+            tz=pytz.timezone("Asia/Yekaterinburg")
+        ) - timedelta(hours=24)
 
         stmt = (
             select(Question)
@@ -282,7 +285,9 @@ class QuestionsRepo(BaseRepo):
         Получение всех доступных к возврату вопросов
         :return: Последовательность доступных к возврату вопросов
         """
-        twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+        twenty_four_hours_ago = datetime.now(
+            tz=pytz.timezone("Asia/Yekaterinburg")
+        ) - timedelta(hours=24)
 
         stmt = (
             select(Question)
@@ -354,7 +359,7 @@ class QuestionsRepo(BaseRepo):
         Получение вопросов старше выставленной в конфиге даты
         :return: Последовательность вопросов старше определенной даты
         """
-        today = datetime.now()
+        today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
         old_date = today - timedelta(days=config.questioner.remove_old_questions_days)
 
         stmt = select(Question).where(Question.start_time < old_date)

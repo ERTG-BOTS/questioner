@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pytz
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -21,7 +22,7 @@ class DivisionStatsExtract(CallbackData, prefix="division_stats"):
 
 # Выбор дат для выгрузки статистики
 def extract_kb() -> InlineKeyboardMarkup:
-    current_date = datetime.now()
+    current_date = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
 
     # Get month names in Russian
     month_names = {

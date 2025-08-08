@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import pytz
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
@@ -41,7 +42,9 @@ async def end_q_cmd(
             stop_inactivity_timer(question.token)
 
             await questions_repo.questions.update_question(
-                token=question.token, status="closed", end_time=datetime.datetime.now()
+                token=question.token,
+                status="closed",
+                end_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
             )
 
             if question.quality_duty is not None:

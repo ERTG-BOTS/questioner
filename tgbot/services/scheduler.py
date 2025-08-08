@@ -290,7 +290,9 @@ async def auto_close_question(
         if question and question.status in ["open", "in_progress"]:
             # Закрываем вопрос
             await questions_repo.questions.update_question(
-                token=question.token, status="closed", end_time=datetime.datetime.now()
+                token=question.token,
+                status="closed",
+                end_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
             )
 
             # Уведомляем о закрытии
