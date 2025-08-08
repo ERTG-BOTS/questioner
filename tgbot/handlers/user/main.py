@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import pytz
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -218,7 +219,7 @@ async def question_text(
             employee_chat_id=message.chat.id,
             employee_fullname=user.FIO,
             employee_division=user.Division,
-            start_time=datetime.datetime.now(),
+            start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
             question_text=state_data.get("question"),
             clever_link=clever_link,  # Может быть None если ссылки нет
             activity_status_enabled=group_settings.get_setting("activity_status"),
@@ -373,7 +374,7 @@ async def clever_link_handler(
         employee_chat_id=message.chat.id,
         employee_fullname=user.FIO,
         employee_division=user.Division,
-        start_time=datetime.datetime.now(),
+        start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
         question_text=state_data.get("question"),
         clever_link=clever_link if clever_link else None,
         activity_status_enabled=group_settings.get_setting("activity_status"),
@@ -473,7 +474,7 @@ async def regulation_not_found_handler(
         employee_chat_id=callback.from_user.id,
         employee_fullname=user.FIO,
         employee_division=user.Division,
-        start_time=datetime.datetime.now(),
+        start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
         question_text=state_data.get("question"),
         clever_link="не нашел",  # Устанавливаем специальное значение,
         activity_status_enabled=group_settings.get_setting("activity_status"),
