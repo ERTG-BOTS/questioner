@@ -29,6 +29,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("group_id", sa.BigInteger(), nullable=False),
+        sa.Column("group_name", sa.Unicode(), nullable=False),
         sa.Column(
             "values", sa.NVARCHAR(length=None), nullable=False, server_default="'{}'"
         ),
