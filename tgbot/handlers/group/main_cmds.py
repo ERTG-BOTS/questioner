@@ -1,12 +1,17 @@
 import logging
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.filters.topic import IsMainTopicMessageWithCommand
+from tgbot.keyboards.group.settings import (
+    SettingsEmoji,
+    SettingsEmojiPage,
+    settings_emoji,
+)
 from tgbot.services.logger import setup_logging
 
 main_topic_cmds_router = Router()
@@ -29,6 +34,29 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
         group_id=message.chat.id,
     )
 
+    custom_emojis = await message.bot.get_forum_topic_icon_stickers()
+
+    # Create a lookup dictionary for faster searching
+    emoji_lookup = {emoji.custom_emoji_id: emoji for emoji in custom_emojis}
+
+    # Находим идентификаторы эмодзи
+    emoji_ids = {
+        "open": group_settings.get_setting("emoji_open"),
+        "in_work": group_settings.get_setting("emoji_in_progress"),
+        "closed": group_settings.get_setting("emoji_closed"),
+        "cancelled": group_settings.get_setting("emoji_fired"),
+    }
+
+    # Форматирование эмодзи для ТГ
+    def format_emoji(emoji_id, fallback):
+        if emoji_id and str(emoji_id) in emoji_lookup:
+            emoji = emoji_lookup[str(emoji_id)]
+            return (
+                f'<tg-emoji emoji-id="{emoji.custom_emoji_id}">{emoji.emoji}</tg-emoji>'
+            )
+        else:
+            return fallback
+
     await message.reply(
         f"""<b>⚙️ Настройки чата:</b> <code>{group_settings.group_name}</code>
 
@@ -41,8 +69,14 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
 - Предупреждение о бездействии: {group_settings.get_setting("activity_warn_minutes")} минут (/warn)
 - Закрытие по бездействию: {group_settings.get_setting("activity_close_minutes")} минут (/close)
 
-<i>Изменять настройки может только РГ</i>
-"""
+<b>💡 Статусы</b>
+- Открытый вопрос: {format_emoji(emoji_ids["open"], "неизвестно")} (/emoji_open)
+- В работе: {format_emoji(emoji_ids["in_work"], "неизвестно")} (/emoji_in_progress)
+- Закрытый вопрос: {format_emoji(emoji_ids["closed"], "неизвестно")} (/emoji_closed)
+- Отмененный вопрос: {format_emoji(emoji_ids["cancelled"], "неизвестно")} (/emoji_fired)
+
+<i>Изменять настройки может только РГ и администраторы</i>""",
+        parse_mode="HTML",
     )
 
 
@@ -308,3 +342,156 @@ async def timer_close_change(
             )
 
     await message.reply(response)
+
+
+@main_topic_cmds_router.message(Command("emoji_open"), IsMainTopicMessageWithCommand())
+async def emoji_open_change(
+    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+):
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    custom_emojis = await message.bot.get_forum_topic_icon_stickers()
+    await message.reply(
+        "<b>Выбор эмодзи для открытых вопросов</b>",
+        reply_markup=settings_emoji(
+            emoji_key="emoji_open",
+            custom_emojis=custom_emojis,
+        ),
+        parse_mode="HTML",
+    )
+
+
+@main_topic_cmds_router.message(
+    Command("emoji_in_progress"), IsMainTopicMessageWithCommand()
+)
+async def emoji_in_progress_change(
+    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+):
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    custom_emojis = await message.bot.get_forum_topic_icon_stickers()
+    await message.reply(
+        "<b>Выбор эмодзи для вопросов в работе</b>",
+        reply_markup=settings_emoji(
+            emoji_key="emoji_in_progress",
+            custom_emojis=custom_emojis,
+        ),
+        parse_mode="HTML",
+    )
+
+
+@main_topic_cmds_router.message(
+    Command("emoji_closed"), IsMainTopicMessageWithCommand()
+)
+async def emoji_closed_change(message: Message, user: User):
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    custom_emojis = await message.bot.get_forum_topic_icon_stickers()
+    await message.reply(
+        "<b>Выбор эмодзи для закрытых вопросов</b>",
+        reply_markup=settings_emoji(
+            emoji_key="emoji_closed",
+            custom_emojis=custom_emojis,
+        ),
+        parse_mode="HTML",
+    )
+
+
+@main_topic_cmds_router.message(Command("emoji_fired"), IsMainTopicMessageWithCommand())
+async def emoji_fired_change(message: Message, user: User):
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    custom_emojis = await message.bot.get_forum_topic_icon_stickers()
+    await message.reply(
+        "<b>Выбор эмодзи для отмененных вопросов</b>",
+        reply_markup=settings_emoji(
+            emoji_key="emoji_fired",
+            custom_emojis=custom_emojis,
+        ),
+        parse_mode="HTML",
+    )
+
+
+@main_topic_cmds_router.callback_query(SettingsEmoji.filter())
+async def handle_emoji_selection(
+    callback: CallbackQuery,
+    callback_data: SettingsEmoji,
+    questions_repo: RequestsRepo,
+    user: User,
+):
+    if user.Role not in [2, 10]:
+        await callback.answer(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    # Обновляем настройки в БД
+    await questions_repo.settings.update_setting(
+        group_id=callback.message.chat.id,
+        key=callback_data.emoji_key,
+        value=callback_data.emoji_id,
+    )
+
+    # Получаем название измененного эмодзи для информирования
+    emoji_names = {
+        "emoji_open": "открытых вопросов",
+        "emoji_in_progress": "вопросов в работе",
+        "emoji_closed": "закрытых вопросов",
+        "emoji_fired": "отмененных вопросов",
+    }
+
+    emoji_name = emoji_names.get(callback_data.emoji_key, callback_data.emoji_key)
+
+    await callback.message.edit_text(
+        f"✅ Эмодзи для {emoji_name} успешно изменено!", reply_markup=None
+    )
+    await callback.answer()
+
+
+@main_topic_cmds_router.callback_query(SettingsEmojiPage.filter())
+async def handle_emoji_page(
+    callback: CallbackQuery, callback_data: SettingsEmojiPage, user: User
+):
+    if user.Role not in [2, 10]:
+        await callback.answer(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    custom_emojis = await callback.bot.get_forum_topic_icon_stickers()
+    keyboard = settings_emoji(
+        emoji_key=callback_data.emoji_key,
+        custom_emojis=custom_emojis,
+        page=callback_data.page,
+    )
+
+    await callback.message.edit_reply_markup(reply_markup=keyboard)
+    await callback.answer()
+
+
+@main_topic_cmds_router.callback_query(F.data == "emoji_cancel")
+async def handle_emoji_cancel(callback: CallbackQuery, user: User):
+    if user.Role not in [2, 10]:
+        await callback.answer(
+            "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
+        )
+        return
+
+    await callback.message.edit_text("❌ Выбор эмодзи отменен", reply_markup=None)
+    await callback.answer()

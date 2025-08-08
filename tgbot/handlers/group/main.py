@@ -32,7 +32,6 @@ from tgbot.keyboards.user.main import (
     finish_question_kb,
 )
 from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
-from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
@@ -57,6 +56,10 @@ async def handle_q_message(
     )
     if message.message_thread_id != question.topic_id:
         return
+
+    group_settings = await questions_repo.settings.get_settings_by_group_id(
+        group_id=message.chat.id,
+    )
 
     if message.text == "✅️ Закрыть вопрос":
         await end_q_cmd(
@@ -102,7 +105,7 @@ async def handle_q_message(
             await message.bot.edit_forum_topic(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
             )
             await message.answer(
                 f"""<b>👮‍♂️ Вопрос в работе</b>
@@ -436,7 +439,7 @@ async def return_q_duty(
             name=f"{user.Division} | {user.FIO}"
             if group_settings.get_setting("show_division")
             else user.FIO,
-            icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
             chat_id=question.group_id,

@@ -7,7 +7,6 @@ from aiogram.types import CallbackQuery, Message
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.keyboards.group.events import on_user_leave_kb
-from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 setup_logging()
@@ -156,6 +155,10 @@ class UserAccessMiddleware(BaseMiddleware):
 
         # Освобождение всех вопросов, принадлежавших исключенному пользователю
         for question in duty_active_questions:
+            group_settings = await questions_repo.settings.get_settings_by_group_id(
+                group_id=question.group_id,
+            )
+
             await questions_repo.questions.update_question(
                 token=question.token,
                 topic_duty_fullname=None,
@@ -166,7 +169,7 @@ class UserAccessMiddleware(BaseMiddleware):
             await self.bot.edit_forum_topic(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                icon_custom_emoji_id=dicts.topicEmojis["open"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
             )
 
             # Уведомление в главную тему

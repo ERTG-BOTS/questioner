@@ -18,7 +18,6 @@ from tgbot.keyboards.user.main import (
     questions_list_kb,
     user_kb,
 )
-from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 employee_return_q_router = Router()
@@ -75,7 +74,7 @@ async def return_finished_q(
             name=f"{user.Division} | {user.FIO}"
             if group_settings.get_setting("show_division")
             else user.FIO,
-            icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
             chat_id=question.group_id,
@@ -284,7 +283,7 @@ async def return_q_confirm(
             name=f"{user.Division} | {user.FIO}"
             if group_settings.get_setting("show_division")
             else user.FIO,
-            icon_custom_emoji_id=dicts.topicEmojis["in_progress"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
 
         # 3. Переоткрываем тему

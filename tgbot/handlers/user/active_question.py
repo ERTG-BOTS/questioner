@@ -25,7 +25,6 @@ from tgbot.keyboards.user.main import (
     question_quality_specialist_kb,
 )
 from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
-from tgbot.misc import dicts
 from tgbot.misc.helpers import check_premium_emoji
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
@@ -52,6 +51,10 @@ async def active_question_end(
     )
 
     if question is not None:
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=message.chat.id,
+        )
+
         if question.status != "closed":
             # Останавливаем таймер бездействия
             stop_inactivity_timer(question.token)
@@ -110,7 +113,7 @@ async def active_question_end(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
-                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_closed"),
             )
             await message.bot.close_forum_topic(
                 chat_id=question.group_id,
@@ -134,7 +137,7 @@ async def active_question_end(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
-                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_closed"),
             )
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(

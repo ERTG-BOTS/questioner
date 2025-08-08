@@ -19,7 +19,6 @@ from tgbot.keyboards.user.main import (
     question_ask_kb,
     user_kb,
 )
-from tgbot.misc import dicts
 from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
 from tgbot.misc.states import AskQuestion
 from tgbot.services.g_sheets import get_target_forum
@@ -210,7 +209,7 @@ async def question_text(
             name=f"{user.Division} | {user.FIO}"
             if group_settings.get_setting("show_division")
             else user.FIO,
-            icon_custom_emoji_id=dicts.topicEmojis["open"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
         )  # Создание темы
 
         new_question = await questions_repo.questions.add_question(
@@ -365,7 +364,7 @@ async def clever_link_handler(
         name=f"{user.Division} | {user.FIO}"
         if group_settings.get_setting("show_division")
         else user.FIO,
-        icon_custom_emoji_id=dicts.topicEmojis["open"],
+        icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )  # Создание темы
 
     new_question = await questions_repo.questions.add_question(
@@ -464,7 +463,7 @@ async def regulation_not_found_handler(
         name=f"{user.Division} | {user.FIO}"
         if group_settings.get_setting("show_division")
         else user.FIO,
-        icon_custom_emoji_id=dicts.topicEmojis["open"],
+        icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )
 
     # Создаем новый вопрос с clever_link = "не нашел"
@@ -559,10 +558,14 @@ async def cancel_question(
         and not question.topic_duty_fullname
         and not question.end_time
     ):
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id
+        )
+
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            icon_custom_emoji_id=dicts.topicEmojis["fired"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_fired"),
         )
         await callback.bot.close_forum_topic(
             chat_id=question.group_id,

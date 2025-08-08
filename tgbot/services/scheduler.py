@@ -14,7 +14,6 @@ from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.group.main import closed_question_duty_kb
 from tgbot.keyboards.user.main import closed_question_specialist_kb
-from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 
 config = load_config(".env")
@@ -308,7 +307,7 @@ async def auto_close_question(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
-                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_closed"),
             )
             await bot.close_forum_topic(
                 chat_id=question.group_id,

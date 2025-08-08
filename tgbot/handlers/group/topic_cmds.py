@@ -10,7 +10,6 @@ from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.filters.topic import IsTopicMessageWithCommand
 from tgbot.keyboards.group.main import FinishedQuestion, question_quality_duty_kb
 from tgbot.keyboards.user.main import question_quality_specialist_kb
-from tgbot.misc import dicts
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     start_attention_reminder,
@@ -35,6 +34,10 @@ async def end_q_cmd(
     )
 
     if question is not None:
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id,
+        )
+
         if question.status != "closed" and (
             question.topic_duty_fullname == user.FIO or user.Role == 10
         ):
@@ -95,7 +98,7 @@ async def end_q_cmd(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
-                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_closed"),
             )
             await message.bot.close_forum_topic(
                 chat_id=question.group_id,
@@ -136,7 +139,7 @@ async def end_q_cmd(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
                 name=question.token,
-                icon_custom_emoji_id=dicts.topicEmojis["closed"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_closed"),
             )
             await message.reply("<b>🔒 Вопрос был закрыт</b>")
             await message.bot.close_forum_topic(
@@ -168,6 +171,10 @@ async def release_q_cmd(
         if question.topic_duty_fullname is not None and (
             question.topic_duty_fullname == user.FIO or user.Role == 10
         ):
+            group_settings = await questions_repo.settings.get_settings_by_group_id(
+                group_id=question.group_id,
+            )
+
             await questions_repo.questions.update_question(
                 token=question.token,
                 topic_duty_fullname=None,
@@ -181,7 +188,7 @@ async def release_q_cmd(
             await message.bot.edit_forum_topic(
                 chat_id=question.group_id,
                 message_thread_id=question.topic_id,
-                icon_custom_emoji_id=dicts.topicEmojis["open"],
+                icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
             )
             await message.answer("""<b>🕊️ Вопрос освобожден</b>
 
@@ -241,6 +248,10 @@ async def release_q_cb(
     )
 
     if question:
+        group_settings = await questions_repo.settings.get_settings_by_group_id(
+            group_id=question.group_id,
+        )
+
         await questions_repo.questions.update_question(
             token=question.token,
             topic_duty_fullname=None,
@@ -257,7 +268,7 @@ async def release_q_cb(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            icon_custom_emoji_id=dicts.topicEmojis["open"],
+            icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
         )
 
         await start_attention_reminder(question.token, questions_repo)
