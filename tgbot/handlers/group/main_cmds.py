@@ -30,7 +30,7 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
     )
 
     await message.reply(
-        f"""<b>⚙️ Настройки чата:</b> <code>{message.chat.title}</code>
+        f"""<b>⚙️ Настройки чата:</b> <code>{group_settings.group_name}</code>
 
 <b>🧩 Функции:</b>
 - Запрос регламента - {"✅" if group_settings.get_setting("ask_clever_link") else "❌"} (/clever)
@@ -40,6 +40,8 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
 <b>⏳ Таймеры:</b>
 - Предупреждение о бездействии: {group_settings.get_setting("activity_warn_minutes")} минут (/warn)
 - Закрытие по бездействию: {group_settings.get_setting("activity_close_minutes")} минут (/close)
+
+<i>Изменять настройки может только РГ</i>
 """
     )
 

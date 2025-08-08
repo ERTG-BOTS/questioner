@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict
 
-from sqlalchemy import BIGINT, DateTime, String, func
+from sqlalchemy import BIGINT, DateTime, String, func, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, TableNameMixin
@@ -38,6 +38,7 @@ class Settings(Base, TableNameMixin):
         BIGINT, primary_key=True, autoincrement=True, nullable=False
     )
     group_id: Mapped[int] = mapped_column(BIGINT, nullable=False, unique=True)
+    group_name: Mapped[str] = mapped_column(Unicode, nullable=False)
     values: Mapped[str] = mapped_column(
         String, nullable=False, default='"{}"', server_default='"{}"'
     )
@@ -50,7 +51,7 @@ class Settings(Base, TableNameMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<Settings id={self.id} group_id={self.group_id} last_update={self.last_update}>"
+        return f"<Settings id={self.id} group_id={self.group_id} group_name={self.group_name} last_update={self.last_update}>"
 
     def get_values(self) -> Dict[str, Any]:
         """
