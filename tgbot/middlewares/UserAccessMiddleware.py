@@ -229,7 +229,7 @@ class UserAccessMiddleware(BaseMiddleware):
                 if current_username is None:
                     await main_repo.users.update_user(
                         user_id=event.from_user.id,
-                        Username=None,
+                        Username="Не указан",
                     )
                     logger.info(
                         f"[Юзернейм] Удален юзернейм пользователя {event.from_user.id}"
