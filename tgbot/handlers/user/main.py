@@ -172,9 +172,6 @@ async def question_text(
         has_clever_link = "https://clever.ertelecom.ru/content/space/" in message.text
     await state.update_data(question_message_id=message.message_id)
 
-    # Отключаем кнопки на предыдущих шагах
-    await disable_previous_buttons(message, state)
-
     state_data = await state.get_data()
     temp_division = state_data.get("temp_division")
     if state_data.get("processing"):
@@ -194,7 +191,15 @@ async def question_text(
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
     if has_clever_link or user.Role == 10 or not ask_clever_link:
         # Извлекаем ссылку если она есть, иначе None
-        clever_link = extract_clever_link(message.text) if has_clever_link else None
+        clever_link = (
+            extract_clever_link(message.text or message.caption)
+            if has_clever_link
+            else None
+        )
+
+        if message.text == clever_link:
+            await state.update_data(processing=False)
+            return
 
         employee_topics_today = (
             await questions_repo.questions.get_questions_count_today(
@@ -282,7 +287,12 @@ async def question_text(
         logging.info(
             f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
         )
+        # Отключаем кнопки на предыдущих шагах
+        await disable_previous_buttons(message, state)
         return
+
+    # Отключаем кнопки на предыдущих шагах
+    await disable_previous_buttons(message, state)
 
     # TODO Вернуть проверку на топ юзеров после обсуждения
     # top_users: Sequence[
