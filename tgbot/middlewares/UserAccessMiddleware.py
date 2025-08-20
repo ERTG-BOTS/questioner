@@ -95,7 +95,10 @@ class UserAccessMiddleware(BaseMiddleware):
         # Юзер прошел все проверки - продолжаем к следующей middleware
         return await handler(event, data)
 
-    def _get_message_thread_id(self, event: Union[Message, CallbackQuery]) -> int:
+    @staticmethod
+    def _get_message_thread_id(
+        event: Union[Message, CallbackQuery],
+    ) -> int | None | Any:
         """Экстракт message_thread_id из ивента"""
         if isinstance(event, Message):
             return event.message_thread_id
@@ -208,8 +211,9 @@ class UserAccessMiddleware(BaseMiddleware):
             text=f"Список активных вопросов исключенного дежурного:\n{question_text}",
         )
 
+    @staticmethod
     async def _update_username(
-        self, user: User, event: Union[Message, CallbackQuery], main_repo: RequestsRepo
+        user: User, event: Union[Message, CallbackQuery], main_repo: RequestsRepo
     ):
         """
         Обновление юзернейма пользователя если он отличается от записанного
