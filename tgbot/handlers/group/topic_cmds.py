@@ -204,10 +204,7 @@ async def release_q_cmd(
             logger.info(
                 f"[Вопрос] - [Освобождение] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} освобожден"
             )
-        elif (
-            question.topic_duty_fullname is not None
-            and question.topic_duty_fullname != user.FIO
-        ):
+        elif question.topic_duty_fullname and question.topic_duty_fullname != user.FIO:
             await message.reply("""<b>⚠️ Предупреждение</b>
 
 Это не твой чат!

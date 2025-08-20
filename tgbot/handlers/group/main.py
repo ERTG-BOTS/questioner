@@ -547,7 +547,9 @@ async def quality_q_duty(
 
 👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
-                reply_markup=closed_question_duty_kb(token=callback_data.token),
+                reply_markup=closed_question_duty_kb(
+                    token=callback_data.token, allow_return=question.allow_return
+                ),
             )
         else:
             await callback.message.edit_text(
@@ -556,7 +558,7 @@ async def quality_q_duty(
 👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
-                    token=callback_data.token,
+                    token=callback_data.token, allow_return=question.allow_return
                 ),
             )
 
