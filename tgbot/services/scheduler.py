@@ -401,15 +401,15 @@ def stop_inactivity_timer(question_token: str):
                 warning_job_id,
                 jobstore="redis" if config.tg_bot.use_redis else "default",
             )
-        except Exception:
-            pass  # Задача может не существовать
+        except Exception as e:
+            logger.warning(f"[Задачи] Ошибка при удалении задачи {warning_job_id}: {e}")
 
         try:
             scheduler.remove_job(
                 close_job_id, jobstore="redis" if config.tg_bot.use_redis else "default"
             )
-        except Exception:
-            pass  # Задача может не существовать
+        except Exception as e:
+            logger.warning(f"[Задачи] Ошибка при удалении задачи {close_job_id}: {e}")
 
     except Exception as e:
         logger.error(
@@ -554,9 +554,10 @@ def stop_attention_reminder(question_token: str):
             logger.info(
                 f"[Внимание вопросу] Отслеживание выключено для вопроса {question_token}"
             )
-        except Exception:
-            # Задача может не существовать, это норма
-            pass
+        except Exception as e:
+            logger.warning(
+                f"[Задачи] Ошибка при удалении задачи {attention_job_id}: {e}"
+            )
 
     except Exception as e:
         logger.error(

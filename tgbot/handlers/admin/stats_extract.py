@@ -6,7 +6,6 @@ from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
 from numpy.random.mtrand import Sequence
 
-from infrastructure.database.models import Question
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.filters.admin import AdminFilter
 from tgbot.keyboards.admin.main import AdminMenu
@@ -117,9 +116,7 @@ async def admin_extract_division(
     )
 
     # Получаем вопросы с фильтрацией по направлению
-    questions: Sequence[
-        Question
-    ] = await questions_repo.questions.get_questions_by_month(
+    questions: Sequence = await questions_repo.questions.get_questions_by_month(
         month=month, year=year, division=division
     )
 

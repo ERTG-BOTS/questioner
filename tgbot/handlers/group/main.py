@@ -274,17 +274,6 @@ async def handle_q_message(
         logger.warning(
             f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}. Чат уже закрыт"
         )
-    else:
-        await message.answer("""<b>⚠️ Ошибка</b>
-
-Не удалось найти текущую тему в базе, закрываю""")
-        await message.bot.close_forum_topic(
-            chat_id=message.chat.id,
-            message_thread_id=message.message_thread_id,
-        )
-        logger.error(
-            f"[Вопрос] - [Общение] Не удалось найти вопрос в базе с TopicId = {message.message_thread_id}. Закрыли тему"
-        )
 
 
 @topic_router.edited_message(IsTopicMessage())

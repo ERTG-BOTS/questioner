@@ -76,7 +76,8 @@ class AdminRoleMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-    def _find_user_admin_status(self, chat_admins, user_id: int):
+    @staticmethod
+    def _find_user_admin_status(chat_admins, user_id: int):
         """
         Проверка является ли пользователем администратором чата
         :param chat_admins:

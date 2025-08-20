@@ -128,8 +128,6 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) 
 @admin_router.callback_query(AdminMenu.filter(F.menu == "change_role"))
 async def show_division_selection(
     callback: CallbackQuery,
-    state: FSMContext,
-    user: User,
 ) -> None:
     """
     Показывает меню выбора направления для смены роли

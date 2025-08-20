@@ -345,9 +345,7 @@ async def timer_close_change(
 
 
 @main_topic_cmds_router.message(Command("emoji_open"), IsMainTopicMessageWithCommand())
-async def emoji_open_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
-):
+async def emoji_open_change(message: Message, user: User):
     if user.Role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
@@ -368,9 +366,7 @@ async def emoji_open_change(
 @main_topic_cmds_router.message(
     Command("emoji_in_progress"), IsMainTopicMessageWithCommand()
 )
-async def emoji_in_progress_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
-):
+async def emoji_in_progress_change(message: Message, user: User):
     if user.Role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"

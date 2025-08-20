@@ -76,12 +76,9 @@ class DatabaseMiddleware(BaseMiddleware):
                             f"[DatabaseMiddleware] All database connection attempts exhausted: {e}"
                         )
                         if isinstance(event, Message):
-                            try:
-                                await event.reply(
-                                    "⚠️ Временные проблемы с базой данных. Попробуйте позже."
-                                )
-                            except:
-                                pass
+                            await event.reply(
+                                "⚠️ Временные проблемы с базой данных. Попробуйте позже."
+                            )
                         return None
                 else:
                     logger.error(f"[DatabaseMiddleware] Critical database error: {e}")

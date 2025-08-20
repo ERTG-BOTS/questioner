@@ -16,8 +16,8 @@ class Base(DeclarativeBase):
 
 class TableNameMixin:
     @declared_attr.directive
-    def __tablename__(cls) -> str:
-        return cls.__name__.lower() + "s"
+    def __tablename__(self) -> str:
+        return self.__name__.lower() + "s"
 
 
 class TimestampMixin:

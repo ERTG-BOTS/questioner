@@ -120,6 +120,7 @@ class QuestionsRepo(BaseRepo):
         """
         Получение вопроса по токену или идентификатору топика
         :param token: Уникальный токен вопроса
+        :param group_id: Идентификатор группы в Telegram
         :param topic_id: Идентификатор топика в Telegram
         :return: Найденный вопрос или None
         """
@@ -312,6 +313,7 @@ class QuestionsRepo(BaseRepo):
         Получение топ-15 пользователей по количеству вопросов в рамках указанного направления
         :param division: Направление для фильтрации (например, "НЦК")
         :param main_repo: Репозиторий для работы с основной БД (RegisteredUsers)
+        :param limit: Лимит пользователей для возврата
         :return: Последовательность из топ-15 пользователей с наибольшим количеством вопросов
         """
         # Получаем все вопросы
@@ -384,6 +386,7 @@ class QuestionsRepo(BaseRepo):
             }
 
         deleted_count = 0
+        total_count = 0
         errors = []
 
         try:

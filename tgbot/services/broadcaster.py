@@ -78,5 +78,4 @@ async def broadcast(
             )  # 20 messages per second (Limit: 30 messages per second)
     finally:
         logging.info(f"{count} messages successful sent.")
-
-    return count
+        return count

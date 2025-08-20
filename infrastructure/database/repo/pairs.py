@@ -141,6 +141,7 @@ class MessagesPairsRepo:
                 - errors (list): Список ошибок, если они возникли
         """
         deleted_count = 0
+        total_count = 0
         errors = []
 
         try:
