@@ -4,7 +4,7 @@ from typing import Sequence
 
 import pytz
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import (
     CallbackQuery,
     InputMediaAnimation,
@@ -107,15 +107,25 @@ async def handle_q_message(
                 message_thread_id=question.topic_id,
                 icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
             )
-            await message.answer(
-                f"""<b>👮‍♂️ Вопрос в работе</b>
+            try:
+                await message.answer(
+                    f"""<b>👮‍♂️ Вопрос в работе</b>
 
 На вопрос отвечает <b>{user.FIO}</b>
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
-                disable_web_page_preview=True,
-                reply_markup=duty_start(user_id=user.ChatId),
-            )
+                    disable_web_page_preview=True,
+                    reply_markup=duty_start(user_id=user.ChatId),
+                )
+            except TelegramBadRequest:
+                await message.answer(
+                    f"""<b>👮‍♂️ Вопрос в работе</b>
+
+На вопрос отвечает <b>{user.FIO}</b>
+
+<blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
+                    disable_web_page_preview=True,
+                )
 
             await message.bot.send_message(
                 chat_id=employee.ChatId,
