@@ -162,14 +162,18 @@ async def question_text(
         await message.answer("У тебя уже есть активный вопрос")
         return
 
-    if message.caption:
-        await state.update_data(question=message.caption)
-        has_clever_link = (
-            "https://clever.ertelecom.ru/content/space/" in message.caption
-        )
-    else:
-        await state.update_data(question=message.text)
-        has_clever_link = "https://clever.ertelecom.ru/content/space/" in message.text
+    question_text = message.caption if message.caption else message.text
+    
+    if not question_text or question_text.strip() == "":
+        await message.answer("❌ Вопрос не может быть пустым. Отправь текст вопроса.")
+        return
+    
+    await state.update_data(question=question_text)
+    has_clever_link = (
+        "https://clever.ertelecom.ru/content/space/" in question_text
+        if question_text
+        else False
+    )
     await state.update_data(question_message_id=message.message_id)
 
     state_data = await state.get_data()
