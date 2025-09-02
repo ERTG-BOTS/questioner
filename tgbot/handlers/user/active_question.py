@@ -347,13 +347,20 @@ async def handle_edited_message(
             )
 
             # Уведомление дежурного об изменении сообщения специалистом
-            await message.bot.send_message(
+            notify_message = await message.bot.send_message(
                 chat_id=pair_to_edit.topic_chat_id,
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+
+<i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
+            )
+            await run_delete_timer(
+                chat_id=question.group_id,
+                message_ids=[notify_message.message_id],
+                seconds=30,
             )
 
             logger.info(
@@ -369,13 +376,21 @@ async def handle_edited_message(
             )
 
             # Уведомление дежурного об изменении сообщения специалистом
-            await message.bot.send_message(
+            notify_message = await message.bot.send_message(
                 chat_id=pair_to_edit.topic_chat_id,
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>""",
+Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+
+<i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
+            )
+
+            await run_delete_timer(
+                chat_id=question.group_id,
+                message_ids=[notify_message.message_id],
+                seconds=30,
             )
 
             logger.info(
