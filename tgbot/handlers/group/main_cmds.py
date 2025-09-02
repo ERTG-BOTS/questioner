@@ -20,6 +20,58 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+@main_topic_cmds_router.message(Command("question"), IsMainTopicMessageWithCommand())
+async def question_info(
+    message: Message,
+    command: CommandObject,
+    user: User,
+    questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
+):
+    """Получение информации о вопросе."""
+    if user.Role not in [2, 10]:
+        await message.reply(
+            "Доступ к получению информацию о вопросах есть только у руководителей"
+        )
+        return
+
+    # Валидация аргументов команды
+    if not command.args:
+        await message.reply("Пример команды: /question [токен вопроса]")
+        return
+
+    token = command.args.split(maxsplit=1)[0].lower()
+
+    # Получаем текущие настройки
+    question = await questions_repo.questions.get_question(
+        token=token, group_id=message.chat.id
+    )
+
+    if question:
+        duty = await main_repo.users.get_user(fullname=question.topic_duty_fullname)
+        employee = await main_repo.users.get_user(user_id=question.employee_chat_id)
+
+        response = f"""<b>Информация о вопросе</b>
+
+<code>{token}</code>
+
+Дежурный: <a href='t.me/{duty.Username}'>{question.topic_duty_fullname}</a>
+Вопрошающий: <a href='t.me/{employee.Username}'>{question.employee_fullname}</a>
+
+Текст вопроса:
+<blockquote expandable>{question.question_text}</blockquote>
+
+Возврат: {"Разрешен" if question.allow_return else "Запрещен"}
+
+<blockquote expandable>ID группы: {question.group_id}
+ID темы: {question.topic_id}</blockquote>"""
+
+    else:
+        response = f"Не удалось найти вопрос с токеном {token}"
+
+    await message.reply(response, disable_web_page_preview=True)
+
+
 @main_topic_cmds_router.message(IsMainTopicMessageWithCommand("link"))
 async def link_cmd(message: Message):
     group_link = await message.bot.export_chat_invite_link(chat_id=message.chat.id)
