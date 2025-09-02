@@ -402,14 +402,14 @@ def stop_inactivity_timer(question_token: str):
                 jobstore="redis" if config.tg_bot.use_redis else "default",
             )
         except Exception as e:
-            logger.warning(f"[Задачи] Ошибка при удалении задачи {warning_job_id}: {e}")
+            logger.debug(f"[Задачи] Ошибка при удалении задачи {warning_job_id}: {e}")
 
         try:
             scheduler.remove_job(
                 close_job_id, jobstore="redis" if config.tg_bot.use_redis else "default"
             )
         except Exception as e:
-            logger.warning(f"[Задачи] Ошибка при удалении задачи {close_job_id}: {e}")
+            logger.debug(f"[Задачи] Ошибка при удалении задачи {close_job_id}: {e}")
 
     except Exception as e:
         logger.error(
