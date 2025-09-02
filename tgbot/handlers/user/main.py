@@ -167,7 +167,6 @@ async def question_text(
         has_clever_link = (
             "https://clever.ertelecom.ru/content/space/" in message.caption
         )
-        logger.info("видим капшн")
     else:
         await state.update_data(question=message.text)
         has_clever_link = "https://clever.ertelecom.ru/content/space/" in message.text
