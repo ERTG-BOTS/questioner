@@ -555,9 +555,7 @@ def stop_attention_reminder(question_token: str):
                 f"[Внимание вопросу] Отслеживание выключено для вопроса {question_token}"
             )
         except Exception as e:
-            logger.warning(
-                f"[Задачи] Ошибка при удалении задачи {attention_job_id}: {e}"
-            )
+            logger.debug(f"[Задачи] Ошибка при удалении задачи {attention_job_id}: {e}")
 
     except Exception as e:
         logger.error(
