@@ -170,16 +170,16 @@ async def question_text(
         return
 
     await state.update_data(question=question_text)
-    
+
     has_clever_link = False
     if question_text and "https://clever.ertelecom.ru/content/space/" in question_text:
         extracted_link = extract_clever_link(question_text)
         if extracted_link:
             forbidden_links = [
                 "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/0",
-                "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0", 
+                "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
                 "https://clever.ertelecom.ru/content/space/4",
-                "https://clever.ertelecom.ru/content/space/4/"
+                "https://clever.ertelecom.ru/content/space/4/",
             ]
             has_clever_link = extracted_link not in forbidden_links
     await state.update_data(question_message_id=message.message_id)
@@ -383,9 +383,9 @@ async def clever_link_handler(
     if extracted_link and user.Role != 10:
         forbidden_links = [
             "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/0",
-            "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0", 
+            "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
             "https://clever.ertelecom.ru/content/space/4",
-            "https://clever.ertelecom.ru/content/space/4/"
+            "https://clever.ertelecom.ru/content/space/4/",
         ]
         if extracted_link in forbidden_links:
             await message.answer(
