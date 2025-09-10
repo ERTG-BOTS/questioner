@@ -23,7 +23,6 @@ from tgbot.keyboards.group.main import (
     QuestionAllowReturn,
     QuestionQualityDuty,
     closed_question_duty_kb,
-    duty_start,
     question_quality_duty_kb,
 )
 from tgbot.keyboards.user.main import (
@@ -107,21 +106,26 @@ async def handle_q_message(
                 message_thread_id=question.topic_id,
                 icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
             )
+
+            if user.Username:
+                user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+            else:
+                user_fullname = user.FIO
+
             try:
                 await message.answer(
                     f"""<b>👮‍♂️ Вопрос в работе</b>
 
-На вопрос отвечает <b>{user.FIO}</b>
+На вопрос отвечает <b>{user_fullname}</b>
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
                     disable_web_page_preview=True,
-                    reply_markup=duty_start(user_id=user.ChatId),
                 )
             except TelegramBadRequest:
                 await message.answer(
                     f"""<b>👮‍♂️ Вопрос в работе</b>
 
-На вопрос отвечает <b>{user.FIO}</b>
+На вопрос отвечает <b>{user_fullname}</b>
 
 <blockquote expandable><b>⚒️ Решено:</b> за день {duty_topics_today} / за месяц {duty_topics_month}</blockquote>""",
                     disable_web_page_preview=True,
@@ -131,7 +135,7 @@ async def handle_q_message(
                 chat_id=employee.ChatId,
                 text=f"""<b>👮‍♂️ Вопрос в работе</b>
 
-Дежурный <b>{user.FIO}</b> взял вопрос в работу""",
+Дежурный <b>{user_fullname}</b> взял вопрос в работу""",
                 reply_markup=finish_question_kb(),
             )
 
@@ -616,7 +620,6 @@ async def toggle_activity_status(
         await callback.message.edit_reply_markup(
             reply_markup=activity_status_toggle_kb(
                 token=callback_data.token,
-                user_id=question.employee_chat_id,
                 clever_link=question.clever_link if question.clever_link else None,
                 current_status=new_status,
                 global_status=group_settings.get_setting("activity_status"),

@@ -155,6 +155,7 @@ async def question_text(
     state: FSMContext,
     user: User,
     questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
 ):
     active_questions = await questions_repo.questions.get_active_questions()
     if user.FIO in [q.employee_fullname for q in active_questions]:
@@ -163,11 +164,11 @@ async def question_text(
         return
 
     question_text = message.caption if message.caption else message.text
-    
+
     if not question_text or question_text.strip() == "":
         await message.answer("❌ Вопрос не может быть пустым. Отправь текст вопроса.")
         return
-    
+
     await state.update_data(question=question_text)
     has_clever_link = (
         "https://clever.ertelecom.ru/content/space/" in question_text
@@ -244,19 +245,30 @@ async def question_text(
             reply_markup=cancel_question_kb(token=new_question.token),
         )
 
+        if user.Username:
+            user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+        else:
+            user_fullname = user.FIO
+
+        head = await main_repo.users.get_user(fullname=user.Boss)
+        if head.Username:
+            head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+        else:
+            head_fullname = head.FIO
+
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
-            topic_text = f"""Вопрос задает <b>{user.FIO}</b>
+            topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 Руководитель:</b> {user.Boss}
+<b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
         else:
-            topic_text = f"""Вопрос задает <b>{user.FIO}</b>
+            topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 Руководитель:</b> {user.Boss}
+<b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
 
@@ -267,7 +279,6 @@ async def question_text(
             disable_web_page_preview=True,
             reply_markup=activity_status_toggle_kb(
                 token=new_question.token,
-                user_id=new_question.employee_chat_id,
                 clever_link=clever_link if clever_link else None,
                 current_status=new_question.activity_status_enabled,
                 global_status=group_settings.get_setting("activity_status"),
@@ -331,7 +342,11 @@ async def question_text(
 
 @user_router.message(AskQuestion.clever_link)
 async def clever_link_handler(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+    message: Message,
+    state: FSMContext,
+    user: User,
+    questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
 ):
     active_questions = await questions_repo.questions.get_active_questions()
     if user.FIO in [q.employee_fullname for q in active_questions]:
@@ -404,19 +419,29 @@ async def clever_link_handler(
         reply_markup=cancel_question_kb(token=new_question.token),
     )
 
+    if user.Username:
+        user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+    else:
+        user_fullname = user.FIO
+
+    head = await main_repo.users.get_user(fullname=user.Boss)
+    if head.Username:
+        head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+    else:
+        head_fullname = head.FIO
+
     topic_info_msg = await message.bot.send_message(
         chat_id=target_forum_id,
         message_thread_id=new_topic.message_thread_id,
-        text=f"""Вопрос задает <b>{user.FIO}</b>
+        text=f"""Вопрос задает <b>{user_fullname}</b>
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 Руководитель:</b> {user.Boss}
+<b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
         disable_web_page_preview=True,
         reply_markup=activity_status_toggle_kb(
             token=new_question.token,
-            user_id=new_question.employee_chat_id,
             clever_link=clever_link if clever_link else None,
             current_status=new_question.activity_status_enabled,
             global_status=group_settings.get_setting("activity_status"),
@@ -448,6 +473,7 @@ async def regulation_not_found_handler(
     state: FSMContext,
     user: User,
     questions_repo: RequestsRepo,
+    main_repo: RequestsRepo,
 ):
     """
     Обработчик кнопки "Не нашел" для случая, когда пользователь не смог найти регламент
@@ -509,13 +535,24 @@ async def regulation_not_found_handler(
     if new_question.status == "open" and new_question.activity_status_enabled:
         await start_inactivity_timer(new_question.token, questions_repo)
 
+    if user.Username:
+        user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+    else:
+        user_fullname = user.FIO
+
+    head = await main_repo.users.get_user(fullname=user.Boss)
+    if head.Username:
+        head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+    else:
+        head_fullname = head.FIO
+
     # Формируем текст сообщения с указанием "не нашел" в регламенте
-    topic_text = f"""Вопрос задает <b>{user.FIO}</b>
+    topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
 Специалист не нашел регламент
 
 <blockquote expandable><b>👔 Должность:</b> {user.Position}
-<b>👑 Руководитель:</b> {user.Boss}
+<b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
 
@@ -527,7 +564,6 @@ async def regulation_not_found_handler(
         disable_web_page_preview=True,
         reply_markup=activity_status_toggle_kb(
             token=new_question.token,
-            user_id=new_question.employee_chat_id,
             current_status=new_question.activity_status_enabled,
             global_status=group_settings.get_setting("activity_status"),
         ),

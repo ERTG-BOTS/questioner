@@ -17,36 +17,13 @@ class FinishedQuestion(CallbackData, prefix="finished_q"):
     action: str
 
 
-def duty_start(
-    user_id: int | str,
-) -> InlineKeyboardMarkup:
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text="💬 ЛС дежурного",
-                url=f"tg://user?id={user_id}",
-            ),
-        ]
-    ]
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-
-    return keyboard
-
-
-def reopened_question_kb(user_id: int | str) -> InlineKeyboardMarkup:
+def reopened_question_kb() -> InlineKeyboardMarkup:
     """
     Клавиатура с освобождением вопроса после переоткрытия
 
     :return: Объект встроенной клавиатуры для возврата главного меню
     """
     buttons = [
-        [
-            InlineKeyboardButton(
-                text="💬 ЛС дежурного",
-                url=f"tg://user?id={user_id}",
-            ),
-        ],
         [
             InlineKeyboardButton(
                 text="🕊️ Освободить вопрос",

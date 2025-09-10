@@ -104,7 +104,7 @@ async def return_finished_q(
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
-            reply_markup=reopened_question_kb(user_id=duty.ChatId),
+            reply_markup=reopened_question_kb(),
             disable_web_page_preview=True,
         )
         logger.info(
@@ -318,7 +318,7 @@ async def return_q_confirm(
 
 <b>❓ Изначальный вопрос:</b>
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
-            reply_markup=reopened_question_kb(user_id=duty.ChatId),
+            reply_markup=reopened_question_kb(),
             disable_web_page_preview=True,
         )
     elif user.FIO in [d.employee_fullname for d in active_questions]:
