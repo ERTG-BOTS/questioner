@@ -180,6 +180,7 @@ async def question_text(
                 "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
                 "https://clever.ertelecom.ru/content/space/4",
                 "https://clever.ertelecom.ru/content/space/4/",
+                "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/1",
             ]
             has_clever_link = extracted_link not in forbidden_links
     await state.update_data(question_message_id=message.message_id)
@@ -386,6 +387,7 @@ async def clever_link_handler(
             "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
             "https://clever.ertelecom.ru/content/space/4",
             "https://clever.ertelecom.ru/content/space/4/",
+            "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/1",
         ]
         if extracted_link in forbidden_links:
             await message.answer(
