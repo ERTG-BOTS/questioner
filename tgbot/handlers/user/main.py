@@ -442,7 +442,7 @@ async def clever_link_handler(
     )
 
 
-@user_router.callback_query(AskQuestionMenu.filter(F.found_regulation == False))
+@user_router.callback_query(AskQuestionMenu.filter(not F.found_regulation))
 async def regulation_not_found_handler(
     callback: CallbackQuery,
     state: FSMContext,
