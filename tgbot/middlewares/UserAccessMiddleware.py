@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from infrastructure.database.models import Question, User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.keyboards.group.events import on_user_leave_kb
+from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
 
 setup_logging()
@@ -84,7 +85,7 @@ class UserAccessMiddleware(BaseMiddleware):
             await self._ban_user_with_notification(
                 event,
                 chat,
-                f"Пользователь <code>{user.FIO}</code> заблокирован\nПричина: недостаточно прав для доступа к чату",
+                f"Пользователь <code>{short_name(user.FIO)}</code> заблокирован\nПричина: недостаточно прав для доступа к чату",
                 change_role=True,
             )
 
@@ -181,7 +182,7 @@ class UserAccessMiddleware(BaseMiddleware):
                 message_thread_id=question.topic_id,
                 text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Дежурный <b>{user.FIO}</b> был исключен из-за недостатка прав
+Дежурный <b>{short_name(user.FIO)}</b> был исключен из-за недостатка прав
 Для взятия вопроса в работу напиши сообщение в эту тему""",
             )
 
@@ -190,11 +191,11 @@ class UserAccessMiddleware(BaseMiddleware):
                 chat_id=question.employee_chat_id,
                 text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
+Дежурный <b>{short_name(user.FIO)}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
 
             logger.info(
-                f"[Вопрос] - [Освобождение] Дежурный {user.FIO} ({user.ChatId}) "
+                f"[Вопрос] - [Освобождение] Дежурный {short_name(user.FIO)} ({user.ChatId}) "
                 f"исключен и освободил вопрос {question.token}"
             )
 

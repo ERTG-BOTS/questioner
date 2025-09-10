@@ -10,6 +10,7 @@ from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.filters.topic import IsTopicMessageWithCommand
 from tgbot.keyboards.group.main import FinishedQuestion, question_quality_duty_kb
 from tgbot.keyboards.user.main import question_quality_specialist_kb
+from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     start_attention_reminder,
@@ -117,7 +118,7 @@ async def end_q_cmd(
 
             await message.bot.send_message(
                 chat_id=employee.ChatId,
-                text=f"""Дежурный <b>{user.FIO}</b> закрыл вопрос
+                text=f"""Дежурный <b>{short_name(user.FIO)}</b> закрыл вопрос
 Оцени, помогли ли тебе решить его""",
                 reply_markup=question_quality_specialist_kb(token=question.token),
             )
@@ -198,7 +199,7 @@ async def release_q_cmd(
                 chat_id=employee.ChatId,
                 text=f"""<b>🕊️ Дежурный покинул чат</b>
 
-Дежурный <b>{user.FIO}</b> освободил вопрос. Ожидай повторного подключения старшего""",
+Дежурный <b>{short_name(user.FIO)}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
             await start_attention_reminder(question.token, questions_repo)
             logger.info(

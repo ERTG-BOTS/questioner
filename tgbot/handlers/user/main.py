@@ -19,7 +19,7 @@ from tgbot.keyboards.user.main import (
     question_ask_kb,
     user_kb,
 )
-from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link
+from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link, short_name
 from tgbot.misc.states import AskQuestion
 from tgbot.services.g_sheets import get_target_forum
 from tgbot.services.logger import setup_logging
@@ -56,7 +56,7 @@ async def main_cmd(
 
     if user:
         await message.answer(
-            f"""👋 Привет, <b>{user.FIO}</b>!
+            f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
 
 Я - бот-вопросник
 
@@ -104,7 +104,7 @@ async def main_cb(
     state_data = await state.get_data()
 
     await callback.message.edit_text(
-        f"""Привет, <b>{user.FIO}</b>!
+        f"""Привет, <b>{short_name(user.FIO)}</b>!
 
 Я - бот-вопросник
 
@@ -220,9 +220,9 @@ async def question_text(
 
         new_topic = await message.bot.create_forum_topic(
             chat_id=target_forum_id,
-            name=f"{user.Division} | {user.FIO}"
+            name=f"{user.Division} | {short_name(user.FIO)}"
             if group_settings.get_setting("show_division")
-            else user.FIO,
+            else short_name(user.FIO),
             icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
         )  # Создание темы
 
@@ -246,15 +246,15 @@ async def question_text(
         )
 
         if user.Username:
-            user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+            user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
         else:
-            user_fullname = user.FIO
+            user_fullname = short_name(user.FIO)
 
         head = await main_repo.users.get_user(fullname=user.Boss)
         if head.Username:
-            head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+            head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
         else:
-            head_fullname = head.FIO
+            head_fullname = short_name(head.FIO)
 
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
@@ -394,9 +394,9 @@ async def clever_link_handler(
 
     new_topic = await message.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {user.FIO}"
+        name=f"{user.Division} | {short_name(user.FIO)}"
         if group_settings.get_setting("show_division")
-        else user.FIO,
+        else short_name(user.FIO),
         icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )  # Создание темы
 
@@ -420,15 +420,15 @@ async def clever_link_handler(
     )
 
     if user.Username:
-        user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+        user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
     else:
-        user_fullname = user.FIO
+        user_fullname = short_name(user.FIO)
 
     head = await main_repo.users.get_user(fullname=user.Boss)
     if head.Username:
-        head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+        head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
     else:
-        head_fullname = head.FIO
+        head_fullname = short_name(head.FIO)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=target_forum_id,
@@ -504,9 +504,9 @@ async def regulation_not_found_handler(
     # Создаем новую тему
     new_topic = await callback.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {user.FIO}"
+        name=f"{user.Division} | {short_name(user.FIO)}"
         if group_settings.get_setting("show_division")
-        else user.FIO,
+        else short_name(user.FIO),
         icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )
 
@@ -536,15 +536,15 @@ async def regulation_not_found_handler(
         await start_inactivity_timer(new_question.token, questions_repo)
 
     if user.Username:
-        user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+        user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
     else:
-        user_fullname = user.FIO
+        user_fullname = short_name(user.FIO)
 
     head = await main_repo.users.get_user(fullname=user.Boss)
     if head.Username:
-        head_fullname = f"<a href='t.me/{head.Username}'>{head.FIO}</a>"
+        head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
     else:
-        head_fullname = head.FIO
+        head_fullname = short_name(head.FIO)
 
     # Формируем текст сообщения с указанием "не нашел" в регламенте
     topic_text = f"""Вопрос задает <b>{user_fullname}</b>
@@ -688,7 +688,7 @@ async def default_message_handler(
     )
 
     await message.answer(
-        f"""👋 Привет, <b>{user.FIO}</b>!
+        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
 
 Я - бот-вопросник
 

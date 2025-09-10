@@ -8,6 +8,7 @@ from infrastructure.database.models import User
 from infrastructure.database.repo.requests import RequestsRepo
 from tgbot.keyboards.group.events import RemovedUser, on_user_leave_kb
 from tgbot.misc.dicts import group_admin_titles, role_names
+from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
 
 group_events_router = Router()
@@ -29,7 +30,7 @@ async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
             chat_id=event.chat.id,
             text=f"""<b>🙅‍♂️ Исключение</b>
 
-Пользователь <code>{user.FIO}</code> исключен
+Пользователь <code>{short_name(user.FIO)}</code> исключен
 Причина: недостаточно прав для входа""",
             reply_markup=on_user_leave_kb(
                 user_id=event.new_chat_member.user.id, change_role=True
@@ -41,7 +42,7 @@ async def on_user_join(event: ChatMemberUpdated, main_repo: RequestsRepo):
         chat_id=event.chat.id,
         text=f"""<b>❤️‍ Новый пользователь</b>
 
-<b>{user.FIO}</b> присоединился к группе
+<b>{short_name(user.FIO)}</b> присоединился к группе
 
 <b>👔 Должность:</b> {user.Position}
 <b>👑 Руководитель:</b> {user.Boss}
@@ -72,7 +73,7 @@ async def on_user_leave(event: ChatMemberUpdated, main_repo: RequestsRepo):
         await event.answer(
             text=f"""<b>🚪 Выход</b>
 
-Пользователь <b>{left_user.FIO}</b> вышел из группы""",
+Пользователь <b>{short_name(left_user.FIO)}</b> вышел из группы""",
             reply_markup=on_user_leave_kb(user_id=left_user_id),
         )
     else:
@@ -80,7 +81,7 @@ async def on_user_leave(event: ChatMemberUpdated, main_repo: RequestsRepo):
         await event.answer(
             text=f"""<b>🙅‍♂️ Исключение</b>
 
-Пользователь <b>{left_user.FIO}</b> был исключен администратором <code>{action_user.FIO}</code>""",
+Пользователь <b>{short_name(left_user.FIO)}</b> был исключен администратором <code>{action_user.FIO}</code>""",
             reply_markup=on_user_leave_kb(user_id=left_user_id),
         )
 
@@ -111,7 +112,7 @@ async def change_user_role(
         await callback.message.edit_text(
             f"""<b>🟢 Разблокировка</b>
 
-Администратор <b>{user.FIO}</b> разблокировал пользователя <b>{updated_user.FIO}</b>
+Администратор <b>{short_name(user.FIO)}</b> разблокировал пользователя <b>{updated_user.FIO}</b>
 
 Теперь пользователь имеет роль <b>{role_names[updated_user.Role]}</b>
 

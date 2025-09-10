@@ -31,7 +31,7 @@ from tgbot.keyboards.user.main import (
     finish_question_kb,
 )
 from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
-from tgbot.misc.helpers import check_premium_emoji
+from tgbot.misc.helpers import check_premium_emoji, short_name
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     restart_inactivity_timer,
@@ -108,7 +108,9 @@ async def handle_q_message(
             )
 
             if user.Username:
-                user_fullname = f"<a href='t.me/{user.Username}'>{user.FIO}</a>"
+                user_fullname = (
+                    f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
+                )
             else:
                 user_fullname = user.FIO
 
@@ -362,7 +364,7 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{user.FIO}</b> отредактировал сообщение""",
+Дежурный <b>{short_name(user.FIO)}</b> отредактировал сообщение""",
                 reply_to_message_id=pair_to_edit.user_message_id,
             )
 
@@ -383,7 +385,7 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{user.FIO}</b> отредактировал сообщение""",
+Дежурный <b>{short_name(user.FIO)}</b> отредактировал сообщение""",
                 reply_to_message_id=pair_to_edit.user_message_id,
             )
 
@@ -439,9 +441,9 @@ async def return_q_duty(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {user.FIO}"
+            name=f"{user.Division} | {short_name(user.FIO)}"
             if group_settings.get_setting("show_division")
-            else user.FIO,
+            else short_name(user.FIO),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
@@ -456,7 +458,7 @@ async def return_q_duty(
             chat_id=question.employee_chat_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Дежурный <b>{user.FIO}</b> переоткрыл вопрос:
+Дежурный <b>{short_name(user.FIO)}</b> переоткрыл вопрос:
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
             reply_markup=finish_question_kb(),
         )
@@ -538,7 +540,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{short_name(user.FIO)}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
                     token=callback_data.token, allow_return=question.allow_return
@@ -548,7 +550,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Дежурный <b>{user.FIO}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{short_name(user.FIO)}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
                     token=callback_data.token, allow_return=question.allow_return

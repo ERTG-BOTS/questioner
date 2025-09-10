@@ -44,3 +44,14 @@ def extract_clever_link(message_text):
     if match:
         return match.group(0)
     return None
+
+
+def short_name(full_name: str) -> str:
+    """Extract short name from full name."""
+    # Remove date info in parentheses if present
+    clean_name = full_name.split("(")[0].strip()
+    parts = clean_name.split()
+
+    if len(parts) >= 2:
+        return " ".join(parts[:2])
+    return clean_name

@@ -18,6 +18,7 @@ from tgbot.keyboards.user.main import (
     questions_list_kb,
     user_kb,
 )
+from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
 
 employee_return_q_router = Router()
@@ -73,9 +74,9 @@ async def return_finished_q(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {user.FIO}"
+            name=f"{user.Division} | {short_name(user.FIO)}"
             if group_settings.get_setting("show_division")
-            else user.FIO,
+            else short_name(user.FIO),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
@@ -99,7 +100,7 @@ async def return_finished_q(
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос сразу после закрытия
+Специалист <b>{short_name(user.FIO)}</b> переоткрыл вопрос сразу после закрытия
 {duty_info}
 
 <b>❓ Изначальный вопрос:</b>
@@ -282,9 +283,9 @@ async def return_q_confirm(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {user.FIO}"
+            name=f"{user.Division} | {short_name(user.FIO)}"
             if group_settings.get_setting("show_division")
-            else user.FIO,
+            else short_name(user.FIO),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
 
@@ -313,7 +314,7 @@ async def return_q_confirm(
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{user.FIO}</b> переоткрыл вопрос из истории вопросов
+Специалист <b>{short_name(user.FIO)}</b> переоткрыл вопрос из истории вопросов
 {duty_info}
 
 <b>❓ Изначальный вопрос:</b>

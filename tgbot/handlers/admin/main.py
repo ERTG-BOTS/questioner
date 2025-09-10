@@ -19,6 +19,7 @@ from tgbot.keyboards.admin.main import (
 )
 from tgbot.keyboards.user.main import user_kb
 from tgbot.misc.dicts import role_names
+from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
 
 admin_router = Router()
@@ -52,7 +53,7 @@ async def admin_start(
             f"[Админ] {message.from_user.username} ({message.from_user.id}): Открыто меню пользователя"
         )
         await message.answer(
-            f"""👋 Привет, <b>{user.FIO}</b>!
+            f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
 
 <b>🎭 Твоя временная роль:</b> {role_text}
 
@@ -68,7 +69,7 @@ async def admin_start(
         return
 
     await message.answer(
-        f"""👋 Привет, <b>{user.FIO}</b>!
+        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
 
 <b>🎭 Твоя роль:</b> {role_names[user.Role]}
 
@@ -111,7 +112,7 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) 
     await state.clear()
 
     await callback.message.edit_text(
-        f"""Привет, <b>{user.FIO}</b>!
+        f"""Привет, <b>{short_name(user.FIO)}</b>!
 
 <b>🎭 Твоя роль:</b> {role_names[user.Role]}
 
@@ -187,7 +188,7 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
     await state.clear()
 
     await message.answer(
-        f"""👋 Привет, <b>{user.FIO}</b>!
+        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
 
 <b>🎭 Твоя роль:</b> {role_names[user.Role]}
 

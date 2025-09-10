@@ -25,7 +25,7 @@ from tgbot.keyboards.user.main import (
     question_quality_specialist_kb,
 )
 from tgbot.middlewares.MessagePairingMiddleware import store_message_connection
-from tgbot.misc.helpers import check_premium_emoji
+from tgbot.misc.helpers import check_premium_emoji, short_name
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     restart_inactivity_timer,
@@ -74,7 +74,7 @@ async def active_question_end(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
     
-Специалист <b>{user.FIO}</b> закрыл вопрос
+Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -88,7 +88,7 @@ async def active_question_end(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{user.FIO}</b> закрыл вопрос
+Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -102,7 +102,7 @@ async def active_question_end(
                     message_thread_id=question.topic_id,
                     text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{user.FIO}</b> закрыл вопрос
+Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
 Оцени, мог ли специалист решить его самостоятельно""",
                     reply_markup=question_quality_duty_kb(
                         token=question.token,
@@ -352,7 +352,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+Специалист <b>{short_name(user.FIO)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
 
 <i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
@@ -381,7 +381,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{user.FIO}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+Специалист <b>{short_name(user.FIO)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
 
 <i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
@@ -412,9 +412,7 @@ async def handle_edited_message(
         )
 
 
-@user_q_router.callback_query(
-    QuestionQualitySpecialist.filter(not F.return_question)
-)
+@user_q_router.callback_query(QuestionQualitySpecialist.filter(not F.return_question))
 async def question_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
