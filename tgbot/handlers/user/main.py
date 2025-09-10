@@ -170,11 +170,18 @@ async def question_text(
         return
 
     await state.update_data(question=question_text)
-    has_clever_link = (
-        "https://clever.ertelecom.ru/content/space/" in question_text
-        if question_text
-        else False
-    )
+
+    has_clever_link = False
+    if question_text and "https://clever.ertelecom.ru/content/space/" in question_text:
+        extracted_link = extract_clever_link(question_text)
+        if extracted_link:
+            forbidden_links = [
+                "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/0",
+                "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
+                "https://clever.ertelecom.ru/content/space/4",
+                "https://clever.ertelecom.ru/content/space/4/",
+            ]
+            has_clever_link = extracted_link not in forbidden_links
     await state.update_data(question_message_id=message.message_id)
 
     state_data = await state.get_data()
@@ -355,7 +362,6 @@ async def clever_link_handler(
         return
 
     state_data = await state.get_data()
-    await state.clear()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
     if (
@@ -372,7 +378,28 @@ async def clever_link_handler(
         )
         return
 
-    clever_link = extract_clever_link(message.text)
+    # Проверяем на запрещенные ссылки
+    extracted_link = extract_clever_link(message.text)
+    if extracted_link and user.Role != 10:
+        forbidden_links = [
+            "https://clever.ertelecom.ru/content/space/4/wiki/1808/page/0",
+            "https://clever.ertelecom.ru/content/space/4/wiki/10259/page/0",
+            "https://clever.ertelecom.ru/content/space/4",
+            "https://clever.ertelecom.ru/content/space/4/",
+        ]
+        if extracted_link in forbidden_links:
+            await message.answer(
+                """<b>🗃️ Регламент</b>
+
+Сообщение <b>содержит запрещенную ссылку</b> 🥺
+
+Отправь корректную ссылку на регламент из клевера, по которому у тебя вопрос""",
+                reply_markup=back_kb(),
+            )
+            return
+
+    clever_link = extracted_link
+    await state.clear()
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
         employee_fullname=user.FIO
     )
