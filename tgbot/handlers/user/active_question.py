@@ -412,7 +412,7 @@ async def handle_edited_message(
         )
 
 
-@user_q_router.callback_query(QuestionQualitySpecialist.filter(not F.return_question))
+@user_q_router.callback_query(QuestionQualitySpecialist.filter(F.return_question == False))
 async def question_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,

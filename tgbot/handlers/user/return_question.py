@@ -43,6 +43,7 @@ async def return_finished_q(
     """
     Возврат вопроса специалистом по клику на клавиатуру после закрытия вопроса.
     """
+    logger.info("we are here")
     await state.clear()
 
     active_questions: Sequence[
