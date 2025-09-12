@@ -172,7 +172,7 @@ async def question_text(
     await state.update_data(question=question_text)
 
     has_clever_link = False
-    if question_text and "https://clever.ertelecom.ru/content/space/" in question_text:
+    if question_text and "clever.ertelecom.ru/content/space/" in question_text:
         extracted_link = extract_clever_link(question_text)
         if extracted_link:
             forbidden_links = [
@@ -375,7 +375,7 @@ async def clever_link_handler(
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
     if (
-        "https://clever.ertelecom.ru/content/space/" not in message.text
+        "clever.ertelecom.ru/content/space/" not in message.text
         and user.Role != 10
     ):
         await message.answer(
