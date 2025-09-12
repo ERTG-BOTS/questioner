@@ -187,7 +187,7 @@ class DbConfig:
         Конструирует и возвращает SQLAlchemy-ссылку для подключения к базе данных
         """
         connection_string = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"DRIVER={{ODBC Driver 18 for SQL Server}};"
             f"SERVER={self.host};"
             f"DATABASE={db_name if db_name else self.questioner_db};"
             f"UID={self.user};"
