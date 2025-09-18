@@ -374,10 +374,7 @@ async def clever_link_handler(
     state_data = await state.get_data()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-    if (
-        "clever.ertelecom.ru/content/space/" not in message.text
-        and user.Role != 10
-    ):
+    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
         await message.answer(
             """<b>🗃️ Регламент</b>
 

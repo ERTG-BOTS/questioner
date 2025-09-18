@@ -357,7 +357,9 @@ def activity_status_toggle_kb(
             [
                 InlineKeyboardButton(
                     text=button_text,
-                    callback_data=ActivityStatusToggle(action=action, token=token).pack(),
+                    callback_data=ActivityStatusToggle(
+                        action=action, token=token
+                    ).pack(),
                 ),
             ]
         ]
