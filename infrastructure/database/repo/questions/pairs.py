@@ -27,7 +27,7 @@ class MessagesPairsRepo:
         Add a new message connection between user chat and forum topic
 
         Args:
-            user_chat_id: User chat ID
+            user_chat_id: Employee chat ID
             user_message_id: Message ID in user chat
             topic_chat_id: Forum chat ID
             topic_message_id: Message ID in forum topic

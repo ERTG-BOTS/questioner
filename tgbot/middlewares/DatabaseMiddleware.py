@@ -5,7 +5,8 @@ from aiogram import BaseMiddleware, Bot
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.exc import DBAPIError, DisconnectionError, OperationalError
 
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.config import Config
 from tgbot.services.logger import setup_logging
 
@@ -44,13 +45,13 @@ class DatabaseMiddleware(BaseMiddleware):
                 async with self.main_session_pool() as main_session:
                     async with self.questioner_session_pool() as questioner_session:
                         # Create repositories for different databases
-                        main_repo = RequestsRepo(main_session)  # For STPMain DB
-                        questioner_repo = RequestsRepo(
+                        main_repo = MainRequestsRepo(main_session)  # For STPMain DB
+                        questioner_repo = QuestionsRequestsRepo(
                             questioner_session
                         )  # For QuestionerBot DB
 
                         # Get user from database
-                        user = await main_repo.users.get_user(
+                        user = await main_repo.employee.get_user(
                             user_id=event.from_user.id
                         )
 

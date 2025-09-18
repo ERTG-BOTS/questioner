@@ -6,7 +6,7 @@ from typing import Optional, Sequence, TypedDict, Unpack
 import pytz
 from sqlalchemy import and_, extract, func, or_, select
 
-from infrastructure.database.models import Question, User
+from infrastructure.database.models import Question, Employee
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.config import load_config
 from tgbot.services.logger import setup_logging
@@ -22,10 +22,8 @@ class QuestionUpdateParams(TypedDict, total=False):
 
     group_id: int
     topic_id: int
-    topic_duty_fullname: str | None
-    employee_fullname: str
-    employee_chat_id: int
-    employee_division: str | None
+    duty_userid: int | None
+    employee_userid: int
     question_text: str | None
     start_time: datetime
     end_time: datetime
@@ -42,9 +40,7 @@ class QuestionsRepo(BaseRepo):
         self,
         group_id: int,
         topic_id: int,
-        employee_fullname: str,
-        employee_chat_id: int,
-        employee_division: str,
+        employee_userid: int,
         question_text: str,
         start_time: date,
         clever_link: str,
@@ -54,9 +50,7 @@ class QuestionsRepo(BaseRepo):
         Добавление нового вопроса
         :param group_id: Идентификатор группы Telegram, в которой вопрос решается
         :param topic_id: Идентификатор топика Telegram, в котором вопрос решается
-        :param employee_chat_id: Идентификатор Telegram специалиста, задавшего вопрос
-        :param employee_fullname: ФИО специалиста, задавшего вопрос
-        :param employee_division: Направление специалиста, задавшего вопрос
+        :param employee_userid: Идентификатор Telegram специалиста, задавшего вопрос
         :param question_text: Текст заданного вопроса
         :param start_time: Время открытия вопроса
         :param clever_link: Ссылка на базу знаний от специалиста
@@ -69,9 +63,7 @@ class QuestionsRepo(BaseRepo):
             token=token,
             group_id=group_id,
             topic_id=topic_id,
-            employee_fullname=employee_fullname,
-            employee_chat_id=employee_chat_id,
-            employee_division=employee_division,
+            employee_userid=employee_userid,
             question_text=question_text,
             start_time=start_time,
             clever_link=clever_link,
@@ -180,21 +172,21 @@ class QuestionsRepo(BaseRepo):
         return questions
 
     async def get_questions_count_today(
-        self, employee_fullname: str = None, duty_fullname: str = None
+        self, employee_userid: int = None, duty_userid: int = None
     ) -> int:
         """
         Получение кол-ва вопросов специалиста за последний день. Может использоваться как для поиска вопросов специалиста, так и для вопросов дежурного
-        :param employee_fullname: ФИО искомого специалиста
-        :param duty_fullname: ФИО искомого дежурного
+        :param employee_userid: Идентификатор Telegram искомого специалиста
+        :param duty_userid: Идентификатор Telegram искомого дежурного
         :return: Кол-во вопросов за последний день
         """
         today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")).date()
         tomorrow = today + timedelta(days=1)
 
-        if employee_fullname:
+        if employee_userid:
             stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.employee_fullname == employee_fullname,
+                    Question.employee_userid == employee_userid,
                     Question.start_time >= today,
                     Question.start_time < tomorrow,
                 )
@@ -202,7 +194,7 @@ class QuestionsRepo(BaseRepo):
         else:
             stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.topic_duty_fullname == duty_fullname,
+                    Question.duty_userid == duty_userid,
                     Question.start_time >= today,
                     Question.start_time < tomorrow,
                 )
@@ -211,12 +203,12 @@ class QuestionsRepo(BaseRepo):
         return result.scalar() or 0
 
     async def get_questions_count_last_month(
-        self, employee_fullname: str = None, duty_fullname: str = None
+        self, employee_userid: str = None, duty_userid: str = None
     ) -> int:
         """
         Получение кол-ва вопросов специалиста за последний месяц. Может использоваться как для поиска вопросов специалиста, так и для вопросов дежурного
-        :param employee_fullname: ФИО искомого специалиста
-        :param duty_fullname: ФИО искомого дежурного
+        :param employee_userid: Идентификатор Telegram искомого специалиста
+        :param duty_userid: Идентификатор Telegram искомого дежурного
         :return: Кол-во вопросов за последний месяц
         """
         today = datetime.now(tz=pytz.timezone("Asia/Yekaterinburg"))
@@ -231,10 +223,10 @@ class QuestionsRepo(BaseRepo):
 
         first_day_next_month = datetime(next_year, next_month, 1).date()
 
-        if employee_fullname:
+        if employee_userid:
             stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.employee_fullname == employee_fullname,
+                    Question.employee_userid == employee_userid,
                     Question.start_time >= first_day_current_month,
                     Question.start_time < first_day_next_month,
                 )
@@ -242,7 +234,7 @@ class QuestionsRepo(BaseRepo):
         else:
             stmt = select(func.count(Question.token)).where(
                 and_(
-                    Question.topic_duty_fullname == duty_fullname,
+                    Question.duty_userid == duty_userid,
                     Question.start_time >= first_day_current_month,
                     Question.start_time < first_day_next_month,
                 )
@@ -267,7 +259,7 @@ class QuestionsRepo(BaseRepo):
             select(Question)
             .where(
                 and_(
-                    Question.employee_chat_id == employee_chat_id,
+                    Question.employee_userid == employee_chat_id,
                     Question.question_text.is_not(None),
                     Question.status == "closed",
                     Question.end_time.is_not(None),
@@ -308,7 +300,7 @@ class QuestionsRepo(BaseRepo):
 
     async def get_top_users_by_division(
         self, division: str, main_repo, limit: int = 15
-    ) -> Sequence[User]:
+    ) -> Sequence[Employee]:
         """
         Получение топ-15 пользователей по количеству вопросов в рамках указанного направления
         :param division: Направление для фильтрации (например, "НЦК")
@@ -328,19 +320,22 @@ class QuestionsRepo(BaseRepo):
         for question in questions:
             try:
                 # Проверяем, есть ли пользователь в кеше
-                if question.employee_chat_id not in processed_users:
-                    user: User = await main_repo.users.get_user(
-                        user_id=question.employee_chat_id
+                if question.employee_userid not in processed_users:
+                    user: Employee = await main_repo.employee.get_user(
+                        user_id=question.employee_userid
                     )
-                    processed_users[question.employee_chat_id] = user
+                    processed_users[question.employee_userid] = user
                 else:
-                    user: User = processed_users[question.employee_chat_id]
+                    user: Employee = processed_users[question.employee_userid]
 
                 # Фильтруем по направлению
-                if user and division.upper() in user.Division.upper():
-                    if user.FIO not in user_question_counts:
-                        user_question_counts[user.FIO] = {"user": user, "count": 0}
-                    user_question_counts[user.FIO]["count"] += 1
+                if user and division.upper() in user.division.upper():
+                    if user.fullname not in user_question_counts:
+                        user_question_counts[user.fullname] = {
+                            "user": Employee,
+                            "count": 0,
+                        }
+                    user_question_counts[user.fullname]["count"] += 1
 
             except Exception as e:
                 logger.warning(

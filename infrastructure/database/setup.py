@@ -13,7 +13,10 @@ def create_engine(db: DbConfig, db_name: str, echo=False):
         echo=echo,
         connect_args={
             "autocommit": False,
-            "isolation_level": None,
+            "charset": "utf8mb4",
+            "use_unicode": True,
+            "sql_mode": "TRADITIONAL",
+            "connect_timeout": 30,
         },
         pool_pre_ping=True,
         pool_recycle=1800,

@@ -77,47 +77,6 @@ class ForumsConfig:
 
 
 @dataclass
-class GoogleSheetsConfig:
-    """
-    Класс конфигурации GoogleSheets.
-
-    Attributes
-    ----------
-    ntp_trainee_spreadsheet_id : str
-        Идентификатор таблицы НТП
-    ntp_trainee_sheet_name : str
-        Название листа в таблице НТП
-    nck_trainee_spreadsheet_id : str
-        Идентификатор таблицы НЦК
-    nck_trainee_sheet_name : str
-        Название листа в таблице НЦК
-    """
-
-    ntp_trainee_spreadsheet_id: str
-    ntp_trainee_sheet_name: str
-
-    nck_trainee_spreadsheet_id: str
-    nck_trainee_sheet_name: str
-
-    @staticmethod
-    def from_env(env: Env):
-        """
-        Создает объект GoogleSheets из переменных окружения.
-        """
-        ntp_trainee_spreadsheet_id = env.str("NTP_TRAINEE_SPREADSHEET_ID")
-        ntp_trainee_sheet_name = env.str("NTP_TRAINEE_SHEET_NAME")
-        nck_trainee_spreadsheet_id = env.str("NCK_TRAINEE_SPREADSHEET_ID")
-        nck_trainee_sheet_name = env.str("NCK_TRAINEE_SHEET_NAME")
-
-        return GoogleSheetsConfig(
-            ntp_trainee_spreadsheet_id=ntp_trainee_spreadsheet_id,
-            ntp_trainee_sheet_name=ntp_trainee_sheet_name,
-            nck_trainee_spreadsheet_id=nck_trainee_spreadsheet_id,
-            nck_trainee_sheet_name=nck_trainee_sheet_name,
-        )
-
-
-@dataclass
 class QuestionerConfig:
     """
     Класс конфигурации QuestionerConfig.
@@ -181,31 +140,25 @@ class DbConfig:
     def construct_sqlalchemy_url(
         self,
         db_name=None,
-        driver="aioodbc",
+        driver="aiomysql",
     ) -> URL:
         """
-        Конструирует и возвращает SQLAlchemy-ссылку для подключения к базе данных
+        Constructs and returns SQLAlchemy URL for MariaDB database connection
         """
-        connection_string = (
-            f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-            f"SERVER={self.host};"
-            f"DATABASE={db_name if db_name else self.questioner_db};"
-            f"UID={self.user};"
-            f"PWD={self.password};"
-            f"TrustServerCertificate=yes;"
-            f"MultipleActiveResultSets=yes;"
-            f"MARS_Connection=yes;"
-            f"Connection Timeout=30;"
-            f"Command Timeout=60;"
-            f"Pooling=yes;"
-            f"Max Pool Size=100;"
-            f"Min Pool Size=5;"
-            f"TCP KeepAlive=yes;"
-            f"ConnectRetryCount=3;"
-            f"ConnectRetryInterval=10;"
-        )
         connection_url = URL.create(
-            f"mssql+{driver}", query={"odbc_connect": connection_string}
+            f"mysql+{driver}",
+            username=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port if hasattr(self, "port") and self.port else 3306,
+            database=db_name,
+            query={
+                "charset": "utf8mb4",
+                "use_unicode": "1",
+                "sql_mode": "TRADITIONAL",
+                "connect_timeout": "30",
+                "autocommit": "false",
+            },
         )
 
         return connection_url
@@ -219,8 +172,8 @@ class DbConfig:
         user = env.str("DB_USER")
         password = env.str("DB_PASS")
 
-        main_db = env.str("DB_MAIN_NAME")
-        questioner_db = env.str("DB_QUESTIONER_NAME")
+        main_db = env.str("MAIN_DB_NAME")
+        questioner_db = env.str("QUESTIONS_DB_NAME")
 
         return DbConfig(
             host=host,
@@ -298,7 +251,6 @@ class Config:
     """
 
     tg_bot: TgBot
-    gsheets: GoogleSheetsConfig
     forum: ForumsConfig
     questioner: QuestionerConfig
     db: DbConfig
@@ -320,7 +272,6 @@ def load_config(path: str = None) -> Config:
 
     return Config(
         tg_bot=TgBot.from_env(env),
-        gsheets=GoogleSheetsConfig.from_env(env),
         forum=ForumsConfig.from_env(env),
         questioner=QuestionerConfig.from_env(env),
         db=DbConfig.from_env(env),

@@ -9,8 +9,9 @@ from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import Sequence
 
-from infrastructure.database.models import MessagesPair, Question
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import MessagesPair, Question, Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.config import load_config
 from tgbot.keyboards.group.main import closed_question_duty_kb
 from tgbot.keyboards.user.main import closed_question_specialist_kb
@@ -158,7 +159,7 @@ async def remove_old_topics(bot: Bot, session_pool):
     try:
         # Create a session and RequestsRepo instance
         async with session_pool() as session:
-            questions_repo = RequestsRepo(session)
+            questions_repo = QuestionsRequestsRepo(session)
 
             old_questions: Sequence[
                 Question
@@ -216,7 +217,7 @@ async def send_inactivity_warning_job(question_token: str):
 
         # Create a fresh session for this job
         async with questioner_session_pool() as session:
-            questions_repo = RequestsRepo(session=session)
+            questions_repo = QuestionsRequestsRepo(session=session)
             await send_inactivity_warning(bot, question_token, questions_repo)
 
     except Exception as e:
@@ -235,7 +236,7 @@ async def auto_close_question_job(question_token: str):
 
         # Create a fresh session for this job
         async with questioner_session_pool() as session:
-            questions_repo = RequestsRepo(session=session)
+            questions_repo = QuestionsRequestsRepo(session=session)
             await auto_close_question(bot, question_token, questions_repo)
 
     except Exception as e:
@@ -243,7 +244,7 @@ async def auto_close_question_job(question_token: str):
 
 
 async def send_inactivity_warning(
-    bot: Bot, question_token: str, questions_repo: RequestsRepo
+    bot: Bot, question_token: str, questions_repo: QuestionsRequestsRepo
 ):
     """Отправляет предупреждение о бездействии через 5 минут."""
     try:
@@ -264,7 +265,7 @@ async def send_inactivity_warning(
 
             # Отправляем предупреждение пользователю
             await bot.send_message(
-                chat_id=question.employee_chat_id,
+                chat_id=question.employee_userid,
                 text=f"⚠️ <b>Внимание!</b>\n\nТвой вопрос будет автоматически закрыт через {group_settings.get_setting('activity_warn_minutes')} минут при отсутствии активности",
             )
 
@@ -275,7 +276,7 @@ async def send_inactivity_warning(
 
 
 async def auto_close_question(
-    bot: Bot, question_token: str, questions_repo: RequestsRepo
+    bot: Bot, question_token: str, questions_repo: QuestionsRequestsRepo
 ):
     """Автоматически закрывает вопрос через 10 минут бездействия."""
     try:
@@ -315,12 +316,12 @@ async def auto_close_question(
             )
 
             await bot.send_message(
-                chat_id=question.employee_chat_id,
+                chat_id=question.employee_userid,
                 text="🔒 <b>Вопрос автоматически закрыт</b>",
                 reply_markup=ReplyKeyboardRemove(),
             )
             await bot.send_message(
-                chat_id=question.employee_chat_id,
+                chat_id=question.employee_userid,
                 text=f"Твой вопрос был закрыт из-за отсутствия активности в течение {group_settings.get_setting('activity_close_minutes')} минут",
                 reply_markup=closed_question_specialist_kb(token=question_token),
             )
@@ -437,27 +438,37 @@ async def send_attention_reminder_job(question_token: str):
     try:
         bot = _scheduler_registry.get("bot")
         questioner_session_pool = _scheduler_registry.get("questioner_session_pool")
+        main_session_pool = _scheduler_registry.get("main_session_pool")
 
         if not bot or not questioner_session_pool:
             logger.error("Bot or questioner_session_pool not registered in scheduler")
             return
 
         # Create a fresh session for this job
-        async with questioner_session_pool() as session:
-            questions_repo = RequestsRepo(session=session)
-            await send_attention_reminder(bot, question_token, questions_repo)
+        async with questioner_session_pool() as questioner_session:
+            async with main_session_pool() as main_session:
+                questions_repo = QuestionsRequestsRepo(session=questioner_session)
+                await send_attention_reminder(
+                    bot, question_token, questions_repo, main_session
+                )
 
     except Exception as e:
         logger.error(f"Error in attention reminder job for {question_token}: {e}")
 
 
 async def send_attention_reminder(
-    bot: Bot, question_token: str, questions_repo: RequestsRepo
+    bot: Bot,
+    question_token: str,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     """Отправляет напоминание о вопросе, требующем внимания, в общий чат группы."""
     try:
         question: Question = await questions_repo.questions.get_question(
             token=question_token
+        )
+        employee: Employee = await main_repo.employee.get_user(
+            user_id=question.employee_userid
         )
 
         if not question:
@@ -468,7 +479,7 @@ async def send_attention_reminder(
             return
 
         # Проверка, что вопрос все еще открыт и не имеет дежурного
-        if question.status != "open" or question.topic_duty_fullname:
+        if question.status != "open" or question.duty_userid:
             logger.info(
                 f"[Внимание вопросу] Вопрос {question_token} уже имеет дежурного или закрыт, пропускаем напоминание"
             )
@@ -478,7 +489,7 @@ async def send_attention_reminder(
         # Отправка уведомления в главную тему
         reminder_text = f"""🔔 <b>Вопрос требует внимания!</b>
 
-<b>От:</b> {question.employee_fullname}
+<b>От:</b> {employee.fullname}
 <b>Создан в:</b> {question.start_time.strftime("%H:%M")} ПРМ
 
 Вопрос ожидает дежурного уже 5 минут!
@@ -510,7 +521,7 @@ async def start_attention_reminder(question_token: str, questions_repo):
             return
 
         # Проверка, что вопрос все еще открыт и не имеет дежурного
-        if question.status != "open" or question.topic_duty_fullname:
+        if question.status != "open" or question.duty_userid:
             stop_attention_reminder(question.token)
             return
 

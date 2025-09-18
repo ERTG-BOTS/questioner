@@ -4,7 +4,7 @@ from typing import Optional, Sequence, TypedDict, Unpack
 from sqlalchemy import and_, select
 from sqlalchemy.exc import SQLAlchemyError
 
-from infrastructure.database.models.user import User
+from infrastructure.database.models import Employee
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.services.logger import setup_logging
 
@@ -32,7 +32,7 @@ class UserRepo(BaseRepo):
         username: Optional[str] = None,
         fullname: Optional[str] = None,
         email: Optional[str] = None,
-    ) -> Optional[User]:
+    ) -> Optional[Employee]:
         """
         Поиск пользователя в БД по фильтрам
 
@@ -48,19 +48,19 @@ class UserRepo(BaseRepo):
         filters = []
 
         if user_id:
-            filters.append(User.ChatId == user_id)
+            filters.append(Employee.user_id == user_id)
         if username:
-            filters.append(User.Username == username)
+            filters.append(Employee.username == username)
         if fullname:
-            filters.append(User.FIO == fullname)
+            filters.append(Employee.fullname == fullname)
         if email:
-            filters.append(User.Email == email)
+            filters.append(Employee.Email == email)
 
         if not filters:
             raise ValueError("At least one parameter must be provided to get_user()")
 
         # Combine all filters using OR
-        query = select(User).where(*filters)
+        query = select(Employee).where(*filters)
 
         try:
             result = await self.session.execute(query)
@@ -73,11 +73,11 @@ class UserRepo(BaseRepo):
         self,
         user_id: int = None,
         **kwargs: Unpack[RegisteredUserParams],
-    ) -> Optional[User]:
-        select_stmt = select(User).where(User.ChatId == user_id)
+    ) -> Optional[Employee]:
+        select_stmt = select(Employee).where(Employee.user_id == user_id)
 
         result = await self.session.execute(select_stmt)
-        user: User | None = result.scalar_one_or_none()
+        user: Employee | None = result.scalar_one_or_none()
 
         # Если пользователь существует - обновляем его
         if user:
@@ -89,7 +89,7 @@ class UserRepo(BaseRepo):
 
     async def get_users_by_fio_parts(
         self, fullname: str, limit: int = 10
-    ) -> Sequence[User]:
+    ) -> Sequence[Employee]:
         """
         Поиск пользователей по частичному совпадению ФИО
         Возвращает список пользователей для случаев, когда найдено несколько совпадений
@@ -108,10 +108,10 @@ class UserRepo(BaseRepo):
         # Создаём условия для каждой части имени
         like_conditions = []
         for part in name_parts:
-            like_conditions.append(User.FIO.ilike(f"%{part}%"))
+            like_conditions.append(Employee.fullname.ilike(f"%{part}%"))
 
         # Все части должны присутствовать в ФИО (AND)
-        query = select(User).where(and_(*like_conditions)).limit(limit)
+        query = select(Employee).where(and_(*like_conditions)).limit(limit)
 
         try:
             result = await self.session.execute(query)
@@ -120,8 +120,8 @@ class UserRepo(BaseRepo):
             logger.error(f"[БД] Ошибка получения пользователей по ФИО: {e}")
             return []
 
-    async def get_admins(self) -> Sequence[User]:
-        query = select(User).where(User.Role == 10)
+    async def get_admins(self) -> Sequence[Employee]:
+        query = select(Employee).where(Employee.role == 10)
 
         try:
             result = await self.session.execute(query)
@@ -130,7 +130,9 @@ class UserRepo(BaseRepo):
             logger.error(f"[БД] Ошибка получения администраторов: {e}")
             return []
 
-    async def update_user_role(self, user_id: str | int, role: int) -> Optional[User]:
+    async def update_user_role(
+        self, user_id: str | int, role: int
+    ) -> Optional[Employee]:
         """
         Обновление роли пользователя
         :param user_id: Идентификатор пользователя Telegram (ChatId)
@@ -139,12 +141,12 @@ class UserRepo(BaseRepo):
         """
         from sqlalchemy import select
 
-        query = select(User).where(User.ChatId == int(user_id))
+        query = select(Employee).where(Employee.user_id == int(user_id))
         result = await self.session.execute(query)
         user = result.scalar_one_or_none()
 
         if user:
-            user.Role = role
+            user.role = role
             await self.session.commit()
             await self.session.refresh(user)
         return user

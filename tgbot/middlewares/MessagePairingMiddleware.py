@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import Message
 
 from infrastructure.database.models import MessagesPair
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.services.logger import setup_logging
 
 setup_logging()
@@ -31,7 +31,7 @@ class MessagePairingMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         # Получаем репозиторий из данных (должно быть предоставлено DatabaseMiddleware)
-        questions_repo: RequestsRepo = data.get("questions_repo")
+        questions_repo: QuestionsRequestsRepo = data.get("questions_repo")
         if not questions_repo:
             logger.error("MessagePairingMiddleware: No repository found in data")
             return await handler(event, data)
@@ -81,7 +81,7 @@ class MessagePairingMiddleware(BaseMiddleware):
 
 
 async def store_message_connection(
-    questions_repo: RequestsRepo,
+    questions_repo: QuestionsRequestsRepo,
     user_chat_id: int,
     user_message_id: int,
     topic_chat_id: int,
@@ -95,7 +95,7 @@ async def store_message_connection(
 
     Args:
         questions_repo: Repository instance
-        user_chat_id: User chat ID
+        user_chat_id: Employee chat ID
         user_message_id: Message ID in user chat
         topic_chat_id: Forum chat ID
         topic_message_id: Message ID in forum topic

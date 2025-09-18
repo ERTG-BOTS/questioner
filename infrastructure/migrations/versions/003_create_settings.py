@@ -29,15 +29,15 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("group_id", sa.BigInteger(), nullable=False),
-        sa.Column("group_name", sa.Unicode(), nullable=False),
+        sa.Column("group_name", sa.Unicode(255), nullable=False),
         sa.Column(
-            "values", sa.NVARCHAR(length=None), nullable=False, server_default="'{}'"
+            "values", sa.NVARCHAR(length=4000), nullable=False, server_default="'{}'"
         ),
         sa.Column(
             "last_update",
             sa.DateTime(),
             nullable=False,
-            server_default=sa.text("GETDATE()"),
+            server_default=sa.text("NOW()"),
         ),
         sa.PrimaryKeyConstraint("id"),
     )

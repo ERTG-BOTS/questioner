@@ -11,7 +11,7 @@ from aiogram.types import (
     Message,
 )
 
-from infrastructure.database.models import User
+from infrastructure.database.models import Employee
 from tgbot.misc.dicts import group_admin_titles
 from tgbot.services.logger import setup_logging
 
@@ -37,7 +37,7 @@ class AdminRoleMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         # Получаем юзера из прошлой middleware
-        user: User = data.get("user")
+        user: Employee = data.get("user")
 
         # Получаем чат из ивента
         chat = (
@@ -92,11 +92,11 @@ class AdminRoleMiddleware(BaseMiddleware):
     async def _update_admin_title_if_needed(
         self,
         admin_status: Union[ChatMemberOwner, ChatMemberAdministrator],
-        user: User,
+        user: Employee,
         chat_id: int,
     ):
         """Update admin custom title if it doesn't match user's role"""
-        expected_title = group_admin_titles[user.Role]
+        expected_title = group_admin_titles[user.role]
 
         # Пропускаем апдейт титула для создателя чата
         if admin_status.status == ChatMemberStatus.CREATOR:
@@ -110,20 +110,20 @@ class AdminRoleMiddleware(BaseMiddleware):
             try:
                 await self.bot.set_chat_administrator_custom_title(
                     chat_id=chat_id,
-                    user_id=user.ChatId,
+                    user_id=user.user_id,
                     custom_title=expected_title,
                 )
                 logger.info(
-                    f"[Роли] Обновлена роль для пользователя {user.FIO} - {expected_title}"
+                    f"[Роли] Обновлена роль для пользователя {user.fullname} - {expected_title}"
                 )
             except TelegramBadRequest:
                 logger.error(
-                    f"[Роли] Ошибка обновления роли для {user.FIO}: Недостаточно прав для изменения пользователя"
+                    f"[Роли] Ошибка обновления роли для {user.fullname}: Недостаточно прав для изменения пользователя"
                 )
             except Exception as e:
-                logger.error(f"[Роли] Ошибка обновления роли для {user.FIO}: {e}")
+                logger.error(f"[Роли] Ошибка обновления роли для {user.fullname}: {e}")
 
-    async def _promote_user_to_admin(self, user: User, chat_id: int) -> None:
+    async def _promote_user_to_admin(self, user: Employee, chat_id: int) -> None:
         """
         Повышение пользователя до админа с правами приглашения других пользователей и титулом
 
@@ -135,23 +135,23 @@ class AdminRoleMiddleware(BaseMiddleware):
             # Promote user to admin
             await self.bot.promote_chat_member(
                 chat_id=chat_id,
-                user_id=user.ChatId,
+                user_id=user.user_id,
                 can_invite_users=True,
             )
 
             # Set custom title
-            expected_title = group_admin_titles[user.Role]
+            expected_title = group_admin_titles[user.role]
             if expected_title:
                 await self.bot.set_chat_administrator_custom_title(
                     chat_id=chat_id,
-                    user_id=user.ChatId,
+                    user_id=user.user_id,
                     custom_title=expected_title,
                 )
 
             logger.info(
-                f"[Роли] Обновлена роль для пользователя {user.FIO} - {expected_title}. "
+                f"[Роли] Обновлена роль для пользователя {user.fullname} - {expected_title}. "
                 f"Пользователь повышен до администратора"
             )
 
         except Exception as e:
-            logger.error(f"[Роли] Ошибка повышения пользователя {user.FIO}: {e}")
+            logger.error(f"[Роли] Ошибка повышения пользователя {user.fullname}: {e}")

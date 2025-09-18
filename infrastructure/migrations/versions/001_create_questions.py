@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import BIGINT, BOOLEAN
 
 # revision identifiers, used by Alembic.
 revision: str = "001_create_questions"
@@ -25,22 +26,20 @@ def upgrade() -> None:
         sa.Column("token", sa.String(length=255), nullable=False),
         sa.Column("group_id", sa.BigInteger(), nullable=False),
         sa.Column("topic_id", sa.Integer(), nullable=False),
-        sa.Column("topic_duty_fullname", sa.Unicode(), nullable=True),
-        sa.Column("employee_fullname", sa.Unicode(), nullable=False),
-        sa.Column("employee_chat_id", sa.BigInteger(), nullable=False),
-        sa.Column("employee_division", sa.Unicode(), nullable=True),
-        sa.Column("question_text", sa.Unicode(), nullable=True),
+        sa.Column("duty_userid", BIGINT, nullable=True),
+        sa.Column("employee_userid", BIGINT, nullable=False),
+        sa.Column("question_text", sa.Unicode(5000), nullable=True),
         sa.Column("start_time", sa.DateTime(), nullable=True),
         sa.Column("end_time", sa.DateTime(), nullable=True),
-        sa.Column("clever_link", sa.Unicode(), nullable=True),
-        sa.Column("quality_employee", sa.Boolean(), nullable=True),
+        sa.Column("clever_link", sa.Unicode(5000), nullable=True),
         sa.Column("quality_duty", sa.Boolean(), nullable=True),
-        sa.Column("status", sa.Unicode(), nullable=True),
-        sa.Column("allow_return", sa.Boolean(), nullable=False, default=True),
+        sa.Column("quality_employee", sa.Boolean(), nullable=True),
+        sa.Column("status", sa.Unicode(5000), nullable=True),
+        sa.Column("allow_return", BOOLEAN, nullable=False, default=True),
         sa.Column("activity_status_enabled", sa.Boolean(), nullable=True, default=None),
         sa.PrimaryKeyConstraint("token"),
     )
-    # ### end Alembic commands ###4
+    # ### end Alembic commands ###
 
 
 def downgrade() -> None:

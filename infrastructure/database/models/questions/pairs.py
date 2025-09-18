@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import BigInteger, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base
+from infrastructure.database.models.base import Base
 
 
 class MessagesPair(Base):
@@ -40,12 +40,4 @@ class MessagesPair(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<MessagesPair("
-            f"id={self.id}, "
-            f"user_chat_id={self.user_chat_id}, "
-            f"user_message_id={self.user_message_id}, "
-            f"topic_message_id={self.topic_message_id}, "
-            f"direction='{self.direction}'"
-            f")>"
-        )
+        return f"<MessagesPair {self.id}>"

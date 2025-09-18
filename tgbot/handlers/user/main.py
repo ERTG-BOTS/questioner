@@ -7,8 +7,9 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import Question, User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import Question, Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.keyboards.user.main import (
     AskQuestionMenu,
     CancelQuestion,
@@ -19,9 +20,13 @@ from tgbot.keyboards.user.main import (
     question_ask_kb,
     user_kb,
 )
-from tgbot.misc.helpers import disable_previous_buttons, extract_clever_link, short_name
+from tgbot.misc.helpers import (
+    disable_previous_buttons,
+    extract_clever_link,
+    short_name,
+    get_target_forum,
+)
 from tgbot.misc.states import AskQuestion
-from tgbot.services.g_sheets import get_target_forum
 from tgbot.services.logger import setup_logging
 from tgbot.services.scheduler import (
     remove_question_timer,
@@ -40,14 +45,17 @@ logger = logging.getLogger(__name__)
 
 @user_router.message(CommandStart())
 async def main_cmd(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+    message: Message,
+    state: FSMContext,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.user_id
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
@@ -56,7 +64,7 @@ async def main_cmd(
 
     if user:
         await message.answer(
-            f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
+            f"""👋 Привет, <b>{short_name(user.fullname)}</b>!
 
 Я - бот-вопросник
 
@@ -67,12 +75,12 @@ async def main_cmd(
 <i>Используй меню для управление ботом</i>""",
             reply_markup=user_kb(
                 is_role_changed=True
-                if state_data.get("role") or user.Role == 10
+                if state_data.get("role") or user.role == 10
                 else False
             ),
         )
         logging.info(
-            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто юзер-меню"
+            f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто юзер-меню"
         )
     else:
         await message.answer(f"""Привет, <b>@{message.from_user.username}</b>!
@@ -89,22 +97,22 @@ async def main_cmd(
 async def main_cb(
     callback: CallbackQuery,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.user_id
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
     state_data = await state.get_data()
 
     await callback.message.edit_text(
-        f"""Привет, <b>{short_name(user.FIO)}</b>!
+        f"""Привет, <b>{short_name(user.fullname)}</b>!
 
 Я - бот-вопросник
 
@@ -114,21 +122,24 @@ async def main_cb(
 
 Используй меню, чтобы выбрать действие""",
         reply_markup=user_kb(
-            is_role_changed=True if state_data.get("role") or user.Role == 10 else False
+            is_role_changed=True if state_data.get("role") or user.role == 10 else False
         ),
     )
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто юзер-меню"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто юзер-меню"
     )
     await callback.answer()
 
 
 @user_router.callback_query(MainMenu.filter(F.menu == "ask"))
 async def ask_question(
-    callback: CallbackQuery, state: FSMContext, user: User, questions_repo: RequestsRepo
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     active_questions = await questions_repo.questions.get_active_questions()
-    if user.FIO in [d.employee_fullname for d in active_questions]:
+    if user.user_id in [d.employee_userid for d in active_questions]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
         return
 
@@ -144,7 +155,7 @@ async def ask_question(
     await state.update_data(messages_with_buttons=[msg.message_id])
     await state.set_state(AskQuestion.question)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} [{user.Division}] {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} [{user.division}] {callback.from_user.username} ({callback.from_user.id}): Открыто меню нового вопроса"
     )
     await callback.answer()
 
@@ -153,12 +164,12 @@ async def ask_question(
 async def question_text(
     message: Message,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     active_questions = await questions_repo.questions.get_active_questions()
-    if user.FIO in [q.employee_fullname for q in active_questions]:
+    if user.user_id in [q.employee_userid for q in active_questions]:
         await state.clear()
         await message.answer("У тебя уже есть активный вопрос")
         return
@@ -195,15 +206,12 @@ async def question_text(
     await state.update_data(question_message_id=message.message_id)
 
     state_data = await state.get_data()
-    temp_division = state_data.get("temp_division")
     if state_data.get("processing"):
         return
 
     await state.update_data(processing=True)
 
-    target_forum_id = await get_target_forum(
-        username=user.Username, division=user.Division, temp_division=temp_division
-    )
+    target_forum_id = await get_target_forum(user)
     group_settings = await questions_repo.settings.get_settings_by_group_id(
         group_id=target_forum_id
     )
@@ -211,7 +219,7 @@ async def question_text(
     ask_clever_link: bool = group_settings.get_setting("ask_clever_link")
 
     # Если ссылка на регламент уже есть в тексте, пользователь root, или отключен запрос ссылки
-    if has_clever_link or user.Role == 10 or not ask_clever_link:
+    if has_clever_link or user.role == 10 or not ask_clever_link:
         # Извлекаем ссылку если она есть, иначе None
         clever_link = (
             extract_clever_link(message.text or message.caption)
@@ -226,29 +234,27 @@ async def question_text(
 
         employee_topics_today = (
             await questions_repo.questions.get_questions_count_today(
-                employee_fullname=user.FIO
+                employee_userid=user.user_id
             )
         )
         employee_topics_month = (
             await questions_repo.questions.get_questions_count_last_month(
-                employee_fullname=user.FIO
+                employee_userid=user.fullname
             )
         )
 
         new_topic = await message.bot.create_forum_topic(
             chat_id=target_forum_id,
-            name=f"{user.Division} | {short_name(user.FIO)}"
+            name=f"{user.division} | {short_name(user.fullname)}"
             if group_settings.get_setting("show_division")
-            else short_name(user.FIO),
+            else short_name(user.fullname),
             icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
         )  # Создание темы
 
         new_question = await questions_repo.questions.add_question(
             group_id=target_forum_id,
             topic_id=new_topic.message_thread_id,
-            employee_chat_id=message.chat.id,
-            employee_fullname=user.FIO,
-            employee_division=user.Division,
+            employee_userid=message.chat.id,
             start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
             question_text=state_data.get("question"),
             clever_link=clever_link,  # Может быть None если ссылки нет
@@ -262,29 +268,33 @@ async def question_text(
             reply_markup=cancel_question_kb(token=new_question.token),
         )
 
-        if user.Username:
-            user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
+        if user.username:
+            user_fullname = (
+                f"<a href='t.me/{user.username}'>{short_name(user.fullname)}</a>"
+            )
         else:
-            user_fullname = short_name(user.FIO)
+            user_fullname = short_name(user.fullname)
 
-        head = await main_repo.users.get_user(fullname=user.Boss)
-        if head.Username:
-            head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
+        head = await main_repo.employee.get_user(fullname=user.head)
+        if head.username:
+            head_fullname = (
+                f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
+            )
         else:
-            head_fullname = short_name(head.FIO)
+            head_fullname = short_name(head.fullname)
 
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
             topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
-<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<blockquote expandable><b>👔 Должность:</b> {user.position}
 <b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
         else:
             topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
-<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<blockquote expandable><b>👔 Должность:</b> {user.position}
 <b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
@@ -318,7 +328,7 @@ async def question_text(
         await start_attention_reminder(new_question.token, questions_repo)
         await state.clear()
         logging.info(
-            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
+            f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
         )
         # Отключаем кнопки на предыдущих шагах
         await disable_previous_buttons(message, state)
@@ -331,7 +341,7 @@ async def question_text(
     # top_users: Sequence[
     #     User
     # ] = await questions_repo.questions.get_top_users_by_division(
-    #     division="НЦК" if "НЦК" in user.Division else "НТП", main_repo=main_repo
+    #     division="НЦК" if "НЦК" in user.division else "НТП", main_repo=main_repo
     # )
 
     # Если дошли до сюда, значит нужно запросить ссылку на регламент
@@ -342,7 +352,7 @@ async def question_text(
         reply_markup=question_ask_kb(is_user_in_top=True),
         # reply_markup=question_ask_kb(
         #     is_user_in_top=True
-        #     if user.ChatId in (u.ChatId for u in top_users)
+        #     if user.user_id in (u.user_id for u in top_users)
         #     else False
         # ),
     )
@@ -353,7 +363,7 @@ async def question_text(
 
     await state.set_state(AskQuestion.clever_link)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Открыто меню уточнения регламента"
     )
 
 
@@ -361,12 +371,12 @@ async def question_text(
 async def clever_link_handler(
     message: Message,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     active_questions = await questions_repo.questions.get_active_questions()
-    if user.FIO in [q.employee_fullname for q in active_questions]:
+    if user.user_id in [q.employee_userid for q in active_questions]:
         await state.clear()
         await message.answer("У тебя уже есть активный вопрос")
         return
@@ -374,7 +384,7 @@ async def clever_link_handler(
     state_data = await state.get_data()
 
     # Проверяем есть ли ссылка на Клевер в сообщении специалиста или является ли пользователь Рутом
-    if "clever.ertelecom.ru/content/space/" not in message.text and user.Role != 10:
+    if "clever.ertelecom.ru/content/space/" not in message.text and user.role != 10:
         await message.answer(
             """<b>🗃️ Регламент</b>
 
@@ -387,7 +397,7 @@ async def clever_link_handler(
 
     # Проверяем на запрещенные ссылки
     extracted_link = extract_clever_link(message.text)
-    if extracted_link and user.Role != 10:
+    if extracted_link and user.role != 10:
         forbidden_links = [
             "https://clever.ertelecom.ru/content/space/4/wiki/1808",
             "https://clever.ertelecom.ru/content/space/4/wiki/1808/",
@@ -418,17 +428,15 @@ async def clever_link_handler(
     clever_link = extracted_link
     await state.clear()
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.user_id
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
-    target_forum_id = await get_target_forum(
-        username=user.Username, division=user.Division
-    )
+    target_forum_id = await get_target_forum(user)
     group_settings = await questions_repo.settings.get_settings_by_group_id(
         group_id=target_forum_id
     )
@@ -438,18 +446,16 @@ async def clever_link_handler(
 
     new_topic = await message.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {short_name(user.FIO)}"
+        name=f"{user.division} | {short_name(user.fullname)}"
         if group_settings.get_setting("show_division")
-        else short_name(user.FIO),
+        else short_name(user.fullname),
         icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )  # Создание темы
 
     new_question = await questions_repo.questions.add_question(
         group_id=target_forum_id,
         topic_id=new_topic.message_thread_id,
-        employee_chat_id=message.chat.id,
-        employee_fullname=user.FIO,
-        employee_division=user.Division,
+        employee_userid=message.chat.id,
         start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
         question_text=state_data.get("question"),
         clever_link=clever_link if clever_link else None,
@@ -463,23 +469,27 @@ async def clever_link_handler(
         reply_markup=cancel_question_kb(token=new_question.token),
     )
 
-    if user.Username:
-        user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
+    if user.username:
+        user_fullname = (
+            f"<a href='t.me/{user.username}'>{short_name(user.fullname)}</a>"
+        )
     else:
-        user_fullname = short_name(user.FIO)
+        user_fullname = short_name(user.fullname)
 
-    head = await main_repo.users.get_user(fullname=user.Boss)
-    if head.Username:
-        head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
+    head = await main_repo.employee.get_user(fullname=user.head)
+    if head.username:
+        head_fullname = (
+            f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
+        )
     else:
-        head_fullname = short_name(head.FIO)
+        head_fullname = short_name(head.fullname)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=target_forum_id,
         message_thread_id=new_topic.message_thread_id,
         text=f"""Вопрос задает <b>{user_fullname}</b>
 
-<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<blockquote expandable><b>👔 Должность:</b> {user.position}
 <b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>""",
@@ -507,7 +517,7 @@ async def clever_link_handler(
 
     await start_attention_reminder(new_question.token, questions_repo)
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {message.from_user.username} ({message.from_user.id}): Создан новый вопрос {new_question.token}"
     )
 
 
@@ -515,9 +525,9 @@ async def clever_link_handler(
 async def regulation_not_found_handler(
     callback: CallbackQuery,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     """
     Обработчик кнопки "Не нашел" для случая, когда пользователь не смог найти регламент
@@ -527,17 +537,15 @@ async def regulation_not_found_handler(
 
     # Получаем статистику для пользователя
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.user_id
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
-    target_forum_id = await get_target_forum(
-        username=user.Username, division=user.Division
-    )
+    target_forum_id = await get_target_forum(user)
     group_settings = await questions_repo.settings.get_settings_by_group_id(
         group_id=target_forum_id
     )
@@ -548,9 +556,9 @@ async def regulation_not_found_handler(
     # Создаем новую тему
     new_topic = await callback.bot.create_forum_topic(
         chat_id=target_forum_id,
-        name=f"{user.Division} | {short_name(user.FIO)}"
+        name=f"{user.division} | {short_name(user.fullname)}"
         if group_settings.get_setting("show_division")
-        else short_name(user.FIO),
+        else short_name(user.fullname),
         icon_custom_emoji_id=group_settings.get_setting("emoji_open"),
     )
 
@@ -558,9 +566,7 @@ async def regulation_not_found_handler(
     new_question = await questions_repo.questions.add_question(
         group_id=target_forum_id,
         topic_id=new_topic.message_thread_id,
-        employee_chat_id=callback.from_user.id,
-        employee_fullname=user.FIO,
-        employee_division=user.Division,
+        employee_userid=callback.from_user.id,
         start_time=datetime.datetime.now(tz=pytz.timezone("Asia/Yekaterinburg")),
         question_text=state_data.get("question"),
         clever_link="не нашел",  # Устанавливаем специальное значение,
@@ -579,23 +585,27 @@ async def regulation_not_found_handler(
     if new_question.status == "open" and new_question.activity_status_enabled:
         await start_inactivity_timer(new_question.token, questions_repo)
 
-    if user.Username:
-        user_fullname = f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
+    if user.username:
+        user_fullname = (
+            f"<a href='t.me/{user.username}'>{short_name(user.fullname)}</a>"
+        )
     else:
-        user_fullname = short_name(user.FIO)
+        user_fullname = short_name(user.fullname)
 
-    head = await main_repo.users.get_user(fullname=user.Boss)
-    if head.Username:
-        head_fullname = f"<a href='t.me/{head.Username}'>{short_name(head.FIO)}</a>"
+    head = await main_repo.employee.get_user(fullname=user.head)
+    if head.username:
+        head_fullname = (
+            f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
+        )
     else:
-        head_fullname = short_name(head.FIO)
+        head_fullname = short_name(head.fullname)
 
     # Формируем текст сообщения с указанием "не нашел" в регламенте
     topic_text = f"""Вопрос задает <b>{user_fullname}</b>
 
 Специалист не нашел регламент
 
-<blockquote expandable><b>👔 Должность:</b> {user.Position}
+<blockquote expandable><b>👔 Должность:</b> {user.position}
 <b>👑 Руководитель:</b> {head_fullname}
 
 <b>❓ Вопросов:</b> за день {employee_topics_today} / за месяц {employee_topics_month}</blockquote>"""
@@ -634,7 +644,7 @@ async def regulation_not_found_handler(
     await start_attention_reminder(new_question.token, questions_repo)
 
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Создан новый вопрос {new_question.token} без регламента (не нашел)"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Создан новый вопрос {new_question.token} без регламента (не нашел)"
     )
 
 
@@ -643,8 +653,8 @@ async def cancel_question(
     callback: CallbackQuery,
     callback_data: CancelQuestion,
     state: FSMContext,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
 ):
     question: Question = await questions_repo.questions.get_question(
         token=callback_data.token
@@ -653,7 +663,7 @@ async def cancel_question(
     if (
         question
         and question.status == "open"
-        and not question.topic_duty_fullname
+        and not question.duty_userid
         and not question.end_time
     ):
         group_settings = await questions_repo.settings.get_settings_by_group_id(
@@ -696,7 +706,10 @@ async def cancel_question(
 
 @user_router.message()
 async def default_message_handler(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+    message: Message,
+    state: FSMContext,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """
     Default handler for all unhandled user messages.
@@ -714,25 +727,25 @@ async def default_message_handler(
     try:
         active_questions = await questions_repo.questions.get_active_questions()
         logger.info(active_questions)
-        if user.FIO in [q.employee_fullname for q in active_questions]:
+        if user.user_id in [q.employee_userid for q in active_questions]:
             return
     except Exception as e:
-        logger.error(f"Error checking active questions for user {user.FIO}: {e}")
+        logger.error(f"Error checking active questions for user {user.fullname}: {e}")
         return
 
     # Если мы оказались здесь - у пользователя нет активных вопросов и состояний в FSM
     # Отправляем стартовое сообщение
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.user_id
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
     await message.answer(
-        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
+        f"""👋 Привет, <b>{short_name(user.fullname)}</b>!
 
 Я - бот-вопросник
 
@@ -741,7 +754,7 @@ async def default_message_handler(
 - За месяц {employee_topics_month}
 
 <i>Используй меню для управление ботом</i>""",
-        reply_markup=user_kb(is_role_changed=user.Role == 10),
+        reply_markup=user_kb(is_role_changed=user.role == 10),
     )
 
     logging.info(

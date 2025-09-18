@@ -2,14 +2,13 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.repo.pairs import MessagesPairsRepo
-from infrastructure.database.repo.questions import QuestionsRepo
-from infrastructure.database.repo.settings import SettingsRepo
-from infrastructure.database.repo.users import UserRepo
+from infrastructure.database.repo.questions.pairs import MessagesPairsRepo
+from infrastructure.database.repo.questions.questions import QuestionsRepo
+from infrastructure.database.repo.questions.settings import SettingsRepo
 
 
 @dataclass
-class RequestsRepo:
+class QuestionsRequestsRepo:
     """
     Repository for handling database operations. This class holds all the repositories for the database models.
 
@@ -17,13 +16,6 @@ class RequestsRepo:
     """
 
     session: AsyncSession
-
-    @property
-    def users(self) -> UserRepo:
-        """
-        The User repository sessions are required to manage user operations.
-        """
-        return UserRepo(self.session)
 
     @property
     def questions(self) -> QuestionsRepo:

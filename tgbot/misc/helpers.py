@@ -4,10 +4,14 @@ import re
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from infrastructure.database.models import Employee
+from tgbot.config import load_config
 from tgbot.services.logger import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+config = load_config(".env")
 
 
 async def disable_previous_buttons(message: Message, state: FSMContext):
@@ -55,3 +59,16 @@ def short_name(full_name: str) -> str:
     if len(parts) >= 2:
         return " ".join(parts[:2])
     return clean_name
+
+
+async def get_target_forum(user: Employee):
+    if user.division == "НЦК":
+        if user.is_trainee:
+            return config.forum.nck_trainee_forum_id
+        else:
+            return config.forum.nck_main_forum_id
+    else:
+        if user.is_trainee:
+            return config.forum.ntp_trainee_forum_id
+        else:
+            return config.forum.ntp_main_forum_id

@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
 from numpy.random.mtrand import Sequence
 
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.filters.admin import AdminFilter
 from tgbot.keyboards.admin.main import AdminMenu
 from tgbot.keyboards.admin.stats_extract import (
@@ -80,7 +80,7 @@ async def admin_extract_month_select_division(
 async def admin_extract_division(
     callback: CallbackQuery,
     callback_data: DivisionStatsExtract,
-    questions_repo: RequestsRepo,
+    questions_repo: QuestionsRequestsRepo,
 ) -> None:
     """
     Выгрузка статистики по выбранному месяцу и направлению

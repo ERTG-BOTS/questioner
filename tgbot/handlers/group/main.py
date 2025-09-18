@@ -15,8 +15,9 @@ from aiogram.types import (
     Message,
 )
 
-from infrastructure.database.models import MessagesPair, Question, User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import MessagesPair, Question, Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.group.topic_cmds import end_q_cmd
 from tgbot.keyboards.group.main import (
@@ -48,11 +49,18 @@ logger = logging.getLogger(__name__)
 
 @topic_router.message(IsTopicMessage())
 async def handle_q_message(
-    message: Message, user: User, questions_repo: RequestsRepo, main_repo: RequestsRepo
+    message: Message,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     question: Question = await questions_repo.questions.get_question(
         group_id=message.chat.id, topic_id=message.message_thread_id
     )
+    employee: Employee = await main_repo.employee.get_user(
+        user_id=question.employee_userid
+    )
+
     if message.message_thread_id != question.topic_id:
         return
 
@@ -71,28 +79,26 @@ async def handle_q_message(
         return
 
     if question is not None and question.status != "closed":
-        if not question.topic_duty_fullname and "".join(
-            c for c in question.employee_division if c.isalpha()
-        ) == "".join(c for c in user.Division if c.isalpha()):
+        if not question.duty_userid and "".join(
+            c for c in employee.division if c.isalpha()
+        ) == "".join(c for c in user.division if c.isalpha()):
             duty_topics_today = (
                 await questions_repo.questions.get_questions_count_today(
-                    duty_fullname=user.FIO
+                    duty_userid=user.user_id
                 )
             )
             duty_topics_month = (
                 await questions_repo.questions.get_questions_count_last_month(
-                    duty_fullname=user.FIO
+                    duty_userid=user.fullname
                 )
             )
 
             await questions_repo.questions.update_question(
-                token=question.token, topic_duty_fullname=user.FIO, status="in_progress"
+                token=question.token,
+                duty_userid=user.user_id,
+                status="in_progress",
             )
             stop_attention_reminder(question.token)
-
-            employee: User = await main_repo.users.get_user(
-                fullname=question.employee_fullname
-            )
 
             # Запускаем таймер бездействия для нового вопроса
             if question.activity_status_enabled:
@@ -107,12 +113,12 @@ async def handle_q_message(
                 icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
             )
 
-            if user.Username:
+            if user.username:
                 user_fullname = (
-                    f"<a href='t.me/{user.Username}'>{short_name(user.FIO)}</a>"
+                    f"<a href='t.me/{user.username}'>{short_name(user.fullname)}</a>"
                 )
             else:
-                user_fullname = user.FIO
+                user_fullname = user.fullname
 
             try:
                 await message.answer(
@@ -134,7 +140,7 @@ async def handle_q_message(
                 )
 
             await message.bot.send_message(
-                chat_id=employee.ChatId,
+                chat_id=employee.user_id,
                 text=f"""<b>👮‍♂️ Вопрос в работе</b>
 
 Дежурный <b>{user_fullname}</b> взял вопрос в работу""",
@@ -144,14 +150,14 @@ async def handle_q_message(
             copied_message = await message.bot.copy_message(
                 from_chat_id=question.group_id,
                 message_id=message.message_id,
-                chat_id=employee.ChatId,
+                chat_id=employee.user_id,
             )
 
             # Сохраняем коннект сообщений
             try:
                 await store_message_connection(
                     questions_repo=questions_repo,
-                    user_chat_id=question.employee_chat_id,
+                    user_chat_id=question.employee_userid,
                     user_message_id=copied_message.message_id,
                     topic_chat_id=question.group_id,
                     topic_message_id=message.message_id,
@@ -166,8 +172,8 @@ async def handle_q_message(
                 f"[Вопрос] - [В работе] Пользователь {message.from_user.username} ({message.from_user.id}): Вопрос {question.token} взят в работу"
             )
         else:
-            if "".join(c for c in question.employee_division if c.isalpha()) != "".join(
-                c for c in user.Division if c.isalpha()
+            if "".join(c for c in employee.division if c.isalpha()) != "".join(
+                c for c in user.division if c.isalpha()
             ):
                 await message.answer(
                     """<b>⚠️ Внимание</b>
@@ -178,7 +184,7 @@ async def handle_q_message(
                 )
                 return
 
-            if question.topic_duty_fullname == user.FIO:
+            if question.duty_userid == user.user_id:
                 # Перезапускаем таймер бездействия при сообщении от дежурного
                 await restart_inactivity_timer(
                     question_token=question.token,
@@ -200,7 +206,7 @@ async def handle_q_message(
                         copied_message = await message.bot.copy_message(
                             from_chat_id=question.group_id,
                             message_id=message.message_id,
-                            chat_id=question.employee_chat_id,
+                            chat_id=question.employee_userid,
                             reply_to_message_id=message_pair.user_message_id,
                         )
                         logger.info(
@@ -211,20 +217,20 @@ async def handle_q_message(
                         copied_message = await message.bot.copy_message(
                             from_chat_id=question.group_id,
                             message_id=message.message_id,
-                            chat_id=question.employee_chat_id,
+                            chat_id=question.employee_userid,
                         )
                 else:
                     copied_message = await message.bot.copy_message(
                         from_chat_id=question.group_id,
                         message_id=message.message_id,
-                        chat_id=question.employee_chat_id,
+                        chat_id=question.employee_userid,
                     )
 
                 # Сохраняем коннект сообщений
                 try:
                     await store_message_connection(
                         questions_repo=questions_repo,
-                        user_chat_id=question.employee_chat_id,
+                        user_chat_id=question.employee_userid,
                         user_message_id=copied_message.message_id,
                         topic_chat_id=question.group_id,
                         topic_message_id=message.message_id,
@@ -260,7 +266,7 @@ async def handle_q_message(
                     )
 
                 logger.info(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {user.fullname} | Сообщение: {message.text if message.text else message.caption}"
                 )
             else:
                 await message.reply("""<b>⚠️ Предупреждение</b>
@@ -269,7 +275,7 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
                 logger.warning(
-                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}. Чат принадлежит другому старшему"
+                    f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {user.fullname} | Сообщение: {message.text if message.text else message.caption}. Чат принадлежит другому старшему"
                 )
     elif question.status == "closed":
         await message.reply("""<b>⚠️ Предупреждение</b>
@@ -278,13 +284,13 @@ async def handle_q_message(
 
 <i>Твое сообщение не отобразится специалисту</i>""")
         logger.warning(
-            f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {question.topic_duty_fullname} | Сообщение: {message.text if message.text else message.caption}. Чат уже закрыт"
+            f"[Вопрос] - [Общение] Токен: {question.token} | Дежурный: {user.fullname} | Сообщение: {message.text if message.text else message.caption}. Чат уже закрыт"
         )
 
 
 @topic_router.edited_message(IsTopicMessage())
 async def handle_edited_message(
-    message: Message, questions_repo: RequestsRepo, user: User
+    message: Message, questions_repo: QuestionsRequestsRepo, user: Employee
 ):
     """Универсальных хендлер для редактируемых сообщений в топиках"""
     question: Question = await questions_repo.questions.get_question(
@@ -299,7 +305,7 @@ async def handle_edited_message(
     # Проверяем, что вопрос все еще активен
     if question.status == "closed":
         logger.warning(
-            f"[Редактирование] Дежурный {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.token}"
+            f"[Редактирование] Дежурный {user.fullname} попытался редактировать сообщение в закрытом вопросе {question.token}"
         )
         return
 
@@ -364,7 +370,7 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{short_name(user.FIO)}</b> отредактировал сообщение""",
+Дежурный <b>{short_name(user.fullname)}</b> отредактировал сообщение""",
                 reply_to_message_id=pair_to_edit.user_message_id,
             )
 
@@ -385,7 +391,7 @@ async def handle_edited_message(
                 chat_id=pair_to_edit.user_chat_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Дежурный <b>{short_name(user.FIO)}</b> отредактировал сообщение""",
+Дежурный <b>{short_name(user.fullname)}</b> отредактировал сообщение""",
                 reply_to_message_id=pair_to_edit.user_message_id,
             )
 
@@ -410,7 +416,7 @@ async def handle_edited_message(
 
 @topic_router.callback_query(QuestionQualityDuty.filter(F.return_question))
 async def return_q_duty(
-    callback: CallbackQuery, user: User, questions_repo: RequestsRepo
+    callback: CallbackQuery, user: Employee, questions_repo: QuestionsRequestsRepo
 ):
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
@@ -426,13 +432,10 @@ async def return_q_duty(
 
     if (
         question.status == "closed"
-        and question.employee_fullname
-        not in [u.employee_fullname for u in active_questions]
+        and question.employee_userid
+        not in [u.employee_userid for u in active_questions]
         and question.token in [d.token for d in available_to_return_questions]
-        and (
-            question.topic_duty_fullname == user.FIO
-            or question.topic_duty_fullname is None
-        )
+        and (question.duty_userid == user.user_id or question.duty_userid is None)
     ):
         await questions_repo.questions.update_question(
             token=question.token, status="in_progress"
@@ -441,9 +444,9 @@ async def return_q_duty(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {short_name(user.FIO)}"
+            name=f"{user.division} | {short_name(user.fullname)}"
             if group_settings.get_setting("show_division")
-            else short_name(user.FIO),
+            else short_name(user.fullname),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
@@ -455,27 +458,27 @@ async def return_q_duty(
 
 Можешь писать сообщения, они будут переданы специалисту""")
         await callback.bot.send_message(
-            chat_id=question.employee_chat_id,
+            chat_id=question.employee_userid,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Дежурный <b>{short_name(user.FIO)}</b> переоткрыл вопрос:
+Дежурный <b>{short_name(user.fullname)}</b> переоткрыл вопрос:
 <blockquote expandable><i>{question.question_text}</i></blockquote>""",
             reply_markup=finish_question_kb(),
         )
         logger.info(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.token} переоткрыт старшим"
         )
-    elif question.topic_duty_fullname != user.FIO:
+    elif question.duty_userid != user.user_id:
         await callback.answer("Это не твой чат!", show_alert=True)
         logger.warning(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, вопрос {question.token} принадлежит другому старшему"
         )
-    elif question.employee_fullname in [d.employee_fullname for d in active_questions]:
+    elif question.employee_userid in [d.employee_userid for d in active_questions]:
         await callback.answer(
             "У специалиста есть другой открытый вопрос", show_alert=True
         )
         logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.employee_fullname} есть другой открытый вопрос"
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.employee_userid} есть другой открытый вопрос"
         )
     elif question.token not in [d.token for d in available_to_return_questions]:
         await callback.answer(
@@ -498,7 +501,7 @@ async def return_q_duty(
 async def change_q_return_status(
     callback: CallbackQuery,
     callback_data: QuestionQualityDuty,
-    questions_repo: RequestsRepo,
+    questions_repo: QuestionsRequestsRepo,
 ):
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
@@ -525,13 +528,13 @@ async def change_q_return_status(
 async def quality_q_duty(
     callback: CallbackQuery,
     callback_data: QuestionQualityDuty,
-    user: User,
-    questions_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     question: Question = await questions_repo.questions.get_question(
         group_id=callback.message.chat.id, topic_id=callback.message.message_thread_id
     )
-    if question.topic_duty_fullname == user.FIO:
+    if question.duty_userid == user.user_id:
         await questions_repo.questions.update_question(
             token=question.token, quality_duty=callback_data.answer
         )
@@ -540,7 +543,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Дежурный <b>{short_name(user.FIO)}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{short_name(user.fullname)}</b> поставил оценку:
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
                     token=callback_data.token, allow_return=question.allow_return
@@ -550,7 +553,7 @@ async def quality_q_duty(
             await callback.message.edit_text(
                 f"""<b>🔒 Вопрос закрыт</b>
 
-👮‍♂️ Дежурный <b>{short_name(user.FIO)}</b> поставил оценку:
+👮‍♂️ Дежурный <b>{short_name(user.fullname)}</b> поставил оценку:
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                 reply_markup=closed_question_duty_kb(
                     token=callback_data.token, allow_return=question.allow_return
@@ -572,7 +575,7 @@ async def quality_q_duty(
 async def toggle_activity_status(
     callback: CallbackQuery,
     callback_data: ActivityStatusToggle,
-    questions_repo: RequestsRepo,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Обработчик переключения статуса активности для топика"""
     question: Question = await questions_repo.questions.get_question(
@@ -657,7 +660,7 @@ async def toggle_activity_status(
             user_message_text = "🟠 <b>Автозакрытие отключено</b>\n\nДежурный выключил автоматические закрытие вопроса при отсутствии активности\n\n<i>Сообщение удалится через 10 секунд</i>"
 
         user_msg = await callback.bot.send_message(
-            chat_id=question.employee_chat_id,
+            chat_id=question.employee_userid,
             text=user_message_text,
         )
 
@@ -669,7 +672,7 @@ async def toggle_activity_status(
         )
 
         await run_delete_timer(
-            chat_id=question.employee_chat_id,
+            chat_id=question.employee_userid,
             message_ids=[user_msg.message_id],
             seconds=10,
         )

@@ -1,10 +1,10 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Unicode, BigInteger
+from sqlalchemy import Boolean, DateTime, Integer, String, Unicode, BIGINT
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base, TableNameMixin
+from infrastructure.database.models.base import Base, TableNameMixin
 
 
 class Question(Base, TableNameMixin):
@@ -15,9 +15,8 @@ class Question(Base, TableNameMixin):
         token (Mapped[str]): Уникальный идентификатор токена (первичный ключ).
         group_id (Mapped[int]): ID группы.
         topic_id (Mapped[int]): ID топика.
-        topic_duty_fullname (Mapped[str]): ФИО ответственного за вопрос.
-        employee_fullname (Mapped[str]): ФИО сотрудника.
-        employee_chat_id (Mapped[int]): Chat ID сотрудника.
+        duty_userid (Mapped[str]): userid дежурного.
+        employee_userid (Mapped[int]): Chat ID сотрудника.
         employee_division (Mapped[int]): Направление сотрудника.
         question_text (Mapped[str]): Текст вопроса.
         start_time (Mapped[Optional[date]]): Время начала вопроса.
@@ -42,12 +41,10 @@ class Question(Base, TableNameMixin):
     __tablename__ = "questions"
 
     token: Mapped[str] = mapped_column(String(255), primary_key=True)
-    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    group_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
     topic_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    topic_duty_fullname: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
-    employee_fullname: Mapped[str] = mapped_column(Unicode, nullable=False)
-    employee_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    employee_division: Mapped[str] = mapped_column(Unicode, nullable=False)
+    duty_userid: Mapped[int] = mapped_column(BIGINT, nullable=True)
+    employee_userid: Mapped[int] = mapped_column(BIGINT, nullable=False)
     question_text: Mapped[str] = mapped_column(Unicode, nullable=True)
     start_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -61,4 +58,4 @@ class Question(Base, TableNameMixin):
     )
 
     def __repr__(self):
-        return f"<Question {self.token} {self.group_id} {self.topic_id} {self.topic_duty_fullname} {self.employee_fullname} {self.employee_chat_id} {self.employee_division} {self.question_text} {self.start_time} {self.end_time} {self.clever_link} {self.quality_employee} {self.quality_duty} {self.status} {self.allow_return} {self.activity_status_enabled}>"
+        return f"<Question {self.token}>"

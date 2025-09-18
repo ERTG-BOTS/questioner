@@ -26,7 +26,8 @@ target_metadata = Base.metadata
 db_config = load_config(".env").db
 
 # Store the URL for later use - don't set it in config to avoid interpolation issues
-database_url = db_config.construct_sqlalchemy_url()
+# Use the questioner database for Questions schema migrations
+database_url = db_config.construct_sqlalchemy_url(db_config.questioner_db)
 
 
 def include_object(object, name, type_, reflected, compare_to):
@@ -36,7 +37,7 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     if type_ == "table":
         # Only include tables that belong to this database
-        return name in ["questions", "messages_pairs"]
+        return name in ["questions", "messages_pairs", "settings"]
 
     # Include all other objects (indexes, constraints, etc.) for included tables
     return True

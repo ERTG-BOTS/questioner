@@ -163,21 +163,21 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Create engines for different databases
-    stp_db_engine = create_engine(bot_config.db, db_name=bot_config.db.main_db)
+    main_db_engine = create_engine(bot_config.db, db_name=bot_config.db.main_db)
     questioner_db_engine = create_engine(
         bot_config.db, db_name=bot_config.db.questioner_db
     )
 
-    stp_db = create_session_pool(stp_db_engine)
+    main_db = create_session_pool(main_db_engine)
     questioner_db = create_session_pool(questioner_db_engine)
 
     # Store session pools in dispatcher
-    dp["stp_db"] = stp_db
+    dp["main_db"] = main_db
     dp["questioner_db"] = questioner_db
 
     dp.include_routers(*routers_list)
 
-    register_middlewares(dp, bot_config, bot, stp_db, questioner_db)
+    register_middlewares(dp, bot_config, bot, main_db, questioner_db)
 
     from tgbot.services.scheduler import register_scheduler_dependencies
 
@@ -203,7 +203,7 @@ async def main():
     try:
         await dp.start_polling(bot)
     finally:
-        await stp_db_engine.dispose()
+        await main_db_engine.dispose()
         await questioner_db_engine.dispose()
 
 

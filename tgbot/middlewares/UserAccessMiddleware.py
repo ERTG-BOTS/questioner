@@ -4,8 +4,9 @@ from typing import Any, Awaitable, Callable, Dict, Sequence, Union
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import Question, User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import Question, Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.keyboards.group.events import on_user_leave_kb
 from tgbot.misc.helpers import short_name
 from tgbot.services.logger import setup_logging
@@ -41,9 +42,9 @@ class UserAccessMiddleware(BaseMiddleware):
         )
 
         # Get user and repos from previous middleware (DatabaseMiddleware)
-        user: User = data.get("user")
-        main_repo: RequestsRepo = data.get("main_repo")
-        questions_repo: RequestsRepo = data.get("questions_repo")
+        user: Employee = data.get("user")
+        main_repo: MainRequestsRepo = data.get("main_repo")
+        questions_repo: QuestionsRequestsRepo = data.get("questions_repo")
 
         # Skip all access control logic for private chats, bots, or if no chat found
         if not chat or chat.type == "private" or event.from_user.is_bot:
@@ -81,11 +82,11 @@ class UserAccessMiddleware(BaseMiddleware):
             return None
 
         # Проверяем есть ли у пользователя доступ к форуму
-        if user.Role not in [2, 3, 10] and message_thread_id:
+        if user.role not in [2, 3, 10] and message_thread_id:
             await self._ban_user_with_notification(
                 event,
                 chat,
-                f"Пользователь <code>{short_name(user.FIO)}</code> заблокирован\nПричина: недостаточно прав для доступа к чату",
+                f"Пользователь <code>{short_name(user.fullname)}</code> заблокирован\nПричина: недостаточно прав для доступа к чату",
                 change_role=True,
             )
 
@@ -140,7 +141,7 @@ class UserAccessMiddleware(BaseMiddleware):
             )
 
     async def _handle_banned_user_questions(
-        self, user: User, questions_repo: RequestsRepo, chat_id: int
+        self, user: Employee, questions_repo: QuestionsRequestsRepo, chat_id: int
     ):
         """Handle active questions when user is banned"""
         active_questions: Sequence[
@@ -151,7 +152,7 @@ class UserAccessMiddleware(BaseMiddleware):
         duty_active_questions = [
             question
             for question in active_questions
-            if user.FIO == question.topic_duty_fullname
+            if user.user_id == question.duty_userid
         ]
 
         if not duty_active_questions:
@@ -165,7 +166,7 @@ class UserAccessMiddleware(BaseMiddleware):
 
             await questions_repo.questions.update_question(
                 token=question.token,
-                topic_duty_fullname=None,
+                duty_userid=None,
                 status="open",
             )
 
@@ -182,20 +183,20 @@ class UserAccessMiddleware(BaseMiddleware):
                 message_thread_id=question.topic_id,
                 text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Дежурный <b>{short_name(user.FIO)}</b> был исключен из-за недостатка прав
+Дежурный <b>{short_name(user.fullname)}</b> был исключен из-за недостатка прав
 Для взятия вопроса в работу напиши сообщение в эту тему""",
             )
 
             # Уведомление специалиста
             await self.bot.send_message(
-                chat_id=question.employee_chat_id,
+                chat_id=question.employee_userid,
                 text=f"""<b>🕊️ Вопрос освобожден</b>
 
-Дежурный <b>{short_name(user.FIO)}</b> освободил вопрос. Ожидай повторного подключения старшего""",
+Дежурный <b>{short_name(user.fullname)}</b> освободил вопрос. Ожидай повторного подключения старшего""",
             )
 
             logger.info(
-                f"[Вопрос] - [Освобождение] Дежурный {short_name(user.FIO)} ({user.ChatId}) "
+                f"[Вопрос] - [Освобождение] Дежурный {short_name(user.fullname)} ({user.user_id}) "
                 f"исключен и освободил вопрос {question.token}"
             )
 
@@ -214,7 +215,9 @@ class UserAccessMiddleware(BaseMiddleware):
 
     @staticmethod
     async def _update_username(
-        user: User, event: Union[Message, CallbackQuery], main_repo: RequestsRepo
+        user: Employee,
+        event: Union[Message, CallbackQuery],
+        main_repo: MainRequestsRepo,
     ):
         """
         Обновление юзернейма пользователя если он отличается от записанного
@@ -227,21 +230,21 @@ class UserAccessMiddleware(BaseMiddleware):
             return
 
         current_username = event.from_user.username
-        stored_username = user.Username
+        stored_username = user.username
 
         if stored_username != current_username:
             try:
                 if current_username is None:
-                    await main_repo.users.update_user(
+                    await main_repo.employee.update_user(
                         user_id=event.from_user.id,
-                        Username="Не указан",
+                        username=None,
                     )
                     logger.info(
                         f"[Юзернейм] Удален юзернейм пользователя {event.from_user.id}"
                     )
                 else:
-                    await main_repo.users.update_user(
-                        user_id=event.from_user.id, Username=current_username
+                    await main_repo.employee.update_user(
+                        user_id=event.from_user.id, username=current_username
                     )
                     logger.info(
                         f"[Юзернейм] Обновлен юзернейм пользователя {event.from_user.id} - @{current_username}"

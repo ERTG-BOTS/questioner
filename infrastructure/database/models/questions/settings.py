@@ -5,7 +5,7 @@ from typing import Any, Dict
 from sqlalchemy import BIGINT, DateTime, String, func, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base, TableNameMixin
+from infrastructure.database.models.base import Base, TableNameMixin
 
 
 class Settings(Base, TableNameMixin):
@@ -51,7 +51,7 @@ class Settings(Base, TableNameMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<Settings id={self.id} group_id={self.group_id} group_name={self.group_name} last_update={self.last_update}>"
+        return f"<Settings id={self.id} group_id={self.group_id}>"
 
     def get_values(self) -> Dict[str, Any]:
         """

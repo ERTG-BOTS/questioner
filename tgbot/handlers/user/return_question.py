@@ -5,8 +5,9 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from infrastructure.database.models import Question, User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import Question, Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.keyboards.group.main import reopened_question_kb
 from tgbot.keyboards.user.main import (
     MainMenu,
@@ -36,14 +37,13 @@ async def return_finished_q(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
     state: FSMContext,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
+    user: Employee,
 ):
     """
     Возврат вопроса специалистом по клику на клавиатуру после закрытия вопроса.
     """
-    logger.info("we are here")
     await state.clear()
 
     active_questions: Sequence[
@@ -61,12 +61,10 @@ async def return_finished_q(
 
     if (
         question.status == "closed"
-        and user.FIO not in [d.employee_fullname for d in active_questions]
+        and user.user_id not in [d.employee_userid for d in active_questions]
         and question.token in [d.token for d in available_to_return_questions]
     ):
-        duty: User = await main_repo.users.get_user(
-            fullname=question.topic_duty_fullname
-        )
+        duty: Employee = await main_repo.employee.get_user(user_id=question.duty_userid)
         await questions_repo.questions.update_question(
             token=question.token,
             status="open",
@@ -75,9 +73,9 @@ async def return_finished_q(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {short_name(user.FIO)}"
+            name=f"{user.division} | {short_name(user.fullname)}"
             if group_settings.get_setting("show_division")
-            else short_name(user.FIO),
+            else short_name(user.fullname),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
         await callback.bot.reopen_forum_topic(
@@ -94,14 +92,14 @@ async def return_finished_q(
 
         duty_info = ""
         if duty:
-            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
+            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.fullname}{'\n<span class="tg-spoiler">@' + duty.username + '</span>' if duty.username != 'Не указан' or 'Скрыто/не определено' else ''}"
 
         await callback.bot.send_message(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{short_name(user.FIO)}</b> переоткрыл вопрос сразу после закрытия
+Специалист <b>{short_name(user.fullname)}</b> переоткрыл вопрос сразу после закрытия
 {duty_info}
 
 <b>❓ Изначальный вопрос:</b>
@@ -112,7 +110,7 @@ async def return_finished_q(
         logger.info(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Вопрос {question.token} переоткрыт специалистом"
         )
-    elif user.FIO in [d.employee_fullname for d in active_questions]:
+    elif user.user_id in [d.employee_userid for d in active_questions]:
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
         logger.info(
             f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста есть другой открытый вопрос"
@@ -135,7 +133,10 @@ async def return_finished_q(
 
 @employee_return_q_router.callback_query(MainMenu.filter(F.menu == "return"))
 async def q_list(
-    callback: CallbackQuery, state: FSMContext, user: User, questions_repo: RequestsRepo
+    callback: CallbackQuery,
+    state: FSMContext,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """
     Меню "🔄 Возврат вопроса". Отображает последние 5 закрытых вопросов за последние 24 часа для возврата в работу со стороны специалиста.
@@ -155,7 +156,7 @@ async def q_list(
             reply_markup=back_kb(),
         )
         logging.warning(
-            f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню возврата чата, доступных вопросов нет"
+            f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню возврата чата, доступных вопросов нет"
         )
         return
 
@@ -168,7 +169,7 @@ async def q_list(
         reply_markup=questions_list_kb(questions),
     )
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню возврата чата"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто меню возврата чата"
     )
     await callback.answer()
 
@@ -178,9 +179,9 @@ async def q_info(
     callback: CallbackQuery,
     callback_data: ReturnQuestion,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     """Меню описания выбранного специалистом вопроса для возврата в работу"""
     question: Question = await questions_repo.questions.get_question(
@@ -191,10 +192,8 @@ async def q_info(
         await callback.message.edit_text("❌ Вопрос не найден", reply_markup=user_kb())
         return
 
-    if question.topic_duty_fullname:
-        duty: User = await main_repo.users.get_user(
-            fullname=question.topic_duty_fullname
-        )
+    if question.duty_userid:
+        duty: Employee = await main_repo.employee.get_user(user_id=question.duty_userid)
     else:
         duty = None
 
@@ -214,7 +213,7 @@ async def q_info(
     # Добавляем инфо только если у вопроса есть закрепленный дежурный
     duty_info = ""
     if duty:
-        duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
+        duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.fullname}{'\n<span class="tg-spoiler">@' + duty.username + '</span>' if duty.username != 'Не указан' or 'Скрыто/не определено' else ''}"
 
     await callback.message.edit_text(
         f"""<b>🔄 Возврат вопроса</b>
@@ -222,7 +221,7 @@ async def q_info(
 ❓ <b>Вопрос:</b>
 <blockquote expandable>{question_text}</blockquote>
 
-🗃️ <b>Регламент:</b> {"<a href=" + question.clever_link + ">тык</a>" if question.clever_link else "Не указан"} {duty_info}
+🗃️ <b>Регламент:</b> {"<a href='" + question.clever_link + "'>тык</a>" if question.clever_link else "Не указан"} {duty_info}
 🚀 <b>Дата создания:</b> {start_date_str}
 🔒 <b>Дата закрытия:</b> {end_date_str}
 
@@ -231,7 +230,7 @@ async def q_info(
         disable_web_page_preview=True,
     )
     logging.info(
-        f"{'[Админ]' if state_data.get('role') or user.Role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто описание вопроса {question.token} для возврата"
+        f"{'[Админ]' if state_data.get('role') or user.role == 10 else '[Юзер]'} {callback.from_user.username} ({callback.from_user.id}): Открыто описание вопроса {question.token} для возврата"
     )
     await callback.answer()
 
@@ -241,9 +240,9 @@ async def return_q_confirm(
     callback: CallbackQuery,
     callback_data: ReturnQuestion,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     """Возврат выбранного специалистом вопроса в работу"""
     await state.clear()
@@ -264,14 +263,14 @@ async def return_q_confirm(
 
     if (
         question.status == "closed"
-        and user.FIO not in [d.employee_fullname for d in active_questions]
+        and user.user_id not in [d.employee_userid for d in active_questions]
         and question.allow_return
     ):
         # Get duty user only if topic_duty_fullname exists
         duty = None
-        if question.topic_duty_fullname:
-            duty: User = await main_repo.users.get_user(
-                fullname=question.topic_duty_fullname
+        if question.duty_userid:
+            duty: Employee = await main_repo.employee.get_user(
+                user_id=question.duty_userid
             )
 
         # 1. Обновляем статус вопроса на "open"
@@ -284,9 +283,9 @@ async def return_q_confirm(
         await callback.bot.edit_forum_topic(
             chat_id=question.group_id,
             message_thread_id=question.topic_id,
-            name=f"{user.Division} | {short_name(user.FIO)}"
+            name=f"{user.division} | {short_name(user.fullname)}"
             if group_settings.get_setting("show_division")
-            else short_name(user.FIO),
+            else short_name(user.fullname),
             icon_custom_emoji_id=group_settings.get_setting("emoji_in_progress"),
         )
 
@@ -307,7 +306,7 @@ async def return_q_confirm(
         # 5. Build duty info only if duty exists
         duty_info = ""
         if duty:
-            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.FIO}{'\n<span class="tg-spoiler">@' + duty.Username + '</span>' if duty.Username != 'Не указан' or 'Скрыто/не определено' else ''}"
+            duty_info = f"\n<b>👮‍♂️ Дежурный:</b> {duty.fullname}{'\n<span class="tg-spoiler">@' + duty.username + '</span>' if duty.username != 'Не указан' or 'Скрыто/не определено' else ''}"
 
         # 6. Отправляем уведомление дежурному в тему
         await callback.bot.send_message(
@@ -315,7 +314,7 @@ async def return_q_confirm(
             message_thread_id=question.topic_id,
             text=f"""<b>🔓 Вопрос переоткрыт</b>
 
-Специалист <b>{short_name(user.FIO)}</b> переоткрыл вопрос из истории вопросов
+Специалист <b>{short_name(user.fullname)}</b> переоткрыл вопрос из истории вопросов
 {duty_info}
 
 <b>❓ Изначальный вопрос:</b>
@@ -323,11 +322,11 @@ async def return_q_confirm(
             reply_markup=reopened_question_kb(),
             disable_web_page_preview=True,
         )
-    elif user.FIO in [d.employee_fullname for d in active_questions]:
+    elif user.user_id in [d.employee_userid for d in active_questions]:
         # Проверка на наличие открытых вопросов у специалиста
         await callback.answer("У тебя есть другой открытый вопрос", show_alert=True)
         logger.error(
-            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.employee_fullname} есть другой открытый вопрос"
+            f"[Вопрос] - [Переоткрытие] Пользователь {callback.from_user.username} ({callback.from_user.id}): Неудачная попытка переоткрытия, у специалиста {question.employee_userid} есть другой открытый вопрос"
         )
     elif question.status != "closed":
         # Проверка на закрытость вопроса

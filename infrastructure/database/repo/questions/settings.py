@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Sequence, TypedDict
 
 from sqlalchemy import func, select
 
-from infrastructure.database.models.settings import Settings
+from infrastructure.database.models.questions.settings import Settings
 from infrastructure.database.repo.base import BaseRepo
 from tgbot.services.logger import setup_logging
 

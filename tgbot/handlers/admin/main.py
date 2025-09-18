@@ -5,8 +5,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import Employee
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.filters.admin import AdminFilter
 from tgbot.filters.topic import IsTopicMessage
 from tgbot.handlers.user.main import main_cb
@@ -31,14 +31,17 @@ logger = logging.getLogger(__name__)
 
 @admin_router.message(CommandStart(), ~IsTopicMessage())
 async def admin_start(
-    message: Message, state: FSMContext, user: User, questions_repo: RequestsRepo
+    message: Message,
+    state: FSMContext,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ) -> None:
     employee_topics_today = await questions_repo.questions.get_questions_count_today(
-        employee_fullname=user.FIO
+        employee_userid=user.fullname
     )
     employee_topics_month = (
         await questions_repo.questions.get_questions_count_last_month(
-            employee_fullname=user.FIO
+            employee_userid=user.fullname
         )
     )
 
@@ -53,7 +56,7 @@ async def admin_start(
             f"[Админ] {message.from_user.username} ({message.from_user.id}): Открыто меню пользователя"
         )
         await message.answer(
-            f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
+            f"""👋 Привет, <b>{short_name(user.fullname)}</b>!
 
 <b>🎭 Твоя временная роль:</b> {role_text}
 
@@ -69,9 +72,9 @@ async def admin_start(
         return
 
     await message.answer(
-        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
+        f"""👋 Привет, <b>{short_name(user.fullname)}</b>!
 
-<b>🎭 Твоя роль:</b> {role_names[user.Role]}
+<b>🎭 Твоя роль:</b> {role_names[user.role]}
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
@@ -87,14 +90,14 @@ async def change_role(
     callback: CallbackQuery,
     callback_data: ChangeRole,
     state: FSMContext,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
 ) -> None:
     match callback_data.role:
         case "spec":
             await state.update_data(role=1)  # Специалист
             logging.info(
-                f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.Role} на 1"
+                f"[Админ] {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {user.role} на 1"
             )
 
     await main_cb(
@@ -104,7 +107,9 @@ async def change_role(
 
 
 @admin_router.callback_query(AdminMenu.filter(F.menu == "reset"))
-async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) -> None:
+async def reset_role_cb(
+    callback: CallbackQuery, state: FSMContext, user: Employee
+) -> None:
     """
     Сброс кастомной роли через клавиатуру
     """
@@ -112,16 +117,16 @@ async def reset_role_cb(callback: CallbackQuery, state: FSMContext, user: User) 
     await state.clear()
 
     await callback.message.edit_text(
-        f"""Привет, <b>{short_name(user.FIO)}</b>!
+        f"""Привет, <b>{short_name(user.fullname)}</b>!
 
-<b>🎭 Твоя роль:</b> {role_names[user.Role]}
+<b>🎭 Твоя роль:</b> {role_names[user.role]}
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
     )
 
     logging.info(
-        f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} кнопкой"
+        f"[Админ] Пользователь {callback.from_user.username} ({callback.from_user.id}): Роль изменена с {state_data.get('role')} на {user.role} кнопкой"
     )
     await callback.answer()
 
@@ -154,8 +159,8 @@ async def change_role_to_division(
     callback: CallbackQuery,
     callback_data: SelectDivision,
     state: FSMContext,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
 ) -> None:
     """
     Изменяет роль админа на специалиста выбранного направления
@@ -170,7 +175,7 @@ async def change_role_to_division(
 
     logging.info(
         f"[Админ] {callback.from_user.username} ({callback.from_user.id}): "
-        f"Роль изменена с {user.Role} на специалиста {division}"
+        f"Роль изменена с {user.role} на специалиста {division}"
     )
 
     await main_cb(
@@ -180,7 +185,7 @@ async def change_role_to_division(
 
 
 @admin_router.message(Command("reset"))
-async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> None:
+async def reset_role_cmd(message: Message, state: FSMContext, user: Employee) -> None:
     """
     Сброс кастомной роли через команду
     """
@@ -188,16 +193,16 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
     await state.clear()
 
     await message.answer(
-        f"""👋 Привет, <b>{short_name(user.FIO)}</b>!
+        f"""👋 Привет, <b>{short_name(user.fullname)}</b>!
 
-<b>🎭 Твоя роль:</b> {role_names[user.Role]}
+<b>🎭 Твоя роль:</b> {role_names[user.role]}
 
 <i>Используй меню для управления ботом</i>""",
         reply_markup=admin_kb(),
     )
 
     logging.info(
-        f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.Role} командой"
+        f"[Админ] {message.from_user.username} ({message.from_user.id}): Роль изменена с {state_data.get('role')} на {user.role} командой"
     )
 
 
@@ -205,8 +210,8 @@ async def reset_role_cmd(message: Message, state: FSMContext, user: User) -> Non
 async def back_to_main_menu(
     callback: CallbackQuery,
     state: FSMContext,
-    user: User,
-    questions_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ) -> None:
     """
     Возврат в главное админ-меню

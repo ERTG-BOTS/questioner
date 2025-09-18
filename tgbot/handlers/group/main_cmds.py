@@ -4,8 +4,9 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
 
-from infrastructure.database.models import User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import Employee
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.filters.topic import IsMainTopicMessageWithCommand
 from tgbot.keyboards.group.settings import (
     SettingsEmoji,
@@ -24,12 +25,12 @@ logger = logging.getLogger(__name__)
 async def question_info(
     message: Message,
     command: CommandObject,
-    user: User,
-    questions_repo: RequestsRepo,
-    main_repo: RequestsRepo,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ):
     """Получение информации о вопросе."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к получению информацию о вопросах есть только у руководителей"
         )
@@ -48,15 +49,15 @@ async def question_info(
     )
 
     if question:
-        duty = await main_repo.users.get_user(fullname=question.topic_duty_fullname)
-        employee = await main_repo.users.get_user(user_id=question.employee_chat_id)
+        duty = await main_repo.employee.get_user(user_id=question.duty_userid)
+        employee = await main_repo.employee.get_user(user_id=question.employee_userid)
 
         response = f"""<b>Информация о вопросе</b>
 
 <code>{token}</code>
 
-Дежурный: <a href='t.me/{duty.Username}'>{question.topic_duty_fullname}</a>
-Вопрошающий: <a href='t.me/{employee.Username}'>{question.employee_fullname}</a>
+Дежурный: <a href='t.me/{duty.username}'>{duty.fullname}</a>
+Вопрошающий: <a href='t.me/{employee.username}'>{employee.fullname}</a>
 
 Текст вопроса:
 <blockquote expandable>{question.question_text}</blockquote>
@@ -81,7 +82,7 @@ async def link_cmd(message: Message):
 
 
 @main_topic_cmds_router.message(IsMainTopicMessageWithCommand("settings"))
-async def settings_cmd(message: Message, questions_repo: RequestsRepo):
+async def settings_cmd(message: Message, questions_repo: QuestionsRequestsRepo):
     group_settings = await questions_repo.settings.get_settings_by_group_id(
         group_id=message.chat.id,
     )
@@ -134,10 +135,13 @@ async def settings_cmd(message: Message, questions_repo: RequestsRepo):
 
 @main_topic_cmds_router.message(Command("clever"), IsMainTopicMessageWithCommand())
 async def ask_clever_link_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+    message: Message,
+    command: CommandObject,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Управление статусом запроса регламента для форумов."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -160,7 +164,7 @@ async def ask_clever_link_change(
 
     current_state = group_settings.get_setting("ask_clever_link")
     target_state = action == "on"
-    user_name = user.FIO
+    user_name = user.fullname
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
     if current_state == target_state:
@@ -185,10 +189,13 @@ async def ask_clever_link_change(
 
 @main_topic_cmds_router.message(Command("division"), IsMainTopicMessageWithCommand())
 async def show_division_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+    message: Message,
+    command: CommandObject,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Управление статусом отображения направления специалиста для форумов."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -211,7 +218,7 @@ async def show_division_change(
 
     current_state = group_settings.get_setting("show_division")
     target_state = action == "on"
-    user_name = user.FIO
+    user_name = user.fullname
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
     if current_state == target_state:
@@ -236,10 +243,13 @@ async def show_division_change(
 
 @main_topic_cmds_router.message(Command("activity"), IsMainTopicMessageWithCommand())
 async def activity_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+    message: Message,
+    command: CommandObject,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Управление статусом закрытия по бездействию."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -262,7 +272,7 @@ async def activity_change(
 
     current_state = group_settings.get_setting("activity_status")
     target_state = action == "on"
-    user_name = user.FIO
+    user_name = user.fullname
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
     if current_state == target_state:
@@ -287,10 +297,13 @@ async def activity_change(
 
 @main_topic_cmds_router.message(Command("warn"), IsMainTopicMessageWithCommand())
 async def timer_warn_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+    message: Message,
+    command: CommandObject,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Управление временем предупреждения о закрытии по бездействию."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -313,7 +326,7 @@ async def timer_warn_change(
 
     current_state = int(group_settings.get_setting("activity_warn_minutes"))
     close_state = int(group_settings.get_setting("activity_close_minutes"))
-    user_name = user.FIO
+    user_name = user.fullname
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
     if current_state == new_timer:
@@ -342,10 +355,13 @@ async def timer_warn_change(
 
 @main_topic_cmds_router.message(Command("close"), IsMainTopicMessageWithCommand())
 async def timer_close_change(
-    message: Message, command: CommandObject, user: User, questions_repo: RequestsRepo
+    message: Message,
+    command: CommandObject,
+    user: Employee,
+    questions_repo: QuestionsRequestsRepo,
 ):
     """Управление временем закрытия по бездействию."""
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -369,7 +385,7 @@ async def timer_close_change(
     current_state = int(group_settings.get_setting("activity_close_minutes"))
     warn_state = int(group_settings.get_setting("activity_warn_minutes"))
     target_state = new_timer == current_state
-    user_name = user.FIO
+    user_name = user.fullname
 
     # Определяем ответ в зависимости от текущего состояния настройки и нового состояния
     if current_state == target_state:
@@ -397,8 +413,8 @@ async def timer_close_change(
 
 
 @main_topic_cmds_router.message(Command("emoji_open"), IsMainTopicMessageWithCommand())
-async def emoji_open_change(message: Message, user: User):
-    if user.Role not in [2, 10]:
+async def emoji_open_change(message: Message, user: Employee):
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -418,8 +434,8 @@ async def emoji_open_change(message: Message, user: User):
 @main_topic_cmds_router.message(
     Command("emoji_in_progress"), IsMainTopicMessageWithCommand()
 )
-async def emoji_in_progress_change(message: Message, user: User):
-    if user.Role not in [2, 10]:
+async def emoji_in_progress_change(message: Message, user: Employee):
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -439,8 +455,8 @@ async def emoji_in_progress_change(message: Message, user: User):
 @main_topic_cmds_router.message(
     Command("emoji_closed"), IsMainTopicMessageWithCommand()
 )
-async def emoji_closed_change(message: Message, user: User):
-    if user.Role not in [2, 10]:
+async def emoji_closed_change(message: Message, user: Employee):
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -458,8 +474,8 @@ async def emoji_closed_change(message: Message, user: User):
 
 
 @main_topic_cmds_router.message(Command("emoji_fired"), IsMainTopicMessageWithCommand())
-async def emoji_fired_change(message: Message, user: User):
-    if user.Role not in [2, 10]:
+async def emoji_fired_change(message: Message, user: Employee):
+    if user.role not in [2, 10]:
         await message.reply(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -480,10 +496,10 @@ async def emoji_fired_change(message: Message, user: User):
 async def handle_emoji_selection(
     callback: CallbackQuery,
     callback_data: SettingsEmoji,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
 ):
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await callback.answer(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -514,9 +530,9 @@ async def handle_emoji_selection(
 
 @main_topic_cmds_router.callback_query(SettingsEmojiPage.filter())
 async def handle_emoji_page(
-    callback: CallbackQuery, callback_data: SettingsEmojiPage, user: User
+    callback: CallbackQuery, callback_data: SettingsEmojiPage, user: Employee
 ):
-    if user.Role not in [2, 10]:
+    if user.role not in [2, 10]:
         await callback.answer(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )
@@ -534,8 +550,8 @@ async def handle_emoji_page(
 
 
 @main_topic_cmds_router.callback_query(F.data == "emoji_cancel")
-async def handle_emoji_cancel(callback: CallbackQuery, user: User):
-    if user.Role not in [2, 10]:
+async def handle_emoji_cancel(callback: CallbackQuery, user: Employee):
+    if user.role not in [2, 10]:
         await callback.answer(
             "Доступ к изменению настроек форума есть только у РГ и администраторов 🥺"
         )

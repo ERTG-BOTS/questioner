@@ -15,8 +15,8 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from infrastructure.database.models import MessagesPair, Question, User
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.models import MessagesPair, Question, Employee
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.filters.active_question import ActiveQuestion, ActiveQuestionWithCommand
 from tgbot.keyboards.group.main import question_quality_duty_kb
 from tgbot.keyboards.user.main import (
@@ -44,8 +44,8 @@ logger = logging.getLogger(__name__)
 @user_q_router.message(ActiveQuestionWithCommand("end"))
 async def active_question_end(
     message: Message,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
     active_question_token: str,
 ):
     question: Question = await questions_repo.questions.get_question(
@@ -74,7 +74,7 @@ async def active_question_end(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
     
-Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
+Специалист <b>{short_name(user.fullname)}</b> закрыл вопрос
 👍 Специалист <b>не мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -88,7 +88,7 @@ async def active_question_end(
                         message_thread_id=question.topic_id,
                         text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
+Специалист <b>{short_name(user.fullname)}</b> закрыл вопрос
 👎 Специалист <b>мог решить вопрос самостоятельно</b>""",
                         reply_markup=question_quality_duty_kb(
                             token=question.token,
@@ -102,7 +102,7 @@ async def active_question_end(
                     message_thread_id=question.topic_id,
                     text=f"""<b>🔒 Вопрос закрыт</b>
 
-Специалист <b>{short_name(user.FIO)}</b> закрыл вопрос
+Специалист <b>{short_name(user.fullname)}</b> закрыл вопрос
 Оцени, мог ли специалист решить его самостоятельно""",
                     reply_markup=question_quality_duty_kb(
                         token=question.token,
@@ -132,7 +132,7 @@ async def active_question_end(
             )
 
             logger.info(
-                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.token} со старшим {question.topic_duty_fullname}"
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Закрыт вопрос {question.token} со старшим {question.duty_userid}"
             )
         elif question.status == "closed":
             await message.bot.edit_forum_topic(
@@ -147,7 +147,7 @@ async def active_question_end(
                 message_thread_id=question.topic_id,
             )
             logger.info(
-                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.token} со старшим {question.topic_duty_fullname}. Вопрос уже закрыт"
+                f"[Вопрос] - [Закрытие] Пользователь {message.from_user.username} ({message.from_user.id}): Неудачная попытка закрытия вопроса {question.token} со старшим {question.duty_userid}. Вопрос уже закрыт"
             )
 
     else:
@@ -162,8 +162,8 @@ async def active_question_end(
 @user_q_router.message(ActiveQuestion())
 async def active_question(
     message: Message,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
     active_question_token: str,
 ) -> None:
     if message.message_thread_id:
@@ -261,7 +261,7 @@ async def active_question(
         )
 
     logger.info(
-        f"[Вопрос] - [Общение] Токен: {question.token} | Специалист: {question.employee_fullname} | Сообщение: {message.text if message.text else message.caption}"
+        f"[Вопрос] - [Общение] Токен: {question.token} | Специалист: {question.employee_userid} | Сообщение: {message.text if message.text else message.caption}"
     )
 
 
@@ -269,8 +269,8 @@ async def active_question(
 async def handle_edited_message(
     message: Message,
     active_question_token: str,
-    questions_repo: RequestsRepo,
-    user: User,
+    questions_repo: QuestionsRequestsRepo,
+    user: Employee,
 ) -> None:
     """Универсальный хендлер для редактируемых сообщений пользователей в активных вопросах"""
     question: Question = await questions_repo.questions.get_question(
@@ -285,7 +285,7 @@ async def handle_edited_message(
     # Проверяем, что вопрос все еще активен
     if question.status == "closed":
         logger.warning(
-            f"[Редактирование] Специалист {user.FIO} попытался редактировать сообщение в закрытом вопросе {question.token}"
+            f"[Редактирование] Специалист {user.fullname} попытался редактировать сообщение в закрытом вопросе {question.token}"
         )
         return
 
@@ -352,7 +352,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{short_name(user.FIO)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+Специалист <b>{short_name(user.fullname)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
 
 <i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
@@ -381,7 +381,7 @@ async def handle_edited_message(
                 message_thread_id=pair_to_edit.topic_thread_id,
                 text=f"""<b>♻️ Изменение сообщения</b>
 
-Специалист <b>{short_name(user.FIO)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
+Специалист <b>{short_name(user.fullname)}</b> отредактировал <a href='https://t.me/c/{str(question.group_id)[4:]}/{pair_to_edit.topic_thread_id}/{pair_to_edit.topic_message_id}'>сообщение</a>
 
 <i>Предупреждение удалится через 30 секунд</i>""",
                 reply_to_message_id=pair_to_edit.topic_message_id,
@@ -412,11 +412,13 @@ async def handle_edited_message(
         )
 
 
-@user_q_router.callback_query(QuestionQualitySpecialist.filter(not F.return_question))
+@user_q_router.callback_query(
+    QuestionQualitySpecialist.filter(F.return_question == False)
+)
 async def question_quality_employee(
     callback: CallbackQuery,
     callback_data: QuestionQualitySpecialist,
-    questions_repo: RequestsRepo,
+    questions_repo: QuestionsRequestsRepo,
 ):
     question: Question = await questions_repo.questions.update_question(
         token=callback_data.token, quality_employee=callback_data.answer

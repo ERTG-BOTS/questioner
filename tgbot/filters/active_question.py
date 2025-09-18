@@ -5,7 +5,7 @@ from aiogram.types import Message
 from sqlalchemy import Sequence
 
 from infrastructure.database.models import Question
-from infrastructure.database.repo.requests import RequestsRepo
+from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
 from tgbot.services.logger import setup_logging
 
 setup_logging()
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ActiveQuestion(BaseFilter):
     async def __call__(
-        self, obj: Message, questions_repo: RequestsRepo, **kwargs
+        self, obj: Message, questions_repo: QuestionsRequestsRepo, **kwargs
     ) -> dict[str, str] | bool:
         """
         Filter to check if user has an active question
@@ -32,7 +32,7 @@ class ActiveQuestion(BaseFilter):
         ] = await questions_repo.questions.get_active_questions()
 
         for question in active_questions:
-            if question.employee_chat_id == obj.from_user.id:
+            if question.employee_userid == obj.from_user.id:
                 active_question_token = question.token
 
                 logger.info(
@@ -52,7 +52,7 @@ class ActiveQuestionWithCommand(BaseFilter):
         self.command = command
 
     async def __call__(
-        self, obj: Message, questions_repo: RequestsRepo, **kwargs
+        self, obj: Message, questions_repo: QuestionsRequestsRepo, **kwargs
     ) -> None | bool | dict[str, str]:
         if self.command:
             if obj.chat.type != "private":
@@ -66,7 +66,7 @@ class ActiveQuestionWithCommand(BaseFilter):
             ] = await questions_repo.questions.get_active_questions()
 
             for question in current_questions:
-                if question.employee_chat_id == obj.from_user.id:
+                if question.employee_userid == obj.from_user.id:
                     active_question_token = question.token
 
                     logger.info(
