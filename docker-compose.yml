@@ -18,6 +18,9 @@ services:
         max-size: "200k"
         max-file: "10"
 
+    networks:
+      - stp_bots
+
   redis_cache:
     image: redis:7.4.5-alpine
     restart: always
@@ -84,3 +87,7 @@ services:
 volumes:
   cache: { }
 #  pgdata: { }
+
+networks:
+  stp_bots:
+    external: true
