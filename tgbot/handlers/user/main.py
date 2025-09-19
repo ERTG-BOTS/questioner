@@ -276,12 +276,12 @@ async def question_text(
             user_fullname = short_name(user.fullname)
 
         head = await main_repo.employee.get_user(fullname=user.head)
-        if head.username:
+        if head and head.username:
             head_fullname = (
                 f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
             )
         else:
-            head_fullname = short_name(head.fullname)
+            head_fullname = short_name(user.head)
 
         # Формируем текст сообщения в зависимости от наличия ссылки на регламент
         if clever_link:
@@ -477,12 +477,12 @@ async def clever_link_handler(
         user_fullname = short_name(user.fullname)
 
     head = await main_repo.employee.get_user(fullname=user.head)
-    if head.username:
+    if head and head.username:
         head_fullname = (
             f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
         )
     else:
-        head_fullname = short_name(head.fullname)
+        head_fullname = short_name(user.head)
 
     topic_info_msg = await message.bot.send_message(
         chat_id=target_forum_id,
@@ -593,12 +593,12 @@ async def regulation_not_found_handler(
         user_fullname = short_name(user.fullname)
 
     head = await main_repo.employee.get_user(fullname=user.head)
-    if head.username:
+    if head and head.username:
         head_fullname = (
             f"<a href='t.me/{head.username}'>{short_name(head.fullname)}</a>"
         )
     else:
-        head_fullname = short_name(head.fullname)
+        head_fullname = short_name(user.head)
 
     # Формируем текст сообщения с указанием "не нашел" в регламенте
     topic_text = f"""Вопрос задает <b>{user_fullname}</b>
