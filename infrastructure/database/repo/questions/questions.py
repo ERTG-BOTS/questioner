@@ -136,38 +136,23 @@ class QuestionsRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_questions_by_month(
-        self, month: int, year: int, division: str = None
-    ) -> Sequence[Question]:
+    async def get_questions_by_month(self, month: int, year: int) -> Sequence[Question]:
         """
-        Получение вопросов за указанный месяц с фильтрацией по направлению
+        Получение вопросов за указанный месяц
 
         :param month: Месяц для фильтрации
         :param year: Год для фильтрации
-        :param division: Направление для фильтрации (НЦК, НТП, ВСЕ, или None)
-        :return: Последовательность вопросов, подходящих под фильтры
+        :return: Последовательность вопросов
         """
-        # Базовый запрос по месяцу и году
         stmt = select(Question).where(
             extract("month", Question.start_time) == month,
             extract("year", Question.start_time) == year,
         )
 
-        # Добавляем фильтр по направлению если указан
-        if division and division != "ВСЕ":
-            stmt = stmt.where(Question.employee_division.ilike(f"%{division}%"))
-
         result = await self.session.execute(stmt)
-        questions = result.fetchall()
+        questions = result.scalars().all()
 
-        logger.info(
-            f"Found {len(questions)} questions for {month}/{year}"
-            + (
-                f" with division filter '{division}'"
-                if division and division != "ВСЕ"
-                else ""
-            )
-        )
+        logger.info(f"Found {len(questions)} questions for {month}/{year}")
 
         return questions
 

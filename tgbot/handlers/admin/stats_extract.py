@@ -7,6 +7,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery
 from numpy.random.mtrand import Sequence
 
 from infrastructure.database.repo.questions.requests import QuestionsRequestsRepo
+from infrastructure.database.repo.STP.requests import MainRequestsRepo
 from tgbot.filters.admin import AdminFilter
 from tgbot.keyboards.admin.main import AdminMenu
 from tgbot.keyboards.admin.stats_extract import (
@@ -81,6 +82,7 @@ async def admin_extract_division(
     callback: CallbackQuery,
     callback_data: DivisionStatsExtract,
     questions_repo: QuestionsRequestsRepo,
+    main_repo: MainRequestsRepo,
 ) -> None:
     """
     Выгрузка статистики по выбранному месяцу и направлению
@@ -115,15 +117,47 @@ async def admin_extract_division(
 ⏳ Обрабатываю данные, это может занять некоторое время..."""
     )
 
-    # Получаем вопросы с фильтрацией по направлению
+    # Получаем все вопросы за месяц
     questions: Sequence = await questions_repo.questions.get_questions_by_month(
-        month=month, year=year, division=division
+        month=month, year=year
     )
+
+    # Собираем все уникальные user_id для батчевого запроса
+    employee_ids = set()
+    duty_ids = set()
+    for question in questions:
+        employee_ids.add(question.employee_userid)
+        if question.duty_userid:
+            duty_ids.add(question.duty_userid)
+
+    # Батчево получаем всех сотрудников и дежурных
+    logger.info(
+        f"Fetching employee data for {len(employee_ids)} employees and {len(duty_ids)} duty users"
+    )
+    all_employees = await main_repo.employee.get_users()
+    logger.info(f"Retrieved {len(all_employees)} total employees from database")
+
+    # Создаем словари для быстрого поиска
+    employees_dict = {emp.user_id: emp for emp in all_employees if emp.user_id}
+    logger.info(f"Created lookup dictionary with {len(employees_dict)} employees")
 
     # Подготавливаем данные для Excel
     data = []
-    for question_obj in questions:
-        question = question_obj[0]  # Извлекаем объект Question из tuple
+    processed_count = 0
+    for question in questions:
+        processed_count += 1
+        if processed_count % 1000 == 0:
+            logger.info(f"Processed {processed_count}/{len(questions)} questions")
+        # Получаем данные из словарей
+        employee = employees_dict.get(question.employee_userid)
+        duty = (
+            employees_dict.get(question.duty_userid) if question.duty_userid else None
+        )
+
+        # Применяем фильтр по направлению
+        if division and division != "ВСЕ" and employee and employee.division:
+            if division.upper() not in employee.division.upper():
+                continue
 
         # Определяем статус чата
         if question.status == "open":
@@ -153,9 +187,9 @@ async def admin_extract_division(
         data.append(
             {
                 "Токен": question.token,
-                "Дежурный": question.topic_duty_fullname or "Не назначен",
-                "Специалист": question.employee_fullname,
-                "Направление": question.employee_division or "Не указано",
+                "Дежурный": duty.fullname if duty else "Не назначен",
+                "Специалист": employee.fullname if employee else "Не найден",
+                "Направление": employee.division if employee else "Не указано",
                 "Вопрос": question.question_text,
                 "Время вопроса": question.start_time,
                 "Время завершения": question.end_time,
@@ -172,6 +206,8 @@ async def admin_extract_division(
             f"""<b>📥 Выгрузка статистики</b>
 
 Не найдено вопросов для периода <b>{month_names[month]} {year}</b> и направления <b>{division}</b>
+
+Всего обработано вопросов: {len(questions)}
 
 Попробуй другой месяц или направление""",
             reply_markup=extract_kb(),
